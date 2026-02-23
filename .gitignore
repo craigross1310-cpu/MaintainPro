@@ -1,0 +1,52 @@
+# Environment variables and secrets
+.env
+.env.local
+.env.production
+.env.staging
+.env.*.local
+
+# Supabase
+supabase/.env
+supabase/.temp/
+
+# API keys and credentials
+*.pem
+*.key
+*.cert
+credentials.json
+service-account.json
+serviceAccountKey.json
+
+# OS files
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE / Editor
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# Node (if you add a build step later)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnp.*
+
+# Build output
+dist/
+build/
+.vercel/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
