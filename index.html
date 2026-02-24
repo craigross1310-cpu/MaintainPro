@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MaintainPro - Complete Maintenance Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co;">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
     <style>
         :root {
@@ -3878,6 +3879,13 @@
 
     <script>
         // ─────────────────────────────────────────────────────────────────────
+        // SUPABASE CLIENT
+        // ─────────────────────────────────────────────────────────────────────
+        const SUPABASE_URL = 'https://ckjdwiipogxdkehxqrzh.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNramR3aWlwb2d4ZGtlaHhxcnpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTE5NDEsImV4cCI6MjA4NzQyNzk0MX0.lLXFAr42AgrkyakPZ4ketX0BfvLK9RayghmkIddXoYg';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ─────────────────────────────────────────────────────────────────────
         // TOAST NOTIFICATIONS
         // ─────────────────────────────────────────────────────────────────────
         function showToast(message, type = 'success') {
@@ -5478,3 +5486,5 @@
     </script>
 </body>
 </html>
+
+add supabase client
