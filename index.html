@@ -2306,26 +2306,44 @@
         <!-- Permits Tab -->
         <div id="permits" class="tab-content">
             <!-- Active Permits Summary -->
-            <div class="stats-grid" style="margin-bottom: 2rem;">
+            <div class="stats-grid" id="permitStatsGrid" style="margin-bottom: 2rem;">
                 <div class="stat-card">
                     <div class="stat-label">Active Permits</div>
-                    <div class="stat-value">4</div>
-                    <div class="stat-change positive">2 expiring today</div>
+                    <div class="stat-value" id="permitStatActive">4</div>
+                    <div class="stat-change positive" id="permitStatActiveNote">—</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Hot Work Permits</div>
-                    <div class="stat-value">1</div>
-                    <div class="stat-change negative">Expires in 3 hours</div>
+                    <div class="stat-value" id="permitStatHW">1</div>
+                    <div class="stat-change" id="permitStatHWNote">—</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Contractor Permits</div>
-                    <div class="stat-value">3</div>
-                    <div class="stat-change positive">All valid</div>
+                    <div class="stat-value" id="permitStatCP">3</div>
+                    <div class="stat-change positive" id="permitStatCPNote">All valid</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Expired This Month</div>
-                    <div class="stat-value">12</div>
-                    <div class="stat-change positive">↓ 3 vs last month</div>
+                    <div class="stat-label">Closed (Archived)</div>
+                    <div class="stat-value" id="permitStatClosed">0</div>
+                    <div class="stat-change" id="permitStatClosedNote">Available for audit</div>
+                </div>
+            </div>
+
+            <!-- Permit Filter Bar -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <div style="padding: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                    <span style="font-weight: 600; color: var(--dark);">View:</span>
+                    <button class="btn btn-small" id="permitFilterActive" onclick="filterPermits('active')" style="background: var(--primary); color: white;">Active Permits</button>
+                    <button class="btn btn-secondary btn-small" id="permitFilterClosed" onclick="filterPermits('closed')">Closed / Archived</button>
+                    <button class="btn btn-secondary btn-small" id="permitFilterAll" onclick="filterPermits('all')">All Permits</button>
+                    <div style="flex:1;"></div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <select class="form-select" id="permitFilterType" onchange="filterPermits(currentPermitFilter)" style="min-width:160px;">
+                            <option value="">All Types</option>
+                            <option value="hotwork">Hot Work Only</option>
+                            <option value="contractor">Contractor Only</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -2518,6 +2536,21 @@
                         <button class="btn btn-primary" onclick="openPermitDetail('contractor', 3)">View Details</button>
                     </div>
                 </div>
+            </div>
+
+            <!-- Closed Permits Archive -->
+            <div class="card" id="closedPermitsCard" style="margin-top: 2rem; display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">📁 Closed Permits Archive</h2>
+                    <span style="font-size: 0.9rem; color: var(--gray-600);">For audit and compliance records</span>
+                </div>
+
+                <div class="search-bar">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" id="closedPermitSearch" placeholder="Search closed permits..." oninput="filterPermits(currentPermitFilter)">
+                </div>
+
+                <div id="closedPermitsList"></div>
             </div>
         </div>
 
@@ -4581,6 +4614,8 @@
             saveData('purchaseOrders', purchaseOrdersData);
             saveData('hotWorkPermits', hotWorkPermits);
             saveData('contractorPermits', contractorPermits);
+            saveData('closedHotWorkPermits', closedHotWorkPermits);
+            saveData('closedContractorPermits', closedContractorPermits);
             saveData('pmSchedule', pmData);
             saveData('breakdowns', breakdownsData);
             saveData('calendarEvents', calendarEvents);
@@ -4723,6 +4758,7 @@
             }
             if (typeof renderEngineerDashboard === 'function') renderEngineerDashboard();
             if (typeof renderProAnalytics === 'function') renderProAnalytics();
+            if (typeof updatePermitStats === 'function') updatePermitStats();
         }
 
         function showAuthScreen() {
@@ -4967,6 +5003,16 @@
             { id: 1, title: 'HVAC System Maintenance - XYZ Mechanical',            company: 'XYZ Mechanical Services',   supervisor: 'Tom Davis',       phone: '(555) 123-4567', workers: 3, location: 'Mechanical Room',   startDate: 'Feb 13, 2026', endDate: 'Feb 14, 2026', insurance: 'INS-2024-12345', scope: 'Complete HVAC system maintenance including filter replacement, coil cleaning, and system testing.',                                              status: 'Active', expiryText: 'Expires tomorrow' },
             { id: 2, title: 'Electrical Panel Upgrade - ABC Electric',              company: 'ABC Electric Co.',          supervisor: 'Lisa Chen',        phone: '(555) 234-5678', workers: 2, location: 'Electrical Room',   startDate: 'Feb 13, 2026', endDate: 'Feb 15, 2026', insurance: 'INS-2024-67890', scope: 'Upgrade main electrical panel and install new circuit breakers for increased capacity.',                                                         status: 'Active', expiryText: 'Expires in 2 days' },
             { id: 3, title: 'Fire Suppression System Inspection - SafeGuard Fire', company: 'SafeGuard Fire Protection', supervisor: 'Robert Martinez', phone: '(555) 345-6789', workers: 2, location: 'Facility-Wide',    startDate: 'Feb 13, 2026', endDate: 'Feb 13, 2026', insurance: 'INS-2024-11223', scope: 'Annual inspection and testing of fire suppression system including all sprinkler heads and control panels.', status: 'Active', expiryText: 'Expires tonight' }
+        ]);
+
+        let closedHotWorkPermits = loadData('closedHotWorkPermits', [
+            { id: 100, title: '🔥 Grinding Work - Line 1 Conveyor Frame', location: 'Production Floor - Line 1', engineer: 'John Smith', fireWatch: 'Dave Turner', startTime: '08:00', endTime: '12:00', status: 'closed', validText: 'Was valid: 8:00 AM – 12:00 PM', expiryText: 'Closed', closedDate: 'Feb 10, 2026', closedBy: 'John Smith' },
+            { id: 101, title: '🔥 Welding Repair - Line 4 Packaging Frame', location: 'Production Floor - Line 4', engineer: 'Mike Johnson', fireWatch: 'Tom Carter', startTime: '13:00', endTime: '16:00', status: 'closed', validText: 'Was valid: 1:00 PM – 4:00 PM', expiryText: 'Closed', closedDate: 'Feb 7, 2026', closedBy: 'Mike Johnson' }
+        ]);
+        let closedContractorPermits = loadData('closedContractorPermits', [
+            { id: 100, title: 'Roof Repair - TopFix Roofing', company: 'TopFix Roofing Ltd', supervisor: 'James Wright', phone: '(555) 456-7890', workers: 4, location: 'Building Exterior - Roof', startDate: 'Feb 3, 2026', endDate: 'Feb 5, 2026', insurance: 'INS-2024-55678', scope: 'Repair damaged roof section above Line 2 area.', status: 'Closed', expiryText: 'Closed', closedDate: 'Feb 5, 2026', closedBy: 'Admin' },
+            { id: 101, title: 'Compressed Air System Service - AirPro', company: 'AirPro Services', supervisor: 'Neil Patel', phone: '(555) 567-8901', workers: 2, location: 'Compressor Room', startDate: 'Jan 28, 2026', endDate: 'Jan 29, 2026', insurance: 'INS-2024-44321', scope: 'Annual service and filter replacement on main compressor.', status: 'Closed', expiryText: 'Closed', closedDate: 'Jan 29, 2026', closedBy: 'Admin' },
+            { id: 102, title: 'Pest Control Inspection - SafePest', company: 'SafePest Solutions', supervisor: 'Karen Mills', phone: '(555) 678-9012', workers: 1, location: 'Facility-Wide', startDate: 'Jan 15, 2026', endDate: 'Jan 15, 2026', insurance: 'INS-2024-33210', scope: 'Quarterly pest control inspection and treatment.', status: 'Closed', expiryText: 'Closed', closedDate: 'Jan 15, 2026', closedBy: 'Admin' }
         ]);
 
         let nextPmId = loadData('nextPmId', 6);
@@ -6429,16 +6475,28 @@
             renderHotWorkPermits();
             closeModal('hotWorkPermitModal');
             document.getElementById('hotWorkPermitForm').reset();
+            updatePermitStats();
             persistAllData();
             showToast('✅ Hot work permit issued!', 'success');
         }
 
         function closeHotWorkPermit(id) {
-            if (!confirm('Close this hot work permit? This will archive the record.')) return;
+            if (!confirm('Close this hot work permit? It will be moved to the closed permits archive.')) return;
+            var permit = hotWorkPermits.find(function(p) { return p.id === id; });
+            if (permit) {
+                var now = new Date();
+                permit.status = 'closed';
+                permit.expiryText = 'Closed';
+                permit.closedDate = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                permit.closedBy = currentUserName || 'User';
+                closedHotWorkPermits.unshift(permit);
+            }
             hotWorkPermits = hotWorkPermits.filter(p => p.id !== id);
             renderHotWorkPermits();
+            renderClosedPermits();
+            updatePermitStats();
             persistAllData();
-            showToast('Hot work permit closed.', 'info');
+            showToast('Hot work permit closed and archived.', 'info');
         }
 
         function submitContractorPermit() {
@@ -6476,16 +6534,28 @@
             renderContractorPermits();
             closeModal('contractorPermitModal');
             document.getElementById('contractorPermitForm').reset();
+            updatePermitStats();
             persistAllData();
             showToast('✅ Contractor permit issued!', 'success');
         }
 
         function closeContractorPermit(id) {
-            if (!confirm('Close this contractor permit?')) return;
+            if (!confirm('Close this contractor permit? It will be moved to the closed permits archive.')) return;
+            var permit = contractorPermits.find(function(p) { return p.id === id; });
+            if (permit) {
+                var now = new Date();
+                permit.status = 'Closed';
+                permit.expiryText = 'Closed';
+                permit.closedDate = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                permit.closedBy = currentUserName || 'User';
+                closedContractorPermits.unshift(permit);
+            }
             contractorPermits = contractorPermits.filter(p => p.id !== id);
             renderContractorPermits();
+            renderClosedPermits();
+            updatePermitStats();
             persistAllData();
-            showToast('Contractor permit closed.', 'info');
+            showToast('Contractor permit closed and archived.', 'info');
         }
 
         function openPermitDetail(type, permitId) {
@@ -6532,18 +6602,173 @@
         function revokePermitFromModal() {
             if (!confirm('Revoke/close this permit?')) return;
             if (currentEditPermitType === 'contractor') {
+                var permit = contractorPermits.find(function(p) { return p.id === currentEditPermitId; });
+                if (permit) {
+                    var now = new Date();
+                    permit.status = 'Closed';
+                    permit.expiryText = 'Closed';
+                    permit.closedDate = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                    permit.closedBy = currentUserName || 'User';
+                    closedContractorPermits.unshift(permit);
+                }
                 contractorPermits = contractorPermits.filter(p => p.id !== currentEditPermitId);
                 renderContractorPermits();
+                renderClosedPermits();
+                updatePermitStats();
             }
             closeModal('permitDetailModal');
             persistAllData();
-            showToast('Permit revoked.', 'info');
+            showToast('Permit closed and archived.', 'info');
         }
 
         function closePermit(type, permitId) {
             if (type === 'hotwork') {
                 closeHotWorkPermit(permitId);
             }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // PERMIT FILTERING & CLOSED PERMITS ARCHIVE
+        // ─────────────────────────────────────────────────────────────────────
+        var currentPermitFilter = 'active';
+
+        function filterPermits(mode) {
+            currentPermitFilter = mode;
+            var typeFilter = document.getElementById('permitFilterType').value;
+            var hwListEl = document.getElementById('hotWorkList');
+            var activeHW = hwListEl ? hwListEl.closest('.card') : null;
+            var cpListEl = document.getElementById('contractorPermitsList');
+            var activeCP = cpListEl ? cpListEl.closest('.card') : null;
+            var closedCard = document.getElementById('closedPermitsCard');
+
+            // Reset filter button styles
+            ['permitFilterActive', 'permitFilterClosed', 'permitFilterAll'].forEach(function(id) {
+                var btn = document.getElementById(id);
+                if (btn) { btn.style.background = ''; btn.style.color = ''; btn.className = 'btn btn-secondary btn-small'; }
+            });
+            var activeBtn = document.getElementById('permitFilter' + mode.charAt(0).toUpperCase() + mode.slice(1));
+            if (activeBtn) { activeBtn.style.background = 'var(--primary)'; activeBtn.style.color = 'white'; }
+
+            var showActive = (mode === 'active' || mode === 'all');
+            var showClosed = (mode === 'closed' || mode === 'all');
+
+            // Type filter
+            var showHW = !typeFilter || typeFilter === 'hotwork';
+            var showCP = !typeFilter || typeFilter === 'contractor';
+
+            if (activeHW) activeHW.style.display = (showActive && showHW) ? '' : 'none';
+            if (activeCP) activeCP.style.display = (showActive && showCP) ? '' : 'none';
+            if (closedCard) closedCard.style.display = showClosed ? '' : 'none';
+
+            if (showClosed) renderClosedPermits();
+        }
+
+        function renderClosedPermits() {
+            var container = document.getElementById('closedPermitsList');
+            if (!container) return;
+
+            var typeFilter = document.getElementById('permitFilterType').value;
+            var searchTerm = (document.getElementById('closedPermitSearch') ? document.getElementById('closedPermitSearch').value.trim().toLowerCase() : '');
+
+            var items = [];
+
+            // Closed hot work permits
+            if (!typeFilter || typeFilter === 'hotwork') {
+                closedHotWorkPermits.forEach(function(p) {
+                    items.push({ type: 'hotwork', data: p, sortDate: p.closedDate || '' });
+                });
+            }
+
+            // Closed contractor permits
+            if (!typeFilter || typeFilter === 'contractor') {
+                closedContractorPermits.forEach(function(p) {
+                    items.push({ type: 'contractor', data: p, sortDate: p.closedDate || '' });
+                });
+            }
+
+            // Search filter
+            if (searchTerm) {
+                items = items.filter(function(item) {
+                    var d = item.data;
+                    var searchable = (d.title + ' ' + (d.company || '') + ' ' + (d.location || '') + ' ' + (d.engineer || '') + ' ' + (d.supervisor || '') + ' ' + (d.closedDate || '')).toLowerCase();
+                    return searchable.indexOf(searchTerm) !== -1;
+                });
+            }
+
+            if (items.length === 0) {
+                container.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--gray-600);">No closed permits found.</div>';
+                return;
+            }
+
+            container.innerHTML = items.map(function(item) {
+                var p = item.data;
+                if (item.type === 'hotwork') {
+                    return '<div class="work-order-item" style="border-left: 6px solid var(--gray-400); opacity: 0.85;">' +
+                        '<div class="wo-priority" style="background: var(--gray-400);"></div>' +
+                        '<div class="wo-details">' +
+                            '<div class="wo-title">' + escHtml(p.title) + '</div>' +
+                            '<div class="wo-meta">' +
+                                '<div class="wo-meta-item"><span>🏭</span><span>' + escHtml(p.location) + '</span></div>' +
+                                '<div class="wo-meta-item"><span>👤</span><span>' + escHtml(p.engineer) + '</span></div>' +
+                                '<div class="wo-meta-item"><span>🔥</span><span>Fire Watch: ' + escHtml(p.fireWatch) + '</span></div>' +
+                                '<div class="wo-meta-item"><span>⏱️</span><span>' + escHtml(p.startTime) + ' – ' + escHtml(p.endTime) + '</span></div>' +
+                            '</div>' +
+                            '<div class="wo-meta" style="margin-top: 0.5rem;">' +
+                                '<div class="wo-meta-item"><span>📅</span><span>Closed: ' + escHtml(p.closedDate) + '</span></div>' +
+                                (p.closedBy ? '<div class="wo-meta-item"><span>👤</span><span>Closed by: ' + escHtml(p.closedBy) + '</span></div>' : '') +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="status-badge" style="background: var(--gray-200); color: var(--gray-700);">CLOSED</div>' +
+                        '<span style="font-size: 0.8rem; color: var(--gray-500); padding: 0.5rem;">Hot Work</span>' +
+                    '</div>';
+                } else {
+                    return '<div class="work-order-item" style="border-left: 6px solid var(--gray-400); opacity: 0.85;">' +
+                        '<div class="wo-priority" style="background: var(--gray-400);"></div>' +
+                        '<div class="wo-details">' +
+                            '<div class="wo-title">' + escHtml(p.title) + '</div>' +
+                            '<div class="wo-meta">' +
+                                '<div class="wo-meta-item"><span>🏢</span><span>' + escHtml(p.company) + '</span></div>' +
+                                '<div class="wo-meta-item"><span>👤</span><span>Supervisor: ' + escHtml(p.supervisor) + '</span></div>' +
+                                '<div class="wo-meta-item"><span>🏭</span><span>' + escHtml(p.location) + '</span></div>' +
+                                '<div class="wo-meta-item"><span>📅</span><span>' + escHtml(p.startDate) + ' – ' + escHtml(p.endDate) + '</span></div>' +
+                            '</div>' +
+                            '<div class="wo-meta" style="margin-top: 0.5rem;">' +
+                                '<div class="wo-meta-item"><span>📅</span><span>Closed: ' + escHtml(p.closedDate) + '</span></div>' +
+                                (p.closedBy ? '<div class="wo-meta-item"><span>👤</span><span>Closed by: ' + escHtml(p.closedBy) + '</span></div>' : '') +
+                                '<div class="wo-meta-item"><span>📋</span><span>Insurance: ' + escHtml(p.insurance) + '</span></div>' +
+                            '</div>' +
+                            (p.scope ? '<div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--gray-600); line-height: 1.5;">' + escHtml(p.scope) + '</div>' : '') +
+                        '</div>' +
+                        '<div class="status-badge" style="background: var(--gray-200); color: var(--gray-700);">CLOSED</div>' +
+                        '<span style="font-size: 0.8rem; color: var(--gray-500); padding: 0.5rem;">Contractor</span>' +
+                    '</div>';
+                }
+            }).join('');
+        }
+
+        function updatePermitStats() {
+            var activeTotal = hotWorkPermits.length + contractorPermits.length;
+            var closedTotal = closedHotWorkPermits.length + closedContractorPermits.length;
+
+            var el = document.getElementById('permitStatActive');
+            if (el) el.textContent = activeTotal;
+            var noteEl = document.getElementById('permitStatActiveNote');
+            if (noteEl) noteEl.textContent = activeTotal === 0 ? 'No active permits' : activeTotal + ' currently active';
+
+            var hwEl = document.getElementById('permitStatHW');
+            if (hwEl) hwEl.textContent = hotWorkPermits.length;
+            var hwNote = document.getElementById('permitStatHWNote');
+            if (hwNote) hwNote.textContent = hotWorkPermits.length === 0 ? 'None active' : hotWorkPermits.length + ' active';
+
+            var cpEl = document.getElementById('permitStatCP');
+            if (cpEl) cpEl.textContent = contractorPermits.length;
+            var cpNote = document.getElementById('permitStatCPNote');
+            if (cpNote) cpNote.textContent = contractorPermits.length === 0 ? 'None active' : 'All valid';
+
+            var clEl = document.getElementById('permitStatClosed');
+            if (clEl) clEl.textContent = closedTotal;
+            var clNote = document.getElementById('permitStatClosedNote');
+            if (clNote) clNote.textContent = 'Available for audit';
         }
 
         // ─────────────────────────────────────────────────────────────────────
