@@ -3091,6 +3091,29 @@
                     <button class="btn btn-primary" onclick="openModal('submitRequestModal')">+ Submit Request</button>
                 </div>
                 <p style="color:var(--gray-600);margin-bottom:1rem;">Submit maintenance requests for equipment issues. Managers and admins can approve requests to create work orders.</p>
+                <div class="filter-bar" style="margin-bottom:1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="reqFilterStatus" onchange="filterWorkRequests()" style="min-width:150px;">
+                            <option value="">All Requests</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="declined">Declined</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Urgency</label>
+                        <select class="form-select" id="reqFilterUrgency" onchange="filterWorkRequests()" style="min-width:150px;">
+                            <option value="">All Urgencies</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="display:flex;align-items:flex-end;">
+                        <button class="btn btn-secondary btn-small" onclick="clearRequestFilter()">Clear</button>
+                    </div>
+                </div>
                 <div id="workRequestsList"></div>
             </div>
         </div>
@@ -6443,15 +6466,20 @@
         // ─────────────────────────────────────────────────────────────────────
         // WORK REQUESTS
         // ─────────────────────────────────────────────────────────────────────
-        function renderWorkRequests() {
+        function renderWorkRequests(data) {
             var container = document.getElementById('workRequestsList');
             if (!container) return;
-            if (workRequestsData.length === 0) {
-                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">No Requests</div><div class="empty-state-text">No maintenance requests have been submitted yet.</div></div>';
+            var list = data || workRequestsData;
+            if (list.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">No Requests</div><div class="empty-state-text">' + (data ? 'No requests match your filters.' : 'No maintenance requests have been submitted yet.') + '</div></div>';
+                // Still update badge from full data
+                var pending = workRequestsData.filter(function(r) { return r.status === 'pending'; }).length;
+                var tab = document.getElementById('workRequestsTab');
+                if (tab) tab.textContent = 'Work Requests' + (pending > 0 ? ' (' + pending + ')' : '');
                 return;
             }
             var isAdminOrManager = currentUserRole === 'admin' || currentUserRole === 'manager';
-            container.innerHTML = workRequestsData.map(function(req) {
+            container.innerHTML = list.map(function(req) {
                 var urgColors = { high: 'var(--danger)', medium: 'var(--warning)', low: 'var(--success)' };
                 var urgLabels = { high: 'HIGH', medium: 'MEDIUM', low: 'LOW' };
                 var statusBadge = req.status === 'pending' ? '<span class="status-badge" style="background:rgba(0,102,255,0.1);color:var(--primary);">PENDING</span>' :
@@ -6459,10 +6487,19 @@
                     '<span class="status-badge" style="background:rgba(220,38,38,0.1);color:var(--danger);">DECLINED</span>';
                 var actions = '';
                 if (isAdminOrManager && req.status === 'pending') {
-                    actions = '<div style="display:flex;gap:0.5rem;margin-top:0.75rem;">' +
+                    actions = '<div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.75rem;flex-wrap:wrap;">' +
+                        '<select class="form-select" id="reqAssign_' + req.id + '" style="min-width:160px;flex:1;">' +
+                        '<option value="">Assign to engineer...</option>' +
+                        '<option value="John Smith">John Smith</option>' +
+                        '<option value="Mike Johnson">Mike Johnson</option>' +
+                        '<option value="Sarah Williams">Sarah Williams</option>' +
+                        '</select>' +
                         '<button class="btn btn-success btn-small" onclick="approveRequest(' + req.id + ')">Approve & Create WO</button>' +
                         '<button class="btn btn-danger btn-small" onclick="declineRequest(' + req.id + ')">Decline</button>' +
                         '</div>';
+                }
+                if (req.status === 'approved' && req.approvedWoId) {
+                    actions = '<div style="margin-top:0.5rem;font-size:0.85rem;color:var(--success);font-weight:600;">Created as ' + escHtml(req.approvedWoId) + (req.assignedTo ? ' — Assigned to ' + escHtml(req.assignedTo) : '') + '</div>';
                 }
                 return '<div style="padding:1rem;background:var(--gray-100);border-radius:8px;margin-bottom:0.75rem;border-left:4px solid ' + (urgColors[req.urgency] || 'var(--gray-400)') + ';">' +
                     '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.5rem;">' +
@@ -6501,24 +6538,32 @@
         function approveRequest(reqId) {
             var req = workRequestsData.find(function(r) { return r.id === reqId; });
             if (!req) return;
+            // Get assigned engineer from dropdown
+            var assignSel = document.getElementById('reqAssign_' + reqId);
+            var assignedTo = assignSel ? assignSel.value : '';
             req.status = 'approved';
+            req.assignedTo = assignedTo;
             // Create a work order from this request
             var now = new Date();
             var timestamp = now.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' }) + ' - ' + now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
             var woIdStr = 'WO-' + now.getFullYear() + '-' + String(nextWoId).padStart(3, '0');
             workOrdersData.push({
                 id: nextWoId++, woId: woIdStr, title: req.equipment + ' - ' + req.description.substring(0, 50),
-                equipment: req.equipment, priority: req.urgency, status: 'open', assignedTo: '',
+                equipment: req.equipment, priority: req.urgency, status: 'open', assignedTo: assignedTo,
                 createdBy: currentUserName || 'System', created: timestamp,
                 description: 'From maintenance request by ' + req.submitter + ':\n\n' + req.description,
                 hasPhotos: false, comments: [], startTime: '', finishTime: '', totalJobTime: '', machineDowntime: ''
             });
+            req.approvedWoId = woIdStr;
             saveData('nextWoId', nextWoId);
             saveData('workRequests', workRequestsData);
             persistAllData();
             renderWorkRequests();
             renderWorkOrders();
-            showToast('Request approved — Work Order ' + woIdStr + ' created!', 'success');
+            if (typeof renderEngineerDashboard === 'function') renderEngineerDashboard();
+            var msg = 'Request approved — Work Order ' + woIdStr + ' created!';
+            if (assignedTo) msg += ' Assigned to ' + assignedTo + '.';
+            showToast(msg, 'success');
         }
 
         function declineRequest(reqId) {
@@ -6538,6 +6583,23 @@
             equipmentList.forEach(function(eq) {
                 sel.innerHTML += '<option value="' + escHtml(eq.name) + '">' + escHtml(eq.name) + ' (' + escHtml(eq.equipId) + ')</option>';
             });
+        }
+
+        function filterWorkRequests() {
+            var status = document.getElementById('reqFilterStatus').value;
+            var urgency = document.getElementById('reqFilterUrgency').value;
+            var filtered = workRequestsData.filter(function(r) {
+                if (status && r.status !== status) return false;
+                if (urgency && r.urgency !== urgency) return false;
+                return true;
+            });
+            renderWorkRequests(filtered);
+        }
+
+        function clearRequestFilter() {
+            document.getElementById('reqFilterStatus').value = '';
+            document.getElementById('reqFilterUrgency').value = '';
+            renderWorkRequests();
         }
 
         // ─────────────────────────────────────────────────────────────────────
