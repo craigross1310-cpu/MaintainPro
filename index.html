@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cradero - Complete Maintenance Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com; worker-src 'self';">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         :root {
             --primary: #0066FF;
@@ -1543,6 +1543,7 @@
                 <span>Cradero</span>
             </div>
             <div class="header-actions">
+                <span id="offlineIndicator" style="display:none;background:#FF3D00;color:white;padding:4px 12px;border-radius:6px;font-size:0.75rem;font-weight:600;letter-spacing:0.5px;">OFFLINE</span>
                 <button class="notification-bell" onclick="toggleNotifications()">
                     🔔
                     <span class="notification-badge" id="notificationCount">5</span>
@@ -4126,11 +4127,84 @@
 
     <script>
         // ─────────────────────────────────────────────────────────────────────
+        // SERVICE WORKER REGISTRATION
+        // ─────────────────────────────────────────────────────────────────────
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+                .then(function(reg) { console.log('SW registered:', reg.scope); })
+                .catch(function(err) { console.warn('SW registration failed:', err); });
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // DATA PERSISTENCE (localStorage)
+        // ─────────────────────────────────────────────────────────────────────
+        var STORAGE_PREFIX = 'cradero_';
+
+        function saveData(key, data) {
+            try {
+                localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(data));
+            } catch (e) {
+                console.warn('Storage save failed for ' + key, e);
+            }
+        }
+
+        function loadData(key, defaultValue) {
+            try {
+                var stored = localStorage.getItem(STORAGE_PREFIX + key);
+                return stored !== null ? JSON.parse(stored) : defaultValue;
+            } catch (e) {
+                console.warn('Storage load failed for ' + key, e);
+                return defaultValue;
+            }
+        }
+
+        function clearAllData() {
+            Object.keys(localStorage)
+                .filter(function(k) { return k.startsWith(STORAGE_PREFIX); })
+                .forEach(function(k) { localStorage.removeItem(k); });
+        }
+
+        function persistAllData() {
+            saveData('workOrders', workOrdersData);
+            saveData('equipment', equipmentList);
+            saveData('parts', partsData);
+            saveData('purchaseOrders', purchaseOrdersData);
+            saveData('hotWorkPermits', hotWorkPermits);
+            saveData('contractorPermits', contractorPermits);
+            saveData('pmSchedule', pmData);
+            saveData('breakdowns', breakdownsData);
+            saveData('calendarEvents', calendarEvents);
+            saveData('nextWoId', nextWoId);
+            saveData('nextEquipId', nextEquipId);
+            saveData('nextPartId', nextPartId);
+            saveData('nextPoId', nextPoId);
+            saveData('nextHwId', nextHwId);
+            saveData('nextCpId', nextCpId);
+            saveData('nextPmId', nextPmId);
+            saveData('nextBrId', nextBrId);
+            saveData('nextCalId', nextCalId);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
         // SUPABASE CLIENT
         // ─────────────────────────────────────────────────────────────────────
         const SUPABASE_URL = 'https://ckjdwiipogxdkehxqrzh.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNramR3aWlwb2d4ZGtlaHhxcnpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTE5NDEsImV4cCI6MjA4NzQyNzk0MX0.lLXFAr42AgrkyakPZ4ketX0BfvLK9RayghmkIddXoYg';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        var supabaseClient;
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch(e) {
+            supabaseClient = {
+                auth: {
+                    getSession: function() { return Promise.resolve({ data: { session: null } }); },
+                    signInWithPassword: function() { return Promise.resolve({ error: { message: 'You are offline. Please connect to the internet to sign in for the first time.' } }); },
+                    signUp: function() { return Promise.resolve({ error: { message: 'You are offline. Please connect to the internet to sign up.' } }); },
+                    signOut: function() { return Promise.resolve({}); },
+                    onAuthStateChange: function() { return { data: { subscription: { unsubscribe: function() {} } } }; }
+                },
+                from: function() { return { select: function() { return { eq: function() { return { single: function() { return Promise.resolve({ data: null, error: { message: 'Offline' } }); } }; } }; } }; }
+            };
+        }
 
         // ─────────────────────────────────────────────────────────────────────
         // AUTHENTICATION
@@ -4161,13 +4235,25 @@
             // Check if user's role is 'pending' — block access if so
             var role = null;
             if (user) {
-                var profileResult = await supabaseClient
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', user.id)
-                    .single();
-                if (profileResult.data) {
-                    role = profileResult.data.role;
+                if (navigator.onLine) {
+                    try {
+                        var profileResult = await supabaseClient
+                            .from('profiles')
+                            .select('role')
+                            .eq('id', user.id)
+                            .single();
+                        if (profileResult.data) {
+                            role = profileResult.data.role;
+                        }
+                        // Cache successful auth for offline use
+                        saveData('cachedUser', { id: user.id, email: user.email, role: role });
+                    } catch (e) {
+                        var cached = loadData('cachedUser', null);
+                        if (cached && cached.id === user.id) { role = cached.role; }
+                    }
+                } else {
+                    var cached = loadData('cachedUser', null);
+                    if (cached && cached.id === user.id) { role = cached.role; }
                 }
             }
 
@@ -4281,16 +4367,51 @@
         }
 
         async function handleLogout() {
-            await supabaseClient.auth.signOut();
+            try { await supabaseClient.auth.signOut(); } catch(e) {}
+            saveData('cachedUser', null);
             appInitialized = false;
             showAuthScreen();
         }
 
         async function checkAuthOnLoad() {
-            var result = await supabaseClient.auth.getSession();
-            if (result.data.session) {
-                await showApp(result.data.session.user);
-                return true;
+            try {
+                var result = await supabaseClient.auth.getSession();
+                if (result.data.session) {
+                    await showApp(result.data.session.user);
+                    return true;
+                }
+            } catch (e) {
+                // Supabase unreachable — check for cached session
+                var cached = loadData('cachedUser', null);
+                if (cached && cached.role !== 'pending') {
+                    document.getElementById('authScreen').classList.add('hidden');
+                    document.getElementById('pendingScreen').style.display = 'none';
+                    document.getElementById('appContent').style.display = '';
+                    document.getElementById('userEmailDisplay').textContent = cached.email || '';
+                    if (!appInitialized) {
+                        appInitialized = true;
+                        if (typeof renderWorkOrders === 'function') {
+                            renderWorkOrders();
+                            renderEquipment();
+                            renderParts();
+                            renderPurchaseOrders();
+                            renderHotWorkPermits();
+                            renderContractorPermits();
+                            renderPM();
+                            updateNotificationCount();
+                            initializeCharts();
+                            if (typeof renderBreakdowns === 'function') {
+                                renderBreakdowns();
+                                renderCalendar();
+                                populateEquipDropdown('brMachine', false);
+                                populateEquipDropdown('brFilterMachine', true);
+                                populateEquipDropdown('brEditMachine', false);
+                                populateEquipDropdown('calEquipment', false);
+                            }
+                        }
+                    }
+                    return true;
+                }
             }
             showAuthScreen();
             return false;
@@ -4328,59 +4449,62 @@
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // DATA STORES
+        // DATA STORES (loaded from localStorage, with hardcoded defaults)
         // ─────────────────────────────────────────────────────────────────────
-        let nextWoId = 5;
-        let workOrdersData = [
+        var _hasStoredData = localStorage.getItem(STORAGE_PREFIX + 'workOrders') !== null;
+
+        var DEFAULT_WORK_ORDERS = [
             { id: 1, woId: 'WO-2024-001', title: 'Line 3 Filler - Motor Overheating', equipment: 'Line 3 Filler', priority: 'high', status: 'open', assignedTo: '', createdBy: 'Sarah Williams', created: 'Feb 13, 2026 - 9:20 AM', description: 'Motor temperature reading above normal range. Noticed unusual heat during production run. Requires immediate inspection to prevent potential failure.', hasPhotos: true },
             { id: 2, woId: 'WO-2024-002', title: 'Line 1 Conveyor - Belt Replacement', equipment: 'Line 1 Conveyor', priority: 'medium', status: 'in-progress', assignedTo: 'John Smith', createdBy: 'Mike Johnson', created: 'Feb 13, 2026 - 8:00 AM', description: 'Conveyor belt showing signs of wear and cracking. Scheduled replacement to prevent unexpected failure during production.', hasPhotos: false },
             { id: 3, woId: 'WO-2024-003', title: 'Line 2 Packaging - Sensor Calibration', equipment: 'Line 2 Packaging', priority: 'low', status: 'open', assignedTo: '', createdBy: 'Sarah Williams', created: 'Feb 12, 2026 - 3:45 PM', description: 'Routine calibration of proximity sensors on packaging line. Sensors need to be adjusted for optimal product detection.', hasPhotos: false },
             { id: 4, woId: 'WO-2024-004', title: 'Line 4 Mixer - Bearing Noise Investigation', equipment: 'Line 4 Mixer', priority: 'high', status: 'in-progress', assignedTo: 'Mike Johnson', createdBy: 'John Smith', created: 'Feb 13, 2026 - 11:00 AM', description: 'Unusual grinding noise coming from main mixer bearing. Investigating potential bearing failure. May require replacement if wear is detected.', hasPhotos: true }
         ];
+        let nextWoId = loadData('nextWoId', 5);
+        let workOrdersData = loadData('workOrders', DEFAULT_WORK_ORDERS);
 
-        let nextEquipId = 5;
-        let equipmentList = [
+        let nextEquipId = loadData('nextEquipId', 5);
+        let equipmentList = loadData('equipment', [
             { id: 1, name: 'Line 3 - Filler Machine',  equipId: 'EQ-FL-003', manufacturer: 'FoodTech Pro',        model: 'FT-500X',  location: 'Production Floor - Line 3', installDate: '2021-01', status: 'down',        workOrders30d: 8 },
             { id: 2, name: 'Line 1 - Conveyor System',  equipId: 'EQ-CV-001', manufacturer: 'ConveyorMax',         model: 'CM-200',   location: 'Production Floor - Line 1', installDate: '2020-03', status: 'maintenance', workOrders30d: 3 },
             { id: 3, name: 'Line 2 - Industrial Mixer', equipId: 'EQ-MX-002', manufacturer: 'MixMaster Industrial', model: 'MM-1000',  location: 'Production Floor - Line 2', installDate: '2019-08', status: 'operational', workOrders30d: 2 },
             { id: 4, name: 'Line 4 - Packaging Unit',   equipId: 'EQ-PK-004', manufacturer: 'PackPro Systems',     model: 'PP-300',   location: 'Production Floor - Line 4', installDate: '2020-12', status: 'operational', workOrders30d: 4 }
-        ];
+        ]);
 
-        let nextPartId = 4;
-        let partsData = [
+        let nextPartId = loadData('nextPartId', 4);
+        let partsData = loadData('parts', [
             { id: 1, name: 'Motor Bearing 6205',   partNumber: 'PN-MB-6205-001', qty: 15, minStock: 8, shelf: 'B3', bin: '12', monthlyUsage: 3 },
             { id: 2, name: 'Conveyor Belt 48"',    partNumber: 'PN-CB-48-002',   qty: 2,  minStock: 4, shelf: 'A1', bin: '5',  monthlyUsage: 1 },
             { id: 3, name: 'Proximity Sensor M18', partNumber: 'PN-PS-M18-004',  qty: 0,  minStock: 5, shelf: 'D4', bin: '15', monthlyUsage: 2 }
-        ];
+        ]);
 
-        let nextPoId = 146;
-        let purchaseOrdersData = [
+        let nextPoId = loadData('nextPoId', 146);
+        let purchaseOrdersData = loadData('purchaseOrders', [
             { id: 1, poNumber: 'PO-2026-00145', title: 'Emergency Parts Order',         vendor: 'Grainger',                    status: 'ordered',    priority: 'high',   total: '$1,245.00', created: 'Today, 10:30 AM',  items: 3,  expectedDelivery: 'Same Day',      tags: ['Proximity Sensor M18 (5x)', 'Motor Bearing 6205 (2x)', 'Conveyor Belt (1x)'], tracking: null,                 notes: 'Urgent repair parts for Line 3 production issue', requestedBy: 'Sarah Williams', budgetCode: 'Emergency Repairs' },
             { id: 2, poNumber: 'PO-2026-00144', title: 'Monthly Restock Order',         vendor: 'RS Components',               status: 'pending',    priority: 'medium', total: '$2,890.00', created: 'Yesterday',        items: 12, expectedDelivery: 'Next Day',      tags: [],                                                                              tracking: null,                 notes: 'Monthly restock order - awaiting approval',      requestedBy: 'John Smith',    budgetCode: 'Maintenance Budget' },
             { id: 3, poNumber: 'PO-2026-00143', title: 'Preventive Maintenance Parts', vendor: 'Motion Industries',            status: 'in-transit', priority: 'low',    total: '$1,567.50', created: 'Feb 12',           items: 8,  expectedDelivery: 'Tomorrow',      tags: [],                                                                              tracking: '1Z999AA10123456784', notes: 'Preventive maintenance parts',                   requestedBy: 'Mike Johnson',  budgetCode: 'Maintenance Budget' },
             { id: 4, poNumber: 'PO-2026-00142', title: 'Line 3 Repair Parts',          vendor: 'Local Supplier - BearingMax', status: 'received',   priority: 'low',    total: '$532.00',   created: 'Feb 11',           items: 5,  expectedDelivery: 'Received',      tags: [],                                                                              tracking: null,                 notes: 'Picked up from local supplier',                  requestedBy: 'John Smith',    budgetCode: 'Emergency Repairs' }
-        ];
+        ]);
 
-        let nextHwId = 2;
-        let hotWorkPermits = [
+        let nextHwId = loadData('nextHwId', 2);
+        let hotWorkPermits = loadData('hotWorkPermits', [
             { id: 1, title: '🔥 Welding Work - Line 3 Filler Repair', location: 'Production Floor - Line 3', engineer: 'Mike Johnson', fireWatch: 'Tom Carter', startTime: '09:00', endTime: '17:00', status: 'active', validText: 'Valid until: 5:00 PM today', expiryText: 'Expires in 3 hours' }
-        ];
+        ]);
 
-        let nextCpId = 4;
-        let contractorPermits = [
+        let nextCpId = loadData('nextCpId', 4);
+        let contractorPermits = loadData('contractorPermits', [
             { id: 1, title: 'HVAC System Maintenance - XYZ Mechanical',            company: 'XYZ Mechanical Services',   supervisor: 'Tom Davis',       phone: '(555) 123-4567', workers: 3, location: 'Mechanical Room',   startDate: 'Feb 13, 2026', endDate: 'Feb 14, 2026', insurance: 'INS-2024-12345', scope: 'Complete HVAC system maintenance including filter replacement, coil cleaning, and system testing.',                                              status: 'Active', expiryText: 'Expires tomorrow' },
             { id: 2, title: 'Electrical Panel Upgrade - ABC Electric',              company: 'ABC Electric Co.',          supervisor: 'Lisa Chen',        phone: '(555) 234-5678', workers: 2, location: 'Electrical Room',   startDate: 'Feb 13, 2026', endDate: 'Feb 15, 2026', insurance: 'INS-2024-67890', scope: 'Upgrade main electrical panel and install new circuit breakers for increased capacity.',                                                         status: 'Active', expiryText: 'Expires in 2 days' },
             { id: 3, title: 'Fire Suppression System Inspection - SafeGuard Fire', company: 'SafeGuard Fire Protection', supervisor: 'Robert Martinez', phone: '(555) 345-6789', workers: 2, location: 'Facility-Wide',    startDate: 'Feb 13, 2026', endDate: 'Feb 13, 2026', insurance: 'INS-2024-11223', scope: 'Annual inspection and testing of fire suppression system including all sprinkler heads and control panels.', status: 'Active', expiryText: 'Expires tonight' }
-        ];
+        ]);
 
-        let nextPmId = 6;
-        let pmData = [
+        let nextPmId = loadData('nextPmId', 6);
+        let pmData = loadData('pmSchedule', [
             { id: 'fire-alarm',    title: '🔥 Fire Alarm System - Weekly Test',    equipment: 'Facility-Wide',        frequency: 'Weekly (Every Monday)', duration: '15 minutes', assignedTo: 'Mike Johnson',    dueStatus: 'overdue',  dueText: 'Overdue by 1 day', status: 'overdue',   lastCompleted: 'Feb 5, 2026' },
             { id: 'emerg-light',   title: '💡 Emergency Lighting - Monthly Test',   equipment: 'All Emergency Exits',  frequency: 'Monthly (1st of month)', duration: '45 minutes', assignedTo: 'Sarah Williams',  dueStatus: 'due-soon', dueText: 'Due in 2 days',    status: 'due-soon',  lastCompleted: 'Jan 1, 2026' },
             { id: 'line3-lube',    title: 'Line 3 Filler - Monthly Lubrication',   equipment: 'Line 3 Filler',        frequency: 'Monthly',               duration: '30 minutes', assignedTo: 'Sarah Williams',  dueStatus: 'overdue',  dueText: 'Overdue by 2 days', status: 'overdue',  lastCompleted: 'Jan 12, 2026' },
             { id: 'line1-belt',    title: 'Line 1 Conveyor - Belt Tension Check',  equipment: 'Line 1 Conveyor',      frequency: 'Weekly',                duration: '15 minutes', assignedTo: 'John Smith',      dueStatus: 'due-soon', dueText: 'Due tomorrow',     status: 'due-soon',  lastCompleted: 'Feb 6, 2026' },
             { id: 'line2-oil',     title: 'Line 2 Mixer - Gearbox Oil Change',     equipment: 'Line 2 Mixer',         frequency: 'Quarterly',             duration: '1 hour',     assignedTo: 'Mike Johnson',    dueStatus: 'upcoming', dueText: 'Due in 5 days',    status: 'upcoming',  lastCompleted: 'Nov 14, 2025' }
-        ];
+        ]);
 
         // Track currently editing IDs
         let currentEditEquipId = null;
@@ -4801,6 +4925,7 @@
             document.getElementById('workOrderForm').reset();
             document.getElementById('filePreview').innerHTML = '';
             uploadedFiles = [];
+            persistAllData();
             showToast('✅ Work order created successfully!', 'success');
         }
 
@@ -4849,6 +4974,7 @@
             if (newStatus) wo.status = newStatus;
             renderWorkOrders();
             closeModal('workOrderDetailModal');
+            persistAllData();
             showToast('✅ Work order updated!', 'success');
         }
 
@@ -4856,6 +4982,7 @@
             if (!confirm('Delete this work order? This cannot be undone.')) return;
             workOrdersData = workOrdersData.filter(w => w.id !== woId);
             renderWorkOrders();
+            persistAllData();
             showToast('Work order deleted.', 'info');
         }
 
@@ -4884,6 +5011,7 @@
             renderEquipment();
             closeModal('equipmentModal');
             document.getElementById('equipmentForm').reset();
+            persistAllData();
             showToast('✅ Equipment added successfully!', 'success');
         }
 
@@ -4941,6 +5069,7 @@
             eq.status       = document.getElementById('editStatus').value;
             renderEquipment();
             closeModal('equipmentEditModal');
+            persistAllData();
             showToast('✅ Equipment updated!', 'success');
         }
 
@@ -4950,6 +5079,7 @@
             if (!confirm(`Delete "${eq.name}"? This cannot be undone.`)) return;
             equipmentList = equipmentList.filter(e => e.id !== equipId);
             renderEquipment();
+            persistAllData();
             showToast('Equipment deleted.', 'info');
         }
 
@@ -4973,6 +5103,7 @@
             renderParts();
             closeModal('addPartModal');
             document.getElementById('addPartForm').reset();
+            persistAllData();
             showToast('✅ Part added to inventory!', 'success');
         }
 
@@ -5014,6 +5145,7 @@
             btn.setAttribute('onclick', 'submitAddPart()');
             document.querySelector('#addPartModal .modal-title').textContent = 'Add New Part';
             editingPartId = null;
+            persistAllData();
             showToast('✅ Part updated!', 'success');
         }
 
@@ -5023,6 +5155,7 @@
             if (!confirm(`Delete "${p.name}" from inventory?`)) return;
             partsData = partsData.filter(x => x.id !== partId);
             renderParts();
+            persistAllData();
             showToast('Part removed from inventory.', 'info');
         }
 
@@ -5069,6 +5202,7 @@
             renderPurchaseOrders();
             closeModal('orderPartModal');
             document.getElementById('orderPartForm').reset();
+            persistAllData();
             showToast(`✅ ${poNumber} created and added to Purchase Orders!`, 'success');
         }
 
@@ -5131,6 +5265,7 @@
             renderPurchaseOrders();
             closeModal('createPOModal');
             document.getElementById('createPOForm').reset();
+            persistAllData();
             showToast(`✅ ${poNumber} created — awaiting approval.`, 'success');
         }
 
@@ -5158,6 +5293,7 @@
             if (po) {
                 po.status = 'ordered';
                 renderPurchaseOrders();
+                persistAllData();
                 showToast(`✅ ${poNumber} approved and sent to vendor!`, 'success');
             }
         }
@@ -5166,6 +5302,7 @@
             if (!confirm('Delete this purchase order?')) return;
             purchaseOrdersData = purchaseOrdersData.filter(p => p.id !== poId);
             renderPurchaseOrders();
+            persistAllData();
             showToast('Purchase order deleted.', 'info');
         }
 
@@ -5225,6 +5362,7 @@
             renderHotWorkPermits();
             closeModal('hotWorkPermitModal');
             document.getElementById('hotWorkPermitForm').reset();
+            persistAllData();
             showToast('✅ Hot work permit issued!', 'success');
         }
 
@@ -5232,6 +5370,7 @@
             if (!confirm('Close this hot work permit? This will archive the record.')) return;
             hotWorkPermits = hotWorkPermits.filter(p => p.id !== id);
             renderHotWorkPermits();
+            persistAllData();
             showToast('Hot work permit closed.', 'info');
         }
 
@@ -5270,6 +5409,7 @@
             renderContractorPermits();
             closeModal('contractorPermitModal');
             document.getElementById('contractorPermitForm').reset();
+            persistAllData();
             showToast('✅ Contractor permit issued!', 'success');
         }
 
@@ -5277,6 +5417,7 @@
             if (!confirm('Close this contractor permit?')) return;
             contractorPermits = contractorPermits.filter(p => p.id !== id);
             renderContractorPermits();
+            persistAllData();
             showToast('Contractor permit closed.', 'info');
         }
 
@@ -5328,6 +5469,7 @@
                 renderContractorPermits();
             }
             closeModal('permitDetailModal');
+            persistAllData();
             showToast('Permit revoked.', 'info');
         }
 
@@ -5374,6 +5516,7 @@
             renderPM();
             closeModal('addPMModal');
             document.getElementById('addPMForm').reset();
+            persistAllData();
             showToast('✅ PM task scheduled!', 'success');
         }
 
@@ -5386,6 +5529,7 @@
             pm.lastCompleted = now;
             pm.dueText = 'Next due: scheduled';
             renderPM();
+            persistAllData();
             showToast(`✅ "${pm.title}" marked complete!`, 'success');
         }
 
@@ -5397,6 +5541,7 @@
             if (!confirm('Delete this PM task?')) return;
             pmData = pmData.filter(p => p.id !== pmId);
             renderPM();
+            persistAllData();
             showToast('PM task removed.', 'info');
         }
 
@@ -5411,6 +5556,14 @@
         // INITIALIZE
         // ─────────────────────────────────────────────────────────────────────
         document.addEventListener('DOMContentLoaded', async function() {
+            // Offline indicator
+            var offlineEl = document.getElementById('offlineIndicator');
+            if (offlineEl) {
+                if (!navigator.onLine) offlineEl.style.display = 'inline-block';
+                window.addEventListener('online', function() { offlineEl.style.display = 'none'; });
+                window.addEventListener('offline', function() { offlineEl.style.display = 'inline-block'; });
+            }
+
             var authed = await checkAuthOnLoad();
             if (!authed) return;
             renderWorkOrders();
@@ -5478,8 +5631,8 @@
         // =================================================================
         // REACTIVE MAINTENANCE
         // =================================================================
-        var nextBrId = 4;
-        var breakdownsData = [
+        var nextBrId = loadData('nextBrId', 4);
+        var breakdownsData = loadData('breakdowns', [
             {
                 id: 1, brId: 'BR-2026-001',
                 machine: 'Line 3 - Filler Machine', dateISO: '2026-02-13', time: '08:45',
@@ -5507,26 +5660,28 @@
                 resolvedBy: '', timeToResolve: '',
                 productionLoss: 'Ongoing', status: 'pending', linkedWoId: 5
             }
-        ];
+        ]);
 
-        // Seed WO for pending breakdown BR-2026-003
-        workOrdersData.push({
-            id: 5, woId: 'WO-2026-005',
-            title: '\u26A1 Breakdown: Sealing jaw not reaching temperature',
-            equipment: 'Line 4 - Packaging Unit',
-            priority: 'high', status: 'open',
-            assignedTo: '', createdBy: 'System',
-            created: '20 Feb 2026',
-            description: 'Auto-raised from Reactive Maintenance Log. Breakdown: BR-2026-003. Heater element failed.',
-            hasPhotos: false, fromBreakdown: 'BR-2026-003'
-        });
-        nextWoId = 6;
+        // Seed WO for pending breakdown BR-2026-003 (only on first load)
+        if (!_hasStoredData) {
+            workOrdersData.push({
+                id: 5, woId: 'WO-2026-005',
+                title: '\u26A1 Breakdown: Sealing jaw not reaching temperature',
+                equipment: 'Line 4 - Packaging Unit',
+                priority: 'high', status: 'open',
+                assignedTo: '', createdBy: 'System',
+                created: '20 Feb 2026',
+                description: 'Auto-raised from Reactive Maintenance Log. Breakdown: BR-2026-003. Heater element failed.',
+                hasPhotos: false, fromBreakdown: 'BR-2026-003'
+            });
+            nextWoId = 6;
+        }
 
         // =================================================================
         // CALENDAR DATA
         // =================================================================
-        var nextCalId = 8;
-        var calendarEvents = [
+        var nextCalId = loadData('nextCalId', 8);
+        var calendarEvents = loadData('calendarEvents', [
             { id: 1, title: 'Line 3 Annual Service',        equipment: 'Line 3 - Filler Machine',   type: 'major-service', date: '2026-02-20', duration: '8 hours',  assignedTo: 'John Smith',     notes: 'Full strip-down and inspection',                status: 'planned' },
             { id: 2, title: 'Fire Suppression Annual Test', equipment: 'Facility-Wide',              type: 'inspection',    date: '2026-02-25', duration: '2 hours',  assignedTo: 'Mike Johnson',   notes: 'Annual statutory inspection',                   status: 'planned' },
             { id: 3, title: 'Line 1 Weekly Belt Check',     equipment: 'Line 1 - Conveyor System',  type: 'weekly-pm',     date: '2026-02-17', duration: '30 min',   assignedTo: 'John Smith',     notes: '',                                              status: 'completed' },
@@ -5534,7 +5689,7 @@
             { id: 5, title: 'Line 4 Weekly Check',          equipment: 'Line 4 - Packaging Unit',   type: 'weekly-pm',     date: '2026-02-24', duration: '30 min',   assignedTo: 'Sarah Williams', notes: '',                                              status: 'planned' },
             { id: 6, title: 'Factory Shutdown \u2014 Deep Clean', equipment: 'Facility-Wide',        type: 'shutdown',      date: '2026-03-06', duration: 'Full Day', assignedTo: '',               notes: 'Planned shutdown for deep clean and major PMs', status: 'planned' },
             { id: 7, title: 'Line 1 Monthly Lubrication',   equipment: 'Line 1 - Conveyor System',  type: 'monthly-pm',    date: '2026-03-09', duration: '45 min',   assignedTo: 'John Smith',     notes: '',                                              status: 'planned' }
-        ];
+        ]);
 
         var currentCalYear  = 2026;
         var currentCalMonth = 1;
@@ -5699,6 +5854,7 @@
             document.getElementById('logBreakdownForm').reset();
             renderBreakdowns();
             populateEquipDropdown('brFilterMachine', true);
+            persistAllData();
             showToast('Breakdown logged' + (linkedWoId ? ' \u2014 Work Order raised.' : '.'), 'success');
         }
 
@@ -5749,12 +5905,14 @@
 
             closeModal('breakdownDetailModal');
             renderBreakdowns();
+            persistAllData();
             showToast('Breakdown updated.', 'success');
         }
 
         function deleteBreakdown(brId) {
             breakdownsData = breakdownsData.filter(function(b) { return b.id !== brId; });
             renderBreakdowns();
+            persistAllData();
             showToast('Breakdown deleted.', 'info');
         }
 
@@ -5892,12 +6050,14 @@
             closeModal('addCalendarEventModal');
             document.getElementById('addCalendarEventForm').reset();
             renderCalendar();
+            persistAllData();
             showToast('Job added to calendar.', 'success');
         }
 
         function deleteCalendarEvent(evId) {
             calendarEvents = calendarEvents.filter(function(e) { return e.id !== evId; });
             renderCalendar();
+            persistAllData();
             showToast('Calendar event deleted.', 'info');
         }
 
@@ -5907,4 +6067,4 @@
 </body>
 </html>
 
-safari code edit
+offline integration
