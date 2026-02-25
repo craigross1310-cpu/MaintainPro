@@ -4147,13 +4147,19 @@
 
         function applyTierRestrictions() {
             // Hide nav tabs the user cannot access
-            document.querySelectorAll('.nav-tab').forEach(function(btn) {
+            var hiddenCount = 0;
+            var allTabs = document.querySelectorAll('.nav-tab');
+            allTabs.forEach(function(btn) {
                 var onclick = btn.getAttribute('onclick') || '';
                 var match = onclick.match(/switchTab\('(\w+)'\)/);
                 if (!match) return;
                 var tabName = match[1];
-                btn.style.display = hasAccess(tabName) ? '' : 'none';
+                if (!hasAccess(tabName)) {
+                    btn.style.display = 'none';
+                    hiddenCount++;
+                }
             });
+            alert('DEBUG applyTierRestrictions: found ' + allTabs.length + ' tabs, hidden ' + hiddenCount + ', tier=' + currentUserTier);
             // If active tab is locked, switch to Work Orders
             var activeTab = document.querySelector('.tab-content.active');
             if (activeTab && !hasAccess(activeTab.id)) {
