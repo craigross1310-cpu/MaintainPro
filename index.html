@@ -8,6 +8,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' blob: data: https://*.supabase.co https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com; worker-src 'self' blob:;">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <style>
         :root {
             --primary: #0066FF;
@@ -6286,43 +6287,109 @@
         function downloadPOPDF() {
             var po = purchaseOrdersData.find(function(p) { return p.id === currentDetailPoId; });
             if (!po) { showToast('No PO selected.', 'error'); return; }
-            var itemsHtml = '';
+            var jsPDF = window.jspdf.jsPDF;
+            var doc = new jsPDF();
+            var y = 20;
+            var leftMargin = 20;
+            var labelX = leftMargin;
+            var valueX = 70;
+            var pageWidth = doc.internal.pageSize.getWidth();
+
+            // Header
+            doc.setFillColor(0, 102, 255);
+            doc.rect(0, 0, pageWidth, 12, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(9);
+            doc.text('CRADERO - MAINTENANCE MANAGEMENT', leftMargin, 8);
+
+            // Title
+            y = 24;
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(18);
+            doc.setFont(undefined, 'bold');
+            doc.text('PURCHASE ORDER', leftMargin, y);
+            y += 10;
+            doc.setTextColor(0, 102, 255);
+            doc.setFontSize(14);
+            doc.text(po.poNumber, leftMargin, y);
+            y += 4;
+            doc.setDrawColor(200, 200, 200);
+            doc.line(leftMargin, y, pageWidth - leftMargin, y);
+            y += 10;
+
+            // Meta fields
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(10);
+            var fields = [
+                ['Vendor:', po.vendor || '-'],
+                ['Status:', po.status.toUpperCase()],
+                ['Created:', po.created || '-'],
+                ['Requested By:', po.requestedBy || '-'],
+                ['Budget Code:', po.budgetCode || '-'],
+                ['Priority:', po.priority.toUpperCase()]
+            ];
+            if (po.tracking) fields.push(['Tracking:', po.tracking]);
+            if (po.expectedDelivery) fields.push(['Expected Delivery:', po.expectedDelivery]);
+            fields.forEach(function(f) {
+                doc.setFont(undefined, 'bold');
+                doc.text(f[0], labelX, y);
+                doc.setFont(undefined, 'normal');
+                doc.text(String(f[1]), valueX, y);
+                y += 7;
+            });
+
+            // Items section
+            y += 4;
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text('Items', leftMargin, y);
+            y += 6;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
             if (po.tags && po.tags.length) {
-                itemsHtml = '<table style="width:100%;border-collapse:collapse;margin-top:8px;">' +
-                    '<tr style="background:#f0f0f0;"><th style="text-align:left;padding:6px;border:1px solid #ccc;">#</th><th style="text-align:left;padding:6px;border:1px solid #ccc;">Item</th></tr>' +
-                    po.tags.map(function(t, i) {
-                        return '<tr><td style="padding:6px;border:1px solid #ccc;">' + (i + 1) + '</td><td style="padding:6px;border:1px solid #ccc;">' + t.replace(/</g, '&lt;') + '</td></tr>';
-                    }).join('') + '</table>';
+                po.tags.forEach(function(t, i) {
+                    if (y > 270) { doc.addPage(); y = 20; }
+                    doc.setFillColor(245, 245, 245);
+                    doc.rect(leftMargin, y - 4, pageWidth - leftMargin * 2, 8, 'F');
+                    doc.text((i + 1) + '.  ' + t, leftMargin + 4, y + 1);
+                    y += 10;
+                });
             } else {
-                itemsHtml = '<p>' + po.items + ' item(s)</p>';
+                doc.text(po.items + ' item(s)', leftMargin, y);
+                y += 10;
             }
-            var html = '<!DOCTYPE html><html><head><title>' + po.poNumber + '</title>' +
-                '<style>body{font-family:Arial,sans-serif;margin:40px;color:#333;}h1{font-size:22px;margin-bottom:4px;}' +
-                '.meta-table td{padding:4px 12px 4px 0;vertical-align:top;}.label{font-weight:bold;white-space:nowrap;}' +
-                '.total{font-size:20px;font-weight:bold;margin-top:16px;padding:12px;background:#f0f0f0;border-radius:6px;}' +
-                '.footer{margin-top:32px;font-size:11px;color:#999;border-top:1px solid #ddd;padding-top:8px;}</style></head><body>' +
-                '<h1>PURCHASE ORDER</h1><h2 style="color:#2563eb;margin-top:0;">' + po.poNumber + '</h2><hr>' +
-                '<table class="meta-table">' +
-                '<tr><td class="label">Vendor:</td><td>' + (po.vendor || '-') + '</td></tr>' +
-                '<tr><td class="label">Status:</td><td>' + po.status.toUpperCase() + '</td></tr>' +
-                '<tr><td class="label">Created:</td><td>' + (po.created || '-') + '</td></tr>' +
-                '<tr><td class="label">Requested By:</td><td>' + (po.requestedBy || '-') + '</td></tr>' +
-                '<tr><td class="label">Budget Code:</td><td>' + (po.budgetCode || '-') + '</td></tr>' +
-                '<tr><td class="label">Priority:</td><td>' + po.priority.toUpperCase() + '</td></tr>' +
-                (po.tracking ? '<tr><td class="label">Tracking:</td><td>' + po.tracking + '</td></tr>' : '') +
-                (po.expectedDelivery ? '<tr><td class="label">Expected Delivery:</td><td>' + po.expectedDelivery + '</td></tr>' : '') +
-                '</table>' +
-                '<h3 style="margin-top:24px;">Items</h3>' + itemsHtml +
-                '<div class="total">TOTAL: ' + (po.total || '-') + '</div>' +
-                (po.notes ? '<p style="margin-top:16px;"><strong>Notes:</strong> ' + po.notes.replace(/</g, '&lt;') + '</p>' : '') +
-                '<div class="footer">Generated by Cradero &mdash; ' + new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' }) + '</div>' +
-                '</body></html>';
-            var printWin = window.open('', '_blank');
-            if (!printWin) { showToast('Pop-up blocked. Please allow pop-ups for this site.', 'error'); return; }
-            printWin.document.write(html);
-            printWin.document.close();
-            printWin.onload = function() { printWin.print(); };
-            showToast('PO PDF ready — use "Save as PDF" in the print dialog.', 'success');
+
+            // Total
+            y += 2;
+            doc.setFillColor(240, 240, 240);
+            doc.rect(leftMargin, y - 5, pageWidth - leftMargin * 2, 12, 'F');
+            doc.setFontSize(13);
+            doc.setFont(undefined, 'bold');
+            doc.text('TOTAL: ' + (po.total || '-'), leftMargin + 4, y + 2);
+            y += 16;
+
+            // Notes
+            if (po.notes) {
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.text('Notes:', leftMargin, y);
+                doc.setFont(undefined, 'normal');
+                var noteLines = doc.splitTextToSize(po.notes, pageWidth - leftMargin * 2);
+                doc.text(noteLines, leftMargin, y + 6);
+                y += 6 + noteLines.length * 5;
+            }
+
+            // Footer
+            y += 10;
+            doc.setDrawColor(220, 220, 220);
+            doc.line(leftMargin, y, pageWidth - leftMargin, y);
+            y += 5;
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text('Generated by Cradero — ' + new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), leftMargin, y);
+
+            doc.save(po.poNumber + '.pdf');
+            showToast('PDF downloaded!', 'success');
         }
 
         function downloadFile(filename, content, type) {
