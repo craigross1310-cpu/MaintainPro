@@ -4275,7 +4275,9 @@
                 return;
             }
 
-            await showApp(result.data.user);
+            if (!appInitialized) {
+                await showApp(result.data.user);
+            }
         }
 
         async function handleLogout() {
@@ -4295,11 +4297,16 @@
         }
 
         // Listen for auth state changes (e.g. session expiry, tab focus)
-        supabaseClient.auth.onAuthStateChange(async function(event, session) {
+        var showAppInProgress = false;
+        supabaseClient.auth.onAuthStateChange(function(event, session) {
             if (event === 'SIGNED_IN' && session) {
-                await showApp(session.user);
+                if (!showAppInProgress && !appInitialized) {
+                    showAppInProgress = true;
+                    showApp(session.user).finally(function() { showAppInProgress = false; });
+                }
             } else if (event === 'SIGNED_OUT') {
                 appInitialized = false;
+                showAppInProgress = false;
                 showAuthScreen();
             }
         });
@@ -5899,4 +5906,5 @@
     </script>
 </body>
 </html>
-logo change
+
+safari code edit
