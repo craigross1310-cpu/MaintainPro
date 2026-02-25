@@ -1592,6 +1592,11 @@
                 <div class="notification-text">Monthly emergency lighting test is due in 2 days</div>
                 <div class="notification-time">Yesterday</div>
             </div>
+            <div class="notification-item" onclick="handleNotificationClick('equipment', 1)">
+                <div class="notification-title">🛡️ Warranty Expired</div>
+                <div class="notification-text">Line 3 - Filler Machine warranty from FoodTech Pro has expired</div>
+                <div class="notification-time">2 days ago</div>
+            </div>
         </div>
     </header>
 
@@ -1640,6 +1645,7 @@
             <button class="nav-tab" onclick="switchTab('reactive')">&#9889; Reactive Maintenance</button>
             <button class="nav-tab" onclick="switchTab('calendar')">&#128197; Maintenance Calendar</button>
             <button class="nav-tab" onclick="switchTab('myTasks')" id="myTasksTab">My Tasks</button>
+            <button class="nav-tab" onclick="switchTab('workRequests')" id="workRequestsTab">Work Requests</button>
         </div>
 
         <!-- Work Orders Tab -->
@@ -1912,7 +1918,7 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Parts Inventory</h2>
-                    <button class="btn btn-primary" onclick="openModal('addPartModal')">+ Add Part</button>
+                    <button class="btn btn-primary" onclick="openAddPartModal()">+ Add Part</button>
                 </div>
 
                 <div class="search-bar">
@@ -2814,7 +2820,22 @@
                             <option>Last 90 Days</option>
                             <option>This Year</option>
                         </select>
-                        <button class="btn btn-secondary" onclick="exportReport()">Export Report</button>
+                        <div style="position:relative;display:inline-block;">
+                            <button class="btn btn-secondary" onclick="toggleExportMenu()">Export Report ▾</button>
+                            <div id="exportMenu" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:white;border:1px solid var(--gray-300);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:100;min-width:200px;">
+                                <div style="padding:0.5rem 0;">
+                                    <div style="padding:0.5rem 1rem;font-weight:700;font-size:0.85rem;color:var(--gray-600);">Export as CSV</div>
+                                    <button onclick="exportCSV('workOrders')" style="display:block;width:100%;text-align:left;padding:0.5rem 1rem;border:none;background:none;cursor:pointer;font-size:0.9rem;">Work Orders</button>
+                                    <button onclick="exportCSV('equipment')" style="display:block;width:100%;text-align:left;padding:0.5rem 1rem;border:none;background:none;cursor:pointer;font-size:0.9rem;">Equipment</button>
+                                    <button onclick="exportCSV('parts')" style="display:block;width:100%;text-align:left;padding:0.5rem 1rem;border:none;background:none;cursor:pointer;font-size:0.9rem;">Parts Inventory</button>
+                                    <button onclick="exportCSV('breakdowns')" style="display:block;width:100%;text-align:left;padding:0.5rem 1rem;border:none;background:none;cursor:pointer;font-size:0.9rem;">Breakdowns</button>
+                                    <button onclick="exportCSV('pm')" style="display:block;width:100%;text-align:left;padding:0.5rem 1rem;border:none;background:none;cursor:pointer;font-size:0.9rem;">PM Schedule</button>
+                                    <button onclick="exportCSV('purchaseOrders')" style="display:block;width:100%;text-align:left;padding:0.5rem 1rem;border:none;background:none;cursor:pointer;font-size:0.9rem;">Purchase Orders</button>
+                                    <div style="border-top:1px solid var(--gray-200);margin:0.25rem 0;"></div>
+                                    <button onclick="exportFullReport()" style="display:block;width:100%;text-align:left;padding:0.5rem 1rem;border:none;background:none;cursor:pointer;font-size:0.9rem;font-weight:600;">Full Maintenance Report</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -2921,6 +2942,51 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Parts Stock Forecast</div>
+                            <div class="chart-subtitle">Parts at risk of depletion</div>
+                        </div>
+                        <div class="metric-list" id="partsAtRiskList">
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">MTTR & MTBF</div>
+                            <div class="chart-subtitle">Mean Time to Repair / Between Failures</div>
+                        </div>
+                        <div class="metric-list" id="mttrMtbfList">
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Technician Workload</div>
+                            <div class="chart-subtitle">Active assignments per engineer</div>
+                        </div>
+                        <div class="metric-list" id="techWorkloadList">
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Equipment Health Scores</div>
+                            <div class="chart-subtitle">Composite score (0-100)</div>
+                        </div>
+                        <div class="metric-list" id="equipHealthList">
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Labor Costs</div>
+                            <div class="chart-subtitle">Based on tracked time</div>
+                        </div>
+                        <div class="metric-list" id="laborCostList">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3016,6 +3082,57 @@
                 </div>
             </div>
         </div>
+
+        <!-- Work Requests Tab -->
+        <div id="workRequests" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Maintenance Requests</h2>
+                    <button class="btn btn-primary" onclick="openModal('submitRequestModal')">+ Submit Request</button>
+                </div>
+                <p style="color:var(--gray-600);margin-bottom:1rem;">Submit maintenance requests for equipment issues. Managers and admins can approve requests to create work orders.</p>
+                <div id="workRequestsList"></div>
+            </div>
+        </div>
+
+    <!-- Submit Request Modal -->
+    <div id="submitRequestModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Submit Maintenance Request</h2>
+            </div>
+            <div class="modal-body">
+                <form id="requestForm">
+                    <div class="form-group">
+                        <label class="form-label">Equipment / Area *</label>
+                        <select class="form-select" id="requestEquipment">
+                            <option value="">Select equipment...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description of Issue *</label>
+                        <textarea class="form-textarea" id="requestDescription" placeholder="Describe the problem, what you noticed, when it started..." rows="4" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Urgency</label>
+                        <select class="form-select" id="requestUrgency">
+                            <option value="low">Low — Can wait for scheduled maintenance</option>
+                            <option value="medium" selected>Medium — Should be addressed soon</option>
+                            <option value="high">High — Affecting production / safety risk</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Your Name</label>
+                        <input type="text" class="form-input" id="requestSubmitter" placeholder="e.g., John from Packaging">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('submitRequestModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitWorkRequest()">Submit Request</button>
+            </div>
+        </div>
+    </div>
 
     <!-- New Work Order Modal -->
     <div id="workOrderModal" class="modal-overlay">
@@ -3128,13 +3245,42 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Status *</label>
-                        <select class="form-select" id="addEquipStatus">
-                            <option value="operational">Operational</option>
-                            <option value="maintenance">Maintenance</option>
-                            <option value="down">Down</option>
-                        </select>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Status *</label>
+                            <select class="form-select" id="addEquipStatus">
+                                <option value="operational">Operational</option>
+                                <option value="maintenance">Maintenance</option>
+                                <option value="down">Down</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Criticality</label>
+                            <select class="form-select" id="addEquipCriticality">
+                                <option value="A">A — Critical</option>
+                                <option value="B" selected>B — Important</option>
+                                <option value="C">C — Low</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:0.5rem;">
+                        <label class="form-label">Warranty Information</label>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Warranty Expiry</label>
+                                <input type="date" class="form-input" id="addWarrantyExpiry">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Warranty Provider</label>
+                                <input type="text" class="form-input" id="addWarrantyProvider" placeholder="e.g., FoodTech Pro">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Warranty Notes</label>
+                            <input type="text" class="form-input" id="addWarrantyNotes" placeholder="e.g., 3-year parts warranty">
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -3402,17 +3548,41 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Activity Log</label>
-                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                            <div style="padding: 0.75rem; background: var(--gray-100); border-radius: 8px; border-left: 4px solid var(--primary);">
-                                <div style="font-weight: 600; margin-bottom: 0.25rem;">Work Order Created</div>
-                                <div style="font-size: 0.9rem; color: var(--gray-600);">By Sarah Williams • Feb 13, 2026 - 9:20 AM</div>
+                    <div class="form-group" style="border-top:1px solid var(--gray-200);padding-top:1rem;">
+                        <label class="form-label">Time Tracking</label>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Start Time</label>
+                                <input type="datetime-local" class="form-input" id="woDetailStartTime">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Finish Time</label>
+                                <input type="datetime-local" class="form-input" id="woDetailFinishTime">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Total Job Time</label>
+                                <div id="woDetailTotalJobTime" style="padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;font-weight:600;">—</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Machine Downtime</label>
+                                <input type="text" class="form-input" id="woDetailMachineDowntime" placeholder="e.g., 2.5 hours">
                             </div>
                         </div>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group" style="border-top:1px solid var(--gray-200);padding-top:1rem;">
+                        <label class="form-label">Comments</label>
+                        <div id="woCommentsContainer" style="display:flex;flex-direction:column;gap:0.75rem;max-height:250px;overflow-y:auto;margin-bottom:0.75rem;">
+                        </div>
+                        <div style="display:flex;gap:0.5rem;">
+                            <input type="text" class="form-input" id="woNewComment" placeholder="Add a comment..." style="flex:1;" onkeydown="if(event.key==='Enter'){addWoComment();}">
+                            <button type="button" class="btn btn-primary btn-small" onclick="addWoComment()">Post</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="border-top:1px solid var(--gray-200);padding-top:1rem;">
                         <label class="form-label">Update Status or Reassign</label>
                         <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                             <select class="form-select" id="woUpdateAssign" style="flex: 1; min-width: 200px;">
@@ -3516,13 +3686,42 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Status</label>
-                        <select class="form-select" id="editStatus">
-                            <option value="operational">Operational</option>
-                            <option value="maintenance">Maintenance</option>
-                            <option value="down">Down</option>
-                        </select>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="editStatus">
+                                <option value="operational">Operational</option>
+                                <option value="maintenance">Maintenance</option>
+                                <option value="down">Down</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Criticality</label>
+                            <select class="form-select" id="editEquipCriticality">
+                                <option value="A">A — Critical</option>
+                                <option value="B">B — Important</option>
+                                <option value="C">C — Low</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:0.5rem;">
+                        <label class="form-label">Warranty Information</label>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Warranty Expiry</label>
+                                <input type="date" class="form-input" id="editWarrantyExpiry">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Warranty Provider</label>
+                                <input type="text" class="form-input" id="editWarrantyProvider">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Warranty Notes</label>
+                            <input type="text" class="form-input" id="editWarrantyNotes">
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -3591,6 +3790,12 @@
                             <option value="hydraulic">Hydraulic Parts</option>
                             <option value="consumables">Consumables</option>
                         </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Compatible Equipment</label>
+                        <div id="partEquipCheckboxes" style="display:flex;flex-direction:column;gap:0.5rem;padding:0.75rem;background:var(--gray-100);border-radius:8px;max-height:150px;overflow-y:auto;">
+                        </div>
                     </div>
 
                     <div class="pro-only-feature">
@@ -4364,6 +4569,8 @@
             saveData('nextPmId', nextPmId);
             saveData('nextBrId', nextBrId);
             saveData('nextCalId', nextCalId);
+            saveData('workRequests', workRequestsData);
+            saveData('nextRequestId', nextRequestId);
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -4474,6 +4681,10 @@
                         populateEquipDropdown('brEditMachine', false);
                         populateEquipDropdown('calEquipment', false);
                     }
+                    if (typeof renderWorkRequests === 'function') {
+                        renderWorkRequests();
+                        populateRequestEquipDropdown();
+                    }
                 }
             }
             console.log('[Cradero] showApp — tier:', currentUserTier, 'role:', role, 'name:', currentUserName);
@@ -4487,6 +4698,7 @@
                 }
             }
             if (typeof renderEngineerDashboard === 'function') renderEngineerDashboard();
+            if (typeof renderProAnalytics === 'function') renderProAnalytics();
         }
 
         function showAuthScreen() {
@@ -4606,6 +4818,10 @@
                                 populateEquipDropdown('brEditMachine', false);
                                 populateEquipDropdown('calEquipment', false);
                             }
+                            if (typeof renderWorkRequests === 'function') {
+                                renderWorkRequests();
+                                populateRequestEquipDropdown();
+                            }
                         }
                     }
                     applyTierRestrictions();
@@ -4653,32 +4869,59 @@
         var _hasStoredData = localStorage.getItem(STORAGE_PREFIX + 'workOrders') !== null;
 
         var DEFAULT_WORK_ORDERS = [
-            { id: 1, woId: 'WO-2024-001', title: 'Line 3 Filler - Motor Overheating', equipment: 'Line 3 Filler', priority: 'high', status: 'open', assignedTo: '', createdBy: 'Sarah Williams', created: 'Feb 13, 2026 - 9:20 AM', description: 'Motor temperature reading above normal range. Noticed unusual heat during production run. Requires immediate inspection to prevent potential failure.', hasPhotos: true },
-            { id: 2, woId: 'WO-2024-002', title: 'Line 1 Conveyor - Belt Replacement', equipment: 'Line 1 Conveyor', priority: 'medium', status: 'in-progress', assignedTo: 'John Smith', createdBy: 'Mike Johnson', created: 'Feb 13, 2026 - 8:00 AM', description: 'Conveyor belt showing signs of wear and cracking. Scheduled replacement to prevent unexpected failure during production.', hasPhotos: false },
-            { id: 3, woId: 'WO-2024-003', title: 'Line 2 Packaging - Sensor Calibration', equipment: 'Line 2 Packaging', priority: 'low', status: 'open', assignedTo: '', createdBy: 'Sarah Williams', created: 'Feb 12, 2026 - 3:45 PM', description: 'Routine calibration of proximity sensors on packaging line. Sensors need to be adjusted for optimal product detection.', hasPhotos: false },
-            { id: 4, woId: 'WO-2024-004', title: 'Line 4 Mixer - Bearing Noise Investigation', equipment: 'Line 4 Mixer', priority: 'high', status: 'in-progress', assignedTo: 'Mike Johnson', createdBy: 'John Smith', created: 'Feb 13, 2026 - 11:00 AM', description: 'Unusual grinding noise coming from main mixer bearing. Investigating potential bearing failure. May require replacement if wear is detected.', hasPhotos: true }
+            { id: 1, woId: 'WO-2024-001', title: 'Line 3 Filler - Motor Overheating', equipment: 'Line 3 Filler', priority: 'high', status: 'open', assignedTo: '', createdBy: 'Sarah Williams', created: 'Feb 13, 2026 - 9:20 AM', description: 'Motor temperature reading above normal range. Noticed unusual heat during production run. Requires immediate inspection to prevent potential failure.', hasPhotos: true, comments: [{author:'Sarah Williams',timestamp:'Feb 13, 2026 - 9:25 AM',text:'Temperature reading was 95°C, normal range is 60-75°C. Production stopped on Line 3.'},{author:'Mike Johnson',timestamp:'Feb 13, 2026 - 10:00 AM',text:'Checked motor bearings — outer bearing feels rough. Likely needs replacement. Ordering parts now.'}], startTime: '', finishTime: '', totalJobTime: '', machineDowntime: '' },
+            { id: 2, woId: 'WO-2024-002', title: 'Line 1 Conveyor - Belt Replacement', equipment: 'Line 1 Conveyor', priority: 'medium', status: 'in-progress', assignedTo: 'John Smith', createdBy: 'Mike Johnson', created: 'Feb 13, 2026 - 8:00 AM', description: 'Conveyor belt showing signs of wear and cracking. Scheduled replacement to prevent unexpected failure during production.', hasPhotos: false, comments: [{author:'John Smith',timestamp:'Feb 13, 2026 - 8:30 AM',text:'Belt received from stores. Starting replacement during lunch break.'}], startTime: '2026-02-13T08:30', finishTime: '', totalJobTime: '', machineDowntime: '' },
+            { id: 3, woId: 'WO-2024-003', title: 'Line 2 Packaging - Sensor Calibration', equipment: 'Line 2 Packaging', priority: 'low', status: 'open', assignedTo: '', createdBy: 'Sarah Williams', created: 'Feb 12, 2026 - 3:45 PM', description: 'Routine calibration of proximity sensors on packaging line. Sensors need to be adjusted for optimal product detection.', hasPhotos: false, comments: [], startTime: '', finishTime: '', totalJobTime: '', machineDowntime: '' },
+            { id: 4, woId: 'WO-2024-004', title: 'Line 4 Mixer - Bearing Noise Investigation', equipment: 'Line 4 Mixer', priority: 'high', status: 'in-progress', assignedTo: 'Mike Johnson', createdBy: 'John Smith', created: 'Feb 13, 2026 - 11:00 AM', description: 'Unusual grinding noise coming from main mixer bearing. Investigating potential bearing failure. May require replacement if wear is detected.', hasPhotos: true, comments: [{author:'Mike Johnson',timestamp:'Feb 13, 2026 - 11:15 AM',text:'Confirmed bearing wear on main shaft. Need 6205 bearing from stores.'}], startTime: '2026-02-13T11:00', finishTime: '', totalJobTime: '', machineDowntime: '' }
         ];
         let nextWoId = loadData('nextWoId', 5);
         let workOrdersData = loadData('workOrders', DEFAULT_WORK_ORDERS);
 
+        let nextRequestId = loadData('nextRequestId', 3);
+        let workRequestsData = loadData('workRequests', [
+            { id: 1, equipment: 'Line 3 - Filler Machine', description: 'Strange vibration noise coming from the filler during operation. Gets louder at higher speeds.', urgency: 'medium', submitter: 'Dave from Production', submitted: 'Feb 24, 2026 - 2:30 PM', status: 'pending' },
+            { id: 2, equipment: 'Line 1 - Conveyor System', description: 'Emergency stop button on east side of conveyor feels sticky and does not spring back properly.', urgency: 'high', submitter: 'Lisa from QA', submitted: 'Feb 25, 2026 - 8:15 AM', status: 'pending' }
+        ]);
+
+
         let nextEquipId = loadData('nextEquipId', 5);
         let equipmentList = loadData('equipment', [
-            { id: 1, name: 'Line 3 - Filler Machine',  equipId: 'EQ-FL-003', manufacturer: 'FoodTech Pro',        model: 'FT-500X',  location: 'Production Floor - Line 3', installDate: '2021-01', status: 'down',        workOrders30d: 8 },
-            { id: 2, name: 'Line 1 - Conveyor System',  equipId: 'EQ-CV-001', manufacturer: 'ConveyorMax',         model: 'CM-200',   location: 'Production Floor - Line 1', installDate: '2020-03', status: 'maintenance', workOrders30d: 3 },
-            { id: 3, name: 'Line 2 - Industrial Mixer', equipId: 'EQ-MX-002', manufacturer: 'MixMaster Industrial', model: 'MM-1000',  location: 'Production Floor - Line 2', installDate: '2019-08', status: 'operational', workOrders30d: 2 },
-            { id: 4, name: 'Line 4 - Packaging Unit',   equipId: 'EQ-PK-004', manufacturer: 'PackPro Systems',     model: 'PP-300',   location: 'Production Floor - Line 4', installDate: '2020-12', status: 'operational', workOrders30d: 4 }
+            { id: 1, name: 'Line 3 - Filler Machine',  equipId: 'EQ-FL-003', manufacturer: 'FoodTech Pro',        model: 'FT-500X',  location: 'Production Floor - Line 3', installDate: '2021-01', status: 'down',        workOrders30d: 8, criticality: 'A', warrantyExpiry: '2025-01-15', warrantyProvider: 'FoodTech Pro', warrantyNotes: 'Extended warranty expired' },
+            { id: 2, name: 'Line 1 - Conveyor System',  equipId: 'EQ-CV-001', manufacturer: 'ConveyorMax',         model: 'CM-200',   location: 'Production Floor - Line 1', installDate: '2020-03', status: 'maintenance', workOrders30d: 3, criticality: 'B', warrantyExpiry: '2026-06-30', warrantyProvider: 'ConveyorMax Ltd', warrantyNotes: '3-year parts warranty' },
+            { id: 3, name: 'Line 2 - Industrial Mixer', equipId: 'EQ-MX-002', manufacturer: 'MixMaster Industrial', model: 'MM-1000',  location: 'Production Floor - Line 2', installDate: '2019-08', status: 'operational', workOrders30d: 2, criticality: 'B', warrantyExpiry: '', warrantyProvider: '', warrantyNotes: '' },
+            { id: 4, name: 'Line 4 - Packaging Unit',   equipId: 'EQ-PK-004', manufacturer: 'PackPro Systems',     model: 'PP-300',   location: 'Production Floor - Line 4', installDate: '2020-12', status: 'operational', workOrders30d: 4, criticality: 'C', warrantyExpiry: '2027-12-31', warrantyProvider: 'PackPro Systems', warrantyNotes: '5-year comprehensive warranty' }
         ]);
 
         let nextPartId = loadData('nextPartId', 4);
         let partsData = loadData('parts', [
-            { id: 1, name: 'Motor Bearing 6205',   partNumber: 'PN-MB-6205-001', qty: 15, minStock: 8, shelf: 'B3', bin: '12', monthlyUsage: 3, suppliers: [{supplier:'RS Components',supplierPartNo:'286-3421',price:8.50,leadTime:'Next day'},{supplier:'Grainger',supplierPartNo:'6Y839',price:9.20,leadTime:'Same day'}] },
-            { id: 2, name: 'Conveyor Belt 48"',    partNumber: 'PN-CB-48-002',   qty: 2,  minStock: 4, shelf: 'A1', bin: '5',  monthlyUsage: 1, suppliers: [{supplier:'Motion Industries',supplierPartNo:'MI-CB48-200',price:145.00,leadTime:'2-3 days'},{supplier:'Local Supplier',supplierPartNo:'BM-BELT-48',price:155.00,leadTime:'Pick up today'}] },
-            { id: 3, name: 'Proximity Sensor M18', partNumber: 'PN-PS-M18-004',  qty: 0,  minStock: 5, shelf: 'D4', bin: '15', monthlyUsage: 2, suppliers: [{supplier:'RS Components',supplierPartNo:'714-6258',price:22.80,leadTime:'Next day'}] }
+            { id: 1, name: 'Motor Bearing 6205',   partNumber: 'PN-MB-6205-001', qty: 15, minStock: 8, shelf: 'B3', bin: '12', monthlyUsage: 3, compatibleEquipment: [1, 3], suppliers: [{supplier:'RS Components',supplierPartNo:'286-3421',price:8.50,leadTime:'Next day'},{supplier:'Grainger',supplierPartNo:'6Y839',price:9.20,leadTime:'Same day'}] },
+            { id: 2, name: 'Conveyor Belt 48"',    partNumber: 'PN-CB-48-002',   qty: 2,  minStock: 4, shelf: 'A1', bin: '5',  monthlyUsage: 1, compatibleEquipment: [2], suppliers: [{supplier:'Motion Industries',supplierPartNo:'MI-CB48-200',price:145.00,leadTime:'2-3 days'},{supplier:'Local Supplier',supplierPartNo:'BM-BELT-48',price:155.00,leadTime:'Pick up today'}] },
+            { id: 3, name: 'Proximity Sensor M18', partNumber: 'PN-PS-M18-004',  qty: 0,  minStock: 5, shelf: 'D4', bin: '15', monthlyUsage: 2, compatibleEquipment: [4], suppliers: [{supplier:'RS Components',supplierPartNo:'714-6258',price:22.80,leadTime:'Next day'}] }
         ]);
 
-        // Migrate existing parts: add suppliers if missing
+        // Migrate existing work orders: add comments and time fields if missing
+        workOrdersData.forEach(function(wo) {
+            if (!wo.comments) wo.comments = [];
+            if (typeof wo.startTime === 'undefined') wo.startTime = '';
+            if (typeof wo.finishTime === 'undefined') wo.finishTime = '';
+            if (typeof wo.totalJobTime === 'undefined') wo.totalJobTime = '';
+            if (typeof wo.machineDowntime === 'undefined') wo.machineDowntime = '';
+        });
+        saveData('workOrders', workOrdersData);
+
+        // Migrate existing equipment: add criticality and warranty if missing
+        equipmentList.forEach(function(eq) {
+            if (!eq.criticality) eq.criticality = 'B';
+            if (typeof eq.warrantyExpiry === 'undefined') eq.warrantyExpiry = '';
+            if (typeof eq.warrantyProvider === 'undefined') eq.warrantyProvider = '';
+            if (typeof eq.warrantyNotes === 'undefined') eq.warrantyNotes = '';
+        });
+        saveData('equipment', equipmentList);
+
+        // Migrate existing parts: add suppliers and compatibleEquipment if missing
         partsData.forEach(function(p) {
             if (!p.suppliers) p.suppliers = [];
+            if (!p.compatibleEquipment) p.compatibleEquipment = [];
         });
         saveData('parts', partsData);
 
@@ -4792,19 +5035,44 @@
             container.innerHTML = equipmentList.map(eq => {
                 const statusLabel = eq.status === 'operational' ? 'Operational' : eq.status === 'maintenance' ? 'Maintenance' : 'Down';
                 const installFormatted = eq.installDate ? new Date(eq.installDate + '-01').toLocaleString('en-GB', { month: 'short', year: 'numeric' }) : 'N/A';
+                const critColors = { A: '#dc2626', B: '#f59e0b', C: '#22c55e' };
+                const critLabels = { A: 'Critical', B: 'Important', C: 'Low' };
+                const crit = eq.criticality || 'B';
+                var warrantyBadge = '';
+                if (eq.warrantyExpiry) {
+                    var wDiff = Math.ceil((new Date(eq.warrantyExpiry) - new Date()) / 86400000);
+                    if (wDiff < 0) warrantyBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;background:rgba(220,38,38,0.1);color:#dc2626;">Warranty Expired</span>';
+                    else if (wDiff <= 30) warrantyBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;background:rgba(245,158,11,0.1);color:#f59e0b;">Warranty Expiring</span>';
+                    else warrantyBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;background:rgba(34,197,94,0.1);color:#22c55e;">Warranty Active</span>';
+                }
                 return `<div class="equipment-card">
                     <div class="equipment-header">
                         <div>
                             <div class="equipment-name">${escHtml(eq.name)}</div>
                             <div class="equipment-id">${escHtml(eq.equipId)}</div>
                         </div>
-                        <div class="equipment-status ${eq.status}">${statusLabel}</div>
+                        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+                            <div class="equipment-status ${eq.status}">${statusLabel}</div>
+                            <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;background:${critColors[crit]}15;color:${critColors[crit]};">${crit} — ${critLabels[crit]}</span>
+                        </div>
                     </div>
                     <div class="equipment-info">
                         <div class="equipment-info-row"><span class="equipment-info-label">Location</span><span class="equipment-info-value">${escHtml(eq.location)}</span></div>
                         <div class="equipment-info-row"><span class="equipment-info-label">Manufacturer</span><span class="equipment-info-value">${escHtml(eq.manufacturer)}</span></div>
                         <div class="equipment-info-row"><span class="equipment-info-label">Install Date</span><span class="equipment-info-value">${installFormatted}</span></div>
                         <div class="equipment-info-row"><span class="equipment-info-label">Work Orders (30d)</span><span class="equipment-info-value">${eq.workOrders30d} total</span></div>
+                        ${warrantyBadge ? '<div class="equipment-info-row"><span class="equipment-info-label">Warranty</span><span class="equipment-info-value">' + warrantyBadge + '</span></div>' : ''}
+                        ${hasAccess('analytics') ? (function() {
+                            var hs = 100;
+                            if (eq.installDate) { var yrs = (new Date() - new Date(eq.installDate + '-01')) / (365.25 * 86400000); hs -= Math.min(20, Math.round(yrs * 2)); }
+                            var rb = breakdownsData.filter(function(b) { return b.machine === eq.name && b.dateISO && (new Date() - new Date(b.dateISO)) < 90 * 86400000; }).length;
+                            hs -= Math.min(40, rb * 10);
+                            if (eq.status === 'down') hs -= 20; else if (eq.status === 'maintenance') hs -= 10;
+                            hs -= Math.min(15, eq.workOrders30d * 2);
+                            hs = Math.max(0, Math.min(100, hs));
+                            var hc = hs >= 80 ? '#22c55e' : hs >= 50 ? '#f59e0b' : '#dc2626';
+                            return '<div class="equipment-info-row pro-only-feature"><span class="equipment-info-label">Health Score</span><span class="equipment-info-value" style="font-weight:700;color:' + hc + ';">' + hs + '/100</span></div>';
+                        })() : ''}
                     </div>
                     <div class="equipment-actions">
                         <button class="btn btn-primary btn-small" onclick="openEquipmentHistory(${eq.id})">View History</button>
@@ -4846,7 +5114,9 @@
                         <div class="part-detail-row"><span class="part-detail-label">Location</span><span class="part-detail-value">Shelf ${escHtml(p.shelf)}, Bin ${escHtml(p.bin)}</span></div>
                         <div class="part-detail-row"><span class="part-detail-label">Min Stock</span><span class="part-detail-value">${p.minStock} units</span></div>
                         <div class="part-detail-row"><span class="part-detail-label">Used This Month</span><span class="part-detail-value">${p.monthlyUsage} times</span></div>
+                        ${p.compatibleEquipment && p.compatibleEquipment.length > 0 ? `<div class="part-detail-row"><span class="part-detail-label">Equipment</span><span class="part-detail-value" style="color:var(--primary);font-weight:600;">${p.compatibleEquipment.map(function(eId) { var eq = equipmentList.find(function(e) { return e.id === eId; }); return eq ? escHtml(eq.name) : ''; }).filter(Boolean).join(', ')}</span></div>` : ''}
                         ${hasAccess('purchaseOrders') && p.suppliers && p.suppliers.length > 0 ? `<div class="part-detail-row"><span class="part-detail-label">Suppliers</span><span class="part-detail-value" style="color:var(--primary);font-weight:600;">${p.suppliers.length} supplier${p.suppliers.length > 1 ? 's' : ''}</span></div>` : ''}
+                        ${hasAccess('purchaseOrders') ? (function() { var m = p.monthlyUsage > 0 ? Math.floor(p.qty / p.monthlyUsage) : -1; var fColor = m < 0 ? 'var(--gray-600)' : m < 2 ? '#dc2626' : m < 4 ? '#f59e0b' : '#22c55e'; var fText = m < 0 ? 'No usage data' : m === 0 ? 'Depleted this month' : m + ' months remaining'; return '<div class="part-detail-row pro-only-feature"><span class="part-detail-label">Stock Forecast</span><span class="part-detail-value" style="color:' + fColor + ';font-weight:600;">' + fText + '</span></div>'; })() : ''}
                     </div>
                     <div style="display:flex;gap:0.5rem;margin-top:1rem;">
                         ${hasAccess('purchaseOrders') ? `<button class="btn ${orderBtnClass}" style="flex:1;" onclick="orderPart('${escHtml(p.partNumber)}','${escHtml(p.name)}',${stock.cls !== 'in-stock'})">${orderBtnLabel}</button>` : ''}
@@ -5085,6 +5355,144 @@
             document.getElementById('totalEquipment').textContent = equipmentList.length;
         }
 
+        function renderProAnalytics() {
+            if (!hasAccess('analytics')) return;
+
+            // P2: Parts at Risk
+            var riskEl = document.getElementById('partsAtRiskList');
+            if (riskEl) {
+                var atRisk = partsData.map(function(p) {
+                    var months = p.monthlyUsage > 0 ? Math.floor(p.qty / p.monthlyUsage) : -1;
+                    return { name: p.name, partNumber: p.partNumber, months: months, qty: p.qty, minStock: p.minStock };
+                }).filter(function(p) { return p.months >= 0 && p.months < 4; }).sort(function(a, b) { return a.months - b.months; });
+                if (atRisk.length === 0) {
+                    riskEl.innerHTML = '<div class="metric-item"><span class="metric-label" style="color:var(--success);">All parts have 4+ months of stock</span></div>';
+                } else {
+                    riskEl.innerHTML = atRisk.map(function(p) {
+                        var color = p.months < 2 ? 'var(--danger)' : 'var(--warning)';
+                        return '<div class="metric-item"><span class="metric-label">' + escHtml(p.name) + '</span><span class="metric-value" style="color:' + color + ';">' + (p.months === 0 ? 'This month' : p.months + ' mo') + '</span></div>';
+                    }).join('');
+                }
+            }
+
+            // P3: MTTR & MTBF
+            var mttrEl = document.getElementById('mttrMtbfList');
+            if (mttrEl) {
+                var machineBreakdowns = {};
+                breakdownsData.forEach(function(b) {
+                    if (!machineBreakdowns[b.machine]) machineBreakdowns[b.machine] = [];
+                    machineBreakdowns[b.machine].push(b);
+                });
+                var html = '';
+                Object.keys(machineBreakdowns).forEach(function(machine) {
+                    var bds = machineBreakdowns[machine];
+                    // MTTR: average time to resolve
+                    var resolvedTimes = bds.filter(function(b) { return b.status === 'resolved' && b.timeToResolve; }).map(function(b) {
+                        var match = b.timeToResolve.match(/([\d.]+)/);
+                        return match ? parseFloat(match[1]) : 0;
+                    }).filter(function(t) { return t > 0; });
+                    var mttr = resolvedTimes.length > 0 ? (resolvedTimes.reduce(function(a, b) { return a + b; }, 0) / resolvedTimes.length).toFixed(1) : 'N/A';
+
+                    // MTBF: average time between failures
+                    var sorted = bds.filter(function(b) { return b.dateISO; }).sort(function(a, b) { return new Date(a.dateISO) - new Date(b.dateISO); });
+                    var gaps = [];
+                    for (var i = 1; i < sorted.length; i++) {
+                        var diff = (new Date(sorted[i].dateISO) - new Date(sorted[i-1].dateISO)) / 86400000;
+                        if (diff > 0) gaps.push(diff);
+                    }
+                    var mtbf = gaps.length > 0 ? Math.round(gaps.reduce(function(a, b) { return a + b; }, 0) / gaps.length) : 'N/A';
+
+                    html += '<div class="metric-item"><span class="metric-label">' + escHtml(machine) + '</span><span class="metric-value" style="font-size:0.9rem;">MTTR: ' + mttr + 'h · MTBF: ' + (mtbf === 'N/A' ? mtbf : mtbf + 'd') + '</span></div>';
+                });
+                mttrEl.innerHTML = html || '<div class="metric-item"><span class="metric-label" style="color:var(--gray-600);">No breakdown data available</span></div>';
+            }
+
+            // P4: Technician Workload
+            var workloadEl = document.getElementById('techWorkloadList');
+            if (workloadEl) {
+                var engineers = {};
+                workOrdersData.forEach(function(wo) {
+                    if (wo.assignedTo && (wo.status === 'open' || wo.status === 'in-progress')) {
+                        if (!engineers[wo.assignedTo]) engineers[wo.assignedTo] = { wo: 0, pm: 0 };
+                        engineers[wo.assignedTo].wo++;
+                    }
+                });
+                pmData.forEach(function(pm) {
+                    if (pm.assignedTo && pm.dueStatus !== 'completed') {
+                        if (!engineers[pm.assignedTo]) engineers[pm.assignedTo] = { wo: 0, pm: 0 };
+                        engineers[pm.assignedTo].pm++;
+                    }
+                });
+                var wHtml = '';
+                Object.keys(engineers).sort().forEach(function(name) {
+                    var total = engineers[name].wo + engineers[name].pm;
+                    var color = total > 10 ? 'var(--danger)' : total > 5 ? 'var(--warning)' : 'var(--success)';
+                    wHtml += '<div class="metric-item"><span class="metric-label">' + escHtml(name) + '</span><span class="metric-value" style="color:' + color + ';">' + engineers[name].wo + ' WO · ' + engineers[name].pm + ' PM</span></div>';
+                });
+                workloadEl.innerHTML = wHtml || '<div class="metric-item"><span class="metric-label" style="color:var(--gray-600);">No assigned tasks</span></div>';
+            }
+
+            // P5: Equipment Health Score
+            var healthEl = document.getElementById('equipHealthList');
+            if (healthEl) {
+                var hHtml = '';
+                equipmentList.forEach(function(eq) {
+                    var score = 100;
+                    // Age factor: -2 points per year since install
+                    if (eq.installDate) {
+                        var years = (new Date() - new Date(eq.installDate + '-01')) / (365.25 * 86400000);
+                        score -= Math.min(20, Math.round(years * 2));
+                    }
+                    // Breakdown frequency: -10 per breakdown in last 90 days
+                    var recentBreakdowns = breakdownsData.filter(function(b) {
+                        return b.machine === eq.name && b.dateISO && (new Date() - new Date(b.dateISO)) < 90 * 86400000;
+                    }).length;
+                    score -= Math.min(40, recentBreakdowns * 10);
+                    // Status factor
+                    if (eq.status === 'down') score -= 20;
+                    else if (eq.status === 'maintenance') score -= 10;
+                    // Work order load
+                    score -= Math.min(15, eq.workOrders30d * 2);
+                    // Clamp
+                    score = Math.max(0, Math.min(100, score));
+                    var color = score >= 80 ? 'var(--success)' : score >= 50 ? 'var(--warning)' : 'var(--danger)';
+                    hHtml += '<div class="metric-item"><span class="metric-label">' + escHtml(eq.name) + '</span><span class="metric-value" style="color:' + color + ';">' + score + '/100</span></div>';
+                });
+                healthEl.innerHTML = hHtml || '<div class="metric-item"><span class="metric-label" style="color:var(--gray-600);">No equipment</span></div>';
+            }
+
+            // P6: Labor Costs
+            var laborEl = document.getElementById('laborCostList');
+            if (laborEl) {
+                var laborRates = loadData('laborRates', { 'John Smith': 25.00, 'Mike Johnson': 28.00, 'Sarah Williams': 30.00 });
+                var laborByEngineer = {};
+                workOrdersData.forEach(function(wo) {
+                    if (wo.assignedTo && wo.totalJobTime) {
+                        var match = wo.totalJobTime.match(/([\d]+)h\s*([\d]*)m?/);
+                        var hours = 0;
+                        if (match) { hours = parseFloat(match[1]) + (match[2] ? parseFloat(match[2]) / 60 : 0); }
+                        else { var mMatch = wo.totalJobTime.match(/([\d]+)m/); if (mMatch) hours = parseFloat(mMatch[1]) / 60; }
+                        if (hours > 0) {
+                            if (!laborByEngineer[wo.assignedTo]) laborByEngineer[wo.assignedTo] = 0;
+                            laborByEngineer[wo.assignedTo] += hours;
+                        }
+                    }
+                });
+                var lHtml = '';
+                var totalLaborCost = 0;
+                Object.keys(laborByEngineer).forEach(function(name) {
+                    var rate = laborRates[name] || 25.00;
+                    var cost = laborByEngineer[name] * rate;
+                    totalLaborCost += cost;
+                    lHtml += '<div class="metric-item"><span class="metric-label">' + escHtml(name) + ' (' + laborByEngineer[name].toFixed(1) + 'h @ £' + rate.toFixed(2) + '/h)</span><span class="metric-value">£' + cost.toFixed(2) + '</span></div>';
+                });
+                if (totalLaborCost > 0) {
+                    lHtml += '<div class="metric-item" style="background:var(--primary);color:white;"><span class="metric-label" style="color:white;">Total Labor Cost</span><span class="metric-value" style="color:white;">£' + totalLaborCost.toFixed(2) + '</span></div>';
+                }
+                laborEl.innerHTML = lHtml || '<div class="metric-item"><span class="metric-label" style="color:var(--gray-600);">No time tracked on work orders yet</span></div>';
+            }
+        }
+
         function escHtml(str) {
             if (!str) return '';
             return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -5269,6 +5677,18 @@
                 ? `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect fill='%23E5E5E5' width='150' height='150'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='16' fill='%23666'%3E📷 Photo%3C/text%3E%3C/svg%3E" style="width:150px;height:150px;border-radius:8px;border:2px solid var(--gray-300);">`
                 : '<div style="color:var(--gray-600);font-style:italic;">No photos attached</div>';
 
+            // Populate time fields
+            document.getElementById('woDetailStartTime').value = wo.startTime || '';
+            document.getElementById('woDetailFinishTime').value = wo.finishTime || '';
+            document.getElementById('woDetailMachineDowntime').value = wo.machineDowntime || '';
+            calcWoJobTime();
+            // Auto-calc on change
+            document.getElementById('woDetailStartTime').onchange = calcWoJobTime;
+            document.getElementById('woDetailFinishTime').onchange = calcWoJobTime;
+
+            // Render comments
+            renderWoComments(wo);
+
             // Pre-fill update selects
             const assignSel = document.getElementById('woUpdateAssign');
             const statusSel = document.getElementById('woUpdateStatus');
@@ -5285,11 +5705,90 @@
             const newStatus = document.getElementById('woUpdateStatus').value;
             if (newAssign) wo.assignedTo = newAssign;
             if (newStatus) wo.status = newStatus;
+            // Save time fields
+            wo.startTime = document.getElementById('woDetailStartTime').value;
+            wo.finishTime = document.getElementById('woDetailFinishTime').value;
+            wo.machineDowntime = document.getElementById('woDetailMachineDowntime').value.trim();
+            // Calculate total job time
+            if (wo.startTime && wo.finishTime) {
+                var diffMs = new Date(wo.finishTime) - new Date(wo.startTime);
+                if (diffMs > 0) {
+                    var hrs = Math.floor(diffMs / 3600000);
+                    var mins = Math.floor((diffMs % 3600000) / 60000);
+                    wo.totalJobTime = hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
+                }
+            }
+            // Auto-set start time when moving to in-progress
+            if (newStatus === 'in-progress' && !wo.startTime) {
+                wo.startTime = new Date().toISOString().slice(0, 16);
+            }
+            // Auto-set finish time when completing
+            if (newStatus === 'completed' && !wo.finishTime) {
+                wo.finishTime = new Date().toISOString().slice(0, 16);
+                if (wo.startTime) {
+                    var diffMs2 = new Date(wo.finishTime) - new Date(wo.startTime);
+                    if (diffMs2 > 0) {
+                        var hrs2 = Math.floor(diffMs2 / 3600000);
+                        var mins2 = Math.floor((diffMs2 % 3600000) / 60000);
+                        wo.totalJobTime = hrs2 > 0 ? hrs2 + 'h ' + mins2 + 'm' : mins2 + 'm';
+                    }
+                }
+            }
             renderWorkOrders();
             if (typeof renderEngineerDashboard === 'function') renderEngineerDashboard();
             closeModal('workOrderDetailModal');
             persistAllData();
             showToast('✅ Work order updated!', 'success');
+        }
+
+        function renderWoComments(wo) {
+            var container = document.getElementById('woCommentsContainer');
+            if (!container) return;
+            if (!wo.comments || wo.comments.length === 0) {
+                container.innerHTML = '<div style="color:var(--gray-600);font-style:italic;padding:0.5rem;">No comments yet.</div>';
+                return;
+            }
+            container.innerHTML = wo.comments.map(function(c) {
+                return '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;border-left:4px solid var(--primary);">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">' +
+                    '<div style="font-weight:600;font-size:0.9rem;">' + escHtml(c.author) + '</div>' +
+                    '<div style="font-size:0.8rem;color:var(--gray-600);">' + escHtml(c.timestamp) + '</div>' +
+                    '</div>' +
+                    '<div style="font-size:0.9rem;line-height:1.5;">' + escHtml(c.text) + '</div>' +
+                    '</div>';
+            }).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addWoComment() {
+            var input = document.getElementById('woNewComment');
+            var text = input.value.trim();
+            if (!text) return;
+            var wo = workOrdersData.find(function(w) { return w.id === currentDetailWoId; });
+            if (!wo) return;
+            if (!wo.comments) wo.comments = [];
+            var now = new Date();
+            var timestamp = now.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' }) + ' - ' + now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            wo.comments.push({ author: currentUserName || 'User', timestamp: timestamp, text: text });
+            renderWoComments(wo);
+            input.value = '';
+            persistAllData();
+        }
+
+        function calcWoJobTime() {
+            var start = document.getElementById('woDetailStartTime').value;
+            var finish = document.getElementById('woDetailFinishTime').value;
+            var el = document.getElementById('woDetailTotalJobTime');
+            if (start && finish) {
+                var diffMs = new Date(finish) - new Date(start);
+                if (diffMs > 0) {
+                    var hrs = Math.floor(diffMs / 3600000);
+                    var mins = Math.floor((diffMs % 3600000) / 60000);
+                    el.textContent = hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
+                    return;
+                }
+            }
+            el.textContent = '—';
         }
 
         function deleteWorkOrder(woId) {
@@ -5321,7 +5820,11 @@
                 return;
             }
 
-            equipmentList.push({ id: nextEquipId++, name, equipId, manufacturer: mfr, model, location: loc, installDate: date || '', status, workOrders30d: 0 });
+            const criticality = document.getElementById('addEquipCriticality').value;
+            const warrantyExpiry = document.getElementById('addWarrantyExpiry').value;
+            const warrantyProvider = document.getElementById('addWarrantyProvider').value.trim();
+            const warrantyNotes = document.getElementById('addWarrantyNotes').value.trim();
+            equipmentList.push({ id: nextEquipId++, name, equipId, manufacturer: mfr, model, location: loc, installDate: date || '', status, workOrders30d: 0, criticality, warrantyExpiry, warrantyProvider, warrantyNotes });
             renderEquipment();
             closeModal('equipmentModal');
             document.getElementById('equipmentForm').reset();
@@ -5333,6 +5836,16 @@
             const eq = equipmentList.find(e => e.id === equipId);
             if (!eq) return;
             document.getElementById('equipHistoryTitle').textContent = eq.name + ' - History';
+            var critColors = { A: '#dc2626', B: '#f59e0b', C: '#22c55e' };
+            var critLabels = { A: 'Critical', B: 'Important', C: 'Low' };
+            var eCrit = eq.criticality || 'B';
+            var warrantyHtml = '';
+            if (eq.warrantyExpiry) {
+                var wDays = Math.ceil((new Date(eq.warrantyExpiry) - new Date()) / 86400000);
+                var wStatus = wDays < 0 ? 'Expired' : wDays <= 30 ? 'Expiring Soon' : 'Active';
+                var wColor = wDays < 0 ? '#dc2626' : wDays <= 30 ? '#f59e0b' : '#22c55e';
+                warrantyHtml = '<div class="form-group"><label class="form-label">Warranty</label><div style="padding:1rem;background:var(--gray-100);border-radius:8px;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;"><div><div style="color:var(--gray-600);font-size:0.9rem;">Status</div><div style="font-weight:600;color:' + wColor + ';">' + wStatus + '</div></div><div><div style="color:var(--gray-600);font-size:0.9rem;">Expiry</div><div style="font-weight:600;">' + escHtml(eq.warrantyExpiry) + '</div></div><div><div style="color:var(--gray-600);font-size:0.9rem;">Provider</div><div style="font-weight:600;">' + escHtml(eq.warrantyProvider || 'N/A') + '</div></div><div><div style="color:var(--gray-600);font-size:0.9rem;">Notes</div><div style="font-weight:600;">' + escHtml(eq.warrantyNotes || '—') + '</div></div></div></div></div>';
+            }
             document.getElementById('equipHistoryContent').innerHTML = `
                 <div class="form-group">
                     <label class="form-label">Equipment Information</label>
@@ -5340,6 +5853,7 @@
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                             <div><div style="color:var(--gray-600);font-size:0.9rem;">ID</div><div style="font-weight:600;font-family:'IBM Plex Mono',monospace;">${escHtml(eq.equipId)}</div></div>
                             <div><div style="color:var(--gray-600);font-size:0.9rem;">Manufacturer</div><div style="font-weight:600;">${escHtml(eq.manufacturer)}</div></div>
+                            <div><div style="color:var(--gray-600);font-size:0.9rem;">Criticality</div><div style="font-weight:600;color:${critColors[eCrit]};">${eCrit} — ${critLabels[eCrit]}</div></div>
                         </div>
                     </div>
                 </div>
@@ -5353,7 +5867,20 @@
                 <div class="form-group">
                     <label class="form-label">Location</label>
                     <div style="padding:1rem;background:var(--gray-100);border-radius:8px;">${escHtml(eq.location)}</div>
-                </div>`;
+                </div>
+                ${warrantyHtml}`;
+            // Add compatible parts section
+            var compatParts = partsData.filter(function(p) { return p.compatibleEquipment && p.compatibleEquipment.indexOf(eq.id) !== -1; });
+            if (compatParts.length > 0) {
+                document.getElementById('equipHistoryContent').innerHTML += '<div class="form-group"><label class="form-label">Compatible Parts</label><div style="display:flex;flex-direction:column;gap:0.5rem;">' +
+                    compatParts.map(function(p) {
+                        var stock = getStockStatus(p.qty, p.minStock);
+                        return '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">' +
+                            '<div><div style="font-weight:600;">' + escHtml(p.name) + '</div><div style="font-size:0.85rem;color:var(--gray-600);">' + escHtml(p.partNumber) + ' · Shelf ' + escHtml(p.shelf) + ', Bin ' + escHtml(p.bin) + '</div></div>' +
+                            '<span class="stock-indicator ' + stock.cls + '">' + stock.label + ' (' + p.qty + ')</span>' +
+                            '</div>';
+                    }).join('') + '</div></div>';
+            }
             openModal('equipmentHistoryModal');
         }
 
@@ -5368,6 +5895,10 @@
             document.getElementById('editLocation').value     = eq.location;
             document.getElementById('editInstallDate').value  = eq.installDate || '';
             document.getElementById('editStatus').value       = eq.status;
+            document.getElementById('editEquipCriticality').value = eq.criticality || 'B';
+            document.getElementById('editWarrantyExpiry').value   = eq.warrantyExpiry || '';
+            document.getElementById('editWarrantyProvider').value = eq.warrantyProvider || '';
+            document.getElementById('editWarrantyNotes').value    = eq.warrantyNotes || '';
             openModal('equipmentEditModal');
         }
 
@@ -5381,6 +5912,10 @@
             eq.location     = document.getElementById('editLocation').value.trim() || eq.location;
             eq.installDate  = document.getElementById('editInstallDate').value;
             eq.status       = document.getElementById('editStatus').value;
+            eq.criticality     = document.getElementById('editEquipCriticality').value;
+            eq.warrantyExpiry  = document.getElementById('editWarrantyExpiry').value;
+            eq.warrantyProvider = document.getElementById('editWarrantyProvider').value.trim();
+            eq.warrantyNotes   = document.getElementById('editWarrantyNotes').value.trim();
             renderEquipment();
             closeModal('equipmentEditModal');
             persistAllData();
@@ -5415,6 +5950,28 @@
             }
         }
 
+        function renderPartEquipCheckboxes(selectedIds) {
+            var container = document.getElementById('partEquipCheckboxes');
+            if (!container) return;
+            if (equipmentList.length === 0) { container.innerHTML = '<span style="color:var(--gray-600);font-style:italic;">No equipment added yet.</span>'; return; }
+            container.innerHTML = equipmentList.map(function(eq) {
+                var checked = (selectedIds || []).indexOf(eq.id) !== -1 ? ' checked' : '';
+                return '<label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;"><input type="checkbox" class="partEquipCb" value="' + eq.id + '"' + checked + '> ' + escHtml(eq.name) + ' <span style="color:var(--gray-500);font-size:0.85rem;">(' + escHtml(eq.equipId) + ')</span></label>';
+            }).join('');
+        }
+
+        function getSelectedPartEquipment() {
+            var cbs = document.querySelectorAll('.partEquipCb:checked');
+            var ids = [];
+            cbs.forEach(function(cb) { ids.push(parseInt(cb.value)); });
+            return ids;
+        }
+
+        function openAddPartModal() {
+            renderPartEquipCheckboxes([]);
+            openModal('addPartModal');
+        }
+
         function submitAddPart() {
             const name     = document.getElementById('addPartName').value.trim();
             const number   = document.getElementById('addPartNumber').value.trim();
@@ -5429,7 +5986,7 @@
             }
 
             capturePendingSupplier();
-            partsData.push({ id: nextPartId++, name, partNumber: number, qty, minStock, shelf, bin, monthlyUsage: 0, suppliers: partSupplierItems.slice() });
+            partsData.push({ id: nextPartId++, name, partNumber: number, qty, minStock, shelf, bin, monthlyUsage: 0, compatibleEquipment: getSelectedPartEquipment(), suppliers: partSupplierItems.slice() });
             renderParts();
             closeModal('addPartModal');
             document.getElementById('addPartForm').reset();
@@ -5454,6 +6011,8 @@
             // Load existing suppliers into builder
             partSupplierItems = (p.suppliers || []).map(function(s) { return { supplier: s.supplier, supplierPartNo: s.supplierPartNo, price: s.price, leadTime: s.leadTime }; });
             renderPartSupplierBuilder();
+            // Load compatible equipment checkboxes
+            renderPartEquipCheckboxes(p.compatibleEquipment || []);
             // Change modal button behavior temporarily
             const btn = document.querySelector('#addPartModal .modal-footer .btn-primary');
             btn.textContent = 'Save Changes';
@@ -5473,6 +6032,7 @@
             p.bin      = document.getElementById('addPartBin').value.trim();
             capturePendingSupplier();
             p.suppliers = partSupplierItems.slice();
+            p.compatibleEquipment = getSelectedPartEquipment();
             renderParts();
             closeModal('addPartModal');
             document.getElementById('addPartForm').reset();
@@ -5700,7 +6260,38 @@
         }
 
         function downloadPOPDF() {
-            showToast('In a live system this would generate and download a PDF.', 'info');
+            var po = purchaseOrdersData.find(function(p) { return p.id === currentDetailPoId; });
+            if (!po) { showToast('No PO selected.', 'error'); return; }
+            var lines = [
+                'PURCHASE ORDER',
+                '==============',
+                '',
+                'PO Number: ' + po.poNumber,
+                'Title: ' + po.title,
+                'Vendor: ' + po.vendor,
+                'Status: ' + po.status.toUpperCase(),
+                'Priority: ' + po.priority.toUpperCase(),
+                'Total: ' + po.total,
+                'Created: ' + po.created,
+                'Requested By: ' + po.requestedBy,
+                'Budget Code: ' + po.budgetCode,
+                'Expected Delivery: ' + po.expectedDelivery,
+                po.tracking ? 'Tracking: ' + po.tracking : '',
+                po.notes ? 'Notes: ' + po.notes : '',
+                '',
+                'Items: ' + po.items + ' line items',
+                po.tags && po.tags.length ? 'Details: ' + po.tags.join(', ') : ''
+            ].filter(Boolean).join('\n');
+            downloadFile(po.poNumber + '.txt', lines, 'text/plain');
+            showToast('PO downloaded!', 'success');
+        }
+
+        function downloadFile(filename, content, type) {
+            var blob = new Blob([content], { type: type });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = filename; a.click();
+            URL.revokeObjectURL(url);
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -5847,6 +6438,106 @@
             if (type === 'hotwork') {
                 closeHotWorkPermit(permitId);
             }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // WORK REQUESTS
+        // ─────────────────────────────────────────────────────────────────────
+        function renderWorkRequests() {
+            var container = document.getElementById('workRequestsList');
+            if (!container) return;
+            if (workRequestsData.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">No Requests</div><div class="empty-state-text">No maintenance requests have been submitted yet.</div></div>';
+                return;
+            }
+            var isAdminOrManager = currentUserRole === 'admin' || currentUserRole === 'manager';
+            container.innerHTML = workRequestsData.map(function(req) {
+                var urgColors = { high: 'var(--danger)', medium: 'var(--warning)', low: 'var(--success)' };
+                var urgLabels = { high: 'HIGH', medium: 'MEDIUM', low: 'LOW' };
+                var statusBadge = req.status === 'pending' ? '<span class="status-badge" style="background:rgba(0,102,255,0.1);color:var(--primary);">PENDING</span>' :
+                    req.status === 'approved' ? '<span class="status-badge" style="background:rgba(0,200,83,0.1);color:var(--success);">APPROVED</span>' :
+                    '<span class="status-badge" style="background:rgba(220,38,38,0.1);color:var(--danger);">DECLINED</span>';
+                var actions = '';
+                if (isAdminOrManager && req.status === 'pending') {
+                    actions = '<div style="display:flex;gap:0.5rem;margin-top:0.75rem;">' +
+                        '<button class="btn btn-success btn-small" onclick="approveRequest(' + req.id + ')">Approve & Create WO</button>' +
+                        '<button class="btn btn-danger btn-small" onclick="declineRequest(' + req.id + ')">Decline</button>' +
+                        '</div>';
+                }
+                return '<div style="padding:1rem;background:var(--gray-100);border-radius:8px;margin-bottom:0.75rem;border-left:4px solid ' + (urgColors[req.urgency] || 'var(--gray-400)') + ';">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.5rem;">' +
+                    '<div><div style="font-weight:700;">' + escHtml(req.equipment) + '</div><div style="font-size:0.85rem;color:var(--gray-600);">Submitted by ' + escHtml(req.submitter || 'Unknown') + ' · ' + escHtml(req.submitted) + '</div></div>' +
+                    '<div style="display:flex;gap:0.5rem;align-items:center;">' +
+                    '<span class="status-badge" style="background:' + urgColors[req.urgency] + '15;color:' + urgColors[req.urgency] + ';">' + urgLabels[req.urgency] + '</span>' +
+                    statusBadge +
+                    '</div></div>' +
+                    '<div style="line-height:1.5;">' + escHtml(req.description) + '</div>' +
+                    actions +
+                    '</div>';
+            }).join('');
+            // Update pending count badge
+            var pending = workRequestsData.filter(function(r) { return r.status === 'pending'; }).length;
+            var tab = document.getElementById('workRequestsTab');
+            if (tab) tab.textContent = 'Work Requests' + (pending > 0 ? ' (' + pending + ')' : '');
+        }
+
+        function submitWorkRequest() {
+            var equipment = document.getElementById('requestEquipment').value;
+            var description = document.getElementById('requestDescription').value.trim();
+            var urgency = document.getElementById('requestUrgency').value;
+            var submitter = document.getElementById('requestSubmitter').value.trim() || currentUserName || 'Unknown';
+            if (!equipment || !description) { showToast('Please select equipment and describe the issue.', 'error'); return; }
+            var now = new Date();
+            var timestamp = now.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' }) + ' - ' + now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            workRequestsData.push({ id: nextRequestId++, equipment: equipment, description: description, urgency: urgency, submitter: submitter, submitted: timestamp, status: 'pending' });
+            saveData('workRequests', workRequestsData);
+            saveData('nextRequestId', nextRequestId);
+            closeModal('submitRequestModal');
+            document.getElementById('requestForm').reset();
+            renderWorkRequests();
+            showToast('Maintenance request submitted!', 'success');
+        }
+
+        function approveRequest(reqId) {
+            var req = workRequestsData.find(function(r) { return r.id === reqId; });
+            if (!req) return;
+            req.status = 'approved';
+            // Create a work order from this request
+            var now = new Date();
+            var timestamp = now.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' }) + ' - ' + now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            var woIdStr = 'WO-' + now.getFullYear() + '-' + String(nextWoId).padStart(3, '0');
+            workOrdersData.push({
+                id: nextWoId++, woId: woIdStr, title: req.equipment + ' - ' + req.description.substring(0, 50),
+                equipment: req.equipment, priority: req.urgency, status: 'open', assignedTo: '',
+                createdBy: currentUserName || 'System', created: timestamp,
+                description: 'From maintenance request by ' + req.submitter + ':\n\n' + req.description,
+                hasPhotos: false, comments: [], startTime: '', finishTime: '', totalJobTime: '', machineDowntime: ''
+            });
+            saveData('nextWoId', nextWoId);
+            saveData('workRequests', workRequestsData);
+            persistAllData();
+            renderWorkRequests();
+            renderWorkOrders();
+            showToast('Request approved — Work Order ' + woIdStr + ' created!', 'success');
+        }
+
+        function declineRequest(reqId) {
+            var req = workRequestsData.find(function(r) { return r.id === reqId; });
+            if (!req) return;
+            if (!confirm('Decline this maintenance request?')) return;
+            req.status = 'declined';
+            saveData('workRequests', workRequestsData);
+            renderWorkRequests();
+            showToast('Request declined.', 'info');
+        }
+
+        function populateRequestEquipDropdown() {
+            var sel = document.getElementById('requestEquipment');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">Select equipment...</option>';
+            equipmentList.forEach(function(eq) {
+                sel.innerHTML += '<option value="' + escHtml(eq.name) + '">' + escHtml(eq.name) + ' (' + escHtml(eq.equipId) + ')</option>';
+            });
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -6184,8 +6875,129 @@
         // ─────────────────────────────────────────────────────────────────────
         // ANALYTICS
         // ─────────────────────────────────────────────────────────────────────
+        function toggleExportMenu() {
+            var menu = document.getElementById('exportMenu');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+        // Close export menu on outside click
+        document.addEventListener('click', function(e) {
+            var menu = document.getElementById('exportMenu');
+            if (menu && !e.target.closest('#exportMenu') && !e.target.closest('[onclick*="toggleExportMenu"]')) menu.style.display = 'none';
+        });
+
+        function csvEscape(val) {
+            var s = String(val == null ? '' : val);
+            if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) return '"' + s.replace(/"/g, '""') + '"';
+            return s;
+        }
+
+        function buildCSV(headers, rows) {
+            return headers.join(',') + '\n' + rows.map(function(r) { return r.map(csvEscape).join(','); }).join('\n');
+        }
+
+        function exportCSV(type) {
+            var csv = '', filename = '';
+            var today = new Date().toISOString().slice(0, 10);
+            if (type === 'workOrders') {
+                filename = 'work-orders-' + today + '.csv';
+                csv = buildCSV(['WO ID','Title','Equipment','Priority','Status','Assigned To','Created By','Created','Start Time','Finish Time','Total Job Time','Machine Downtime'],
+                    workOrdersData.map(function(w) { return [w.woId, w.title, w.equipment, w.priority, w.status, w.assignedTo || 'Unassigned', w.createdBy, w.created, w.startTime || '', w.finishTime || '', w.totalJobTime || '', w.machineDowntime || '']; }));
+            } else if (type === 'equipment') {
+                filename = 'equipment-' + today + '.csv';
+                csv = buildCSV(['ID','Name','Equipment ID','Manufacturer','Model','Location','Install Date','Status','Criticality','Warranty Expiry','Warranty Provider','Work Orders 30d'],
+                    equipmentList.map(function(e) { return [e.id, e.name, e.equipId, e.manufacturer, e.model, e.location, e.installDate, e.status, e.criticality || 'B', e.warrantyExpiry || '', e.warrantyProvider || '', e.workOrders30d]; }));
+            } else if (type === 'parts') {
+                filename = 'parts-inventory-' + today + '.csv';
+                csv = buildCSV(['ID','Name','Part Number','Quantity','Min Stock','Shelf','Bin','Monthly Usage','Compatible Equipment','Suppliers'],
+                    partsData.map(function(p) {
+                        var eqNames = (p.compatibleEquipment || []).map(function(eId) { var eq = equipmentList.find(function(e) { return e.id === eId; }); return eq ? eq.name : ''; }).filter(Boolean).join('; ');
+                        var supNames = (p.suppliers || []).map(function(s) { return s.supplier + ' (' + s.supplierPartNo + ' £' + s.price + ')'; }).join('; ');
+                        return [p.id, p.name, p.partNumber, p.qty, p.minStock, p.shelf, p.bin, p.monthlyUsage, eqNames, supNames];
+                    }));
+            } else if (type === 'breakdowns') {
+                filename = 'breakdowns-' + today + '.csv';
+                csv = buildCSV(['BR ID','Machine','Date','Time','Fault Description','Root Cause','Action Taken','Resolved By','Time to Resolve','Production Loss','Status'],
+                    breakdownsData.map(function(b) { return [b.brId, b.machine, b.dateISO, b.time, b.faultDescription, b.rootCause || '', b.actionTaken || '', b.resolvedBy || '', b.timeToResolve || '', b.productionLoss || '', b.status]; }));
+            } else if (type === 'pm') {
+                filename = 'pm-schedule-' + today + '.csv';
+                csv = buildCSV(['ID','Title','Equipment','Frequency','Duration','Assigned To','Status','Due Status','Scheduled Date','Last Completed'],
+                    pmData.map(function(pm) { return [pm.id, pm.title, pm.equipment, pm.frequency, pm.duration, pm.assignedTo, pm.status || '', pm.dueStatus, pm.scheduledDate || '', pm.lastCompleted || '']; }));
+            } else if (type === 'purchaseOrders') {
+                filename = 'purchase-orders-' + today + '.csv';
+                csv = buildCSV(['PO Number','Title','Vendor','Status','Priority','Total','Created','Items','Expected Delivery','Budget Code','Requested By'],
+                    purchaseOrdersData.map(function(po) { return [po.poNumber, po.title, po.vendor, po.status, po.priority, po.total, po.created, po.items, po.expectedDelivery, po.budgetCode, po.requestedBy]; }));
+            }
+            if (csv) {
+                downloadFile(filename, csv, 'text/csv');
+                showToast('Exported ' + type + ' as CSV!', 'success');
+            }
+            document.getElementById('exportMenu').style.display = 'none';
+        }
+
+        function exportFullReport() {
+            var today = new Date().toISOString().slice(0, 10);
+            var lines = [];
+            lines.push('MAINTENANCE REPORT — ' + today);
+            lines.push('='.repeat(50));
+            lines.push('');
+
+            // KPIs
+            var openWo = workOrdersData.filter(function(w) { return w.status === 'open'; }).length;
+            var inProgressWo = workOrdersData.filter(function(w) { return w.status === 'in-progress'; }).length;
+            var completedWo = workOrdersData.filter(function(w) { return w.status === 'completed'; }).length;
+            var overduePm = pmData.filter(function(pm) { return pm.dueStatus === 'overdue'; }).length;
+            var lowStockParts = partsData.filter(function(p) { return p.qty > 0 && p.qty <= p.minStock; }).length;
+            var outOfStockParts = partsData.filter(function(p) { return p.qty === 0; }).length;
+
+            lines.push('KEY METRICS');
+            lines.push('-'.repeat(30));
+            lines.push('Open Work Orders: ' + openWo);
+            lines.push('In-Progress Work Orders: ' + inProgressWo);
+            lines.push('Completed Work Orders: ' + completedWo);
+            lines.push('Total Equipment: ' + equipmentList.length);
+            lines.push('Overdue PMs: ' + overduePm);
+            lines.push('Low Stock Parts: ' + lowStockParts);
+            lines.push('Out of Stock Parts: ' + outOfStockParts);
+            lines.push('');
+
+            // Equipment summary
+            lines.push('EQUIPMENT STATUS');
+            lines.push('-'.repeat(30));
+            equipmentList.forEach(function(eq) {
+                lines.push(eq.equipId + ' | ' + eq.name + ' | ' + eq.status.toUpperCase() + ' | Criticality: ' + (eq.criticality || 'B'));
+            });
+            lines.push('');
+
+            // Active work orders
+            lines.push('ACTIVE WORK ORDERS');
+            lines.push('-'.repeat(30));
+            workOrdersData.filter(function(w) { return w.status !== 'completed'; }).forEach(function(w) {
+                lines.push(w.woId + ' | ' + w.title + ' | ' + w.priority.toUpperCase() + ' | ' + w.status + ' | ' + (w.assignedTo || 'Unassigned'));
+            });
+            lines.push('');
+
+            // PM compliance
+            lines.push('PM SCHEDULE');
+            lines.push('-'.repeat(30));
+            pmData.forEach(function(pm) {
+                lines.push(pm.title + ' | ' + pm.frequency + ' | ' + pm.dueStatus + ' | ' + (pm.assignedTo || 'Unassigned'));
+            });
+            lines.push('');
+
+            // Parts at risk
+            lines.push('PARTS REQUIRING ATTENTION');
+            lines.push('-'.repeat(30));
+            partsData.filter(function(p) { return p.qty <= p.minStock; }).forEach(function(p) {
+                lines.push(p.partNumber + ' | ' + p.name + ' | Qty: ' + p.qty + '/' + p.minStock + ' | ' + (p.qty === 0 ? 'OUT OF STOCK' : 'LOW STOCK'));
+            });
+
+            downloadFile('maintenance-report-' + today + '.txt', lines.join('\n'), 'text/plain');
+            showToast('Full maintenance report exported!', 'success');
+            document.getElementById('exportMenu').style.display = 'none';
+        }
+
         function exportReport() {
-            showToast('In a live system, this would generate a PDF/Excel/CSV report.', 'info');
+            toggleExportMenu();
         }
 
         // ─────────────────────────────────────────────────────────────────────
