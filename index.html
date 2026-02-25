@@ -250,6 +250,8 @@
             border-bottom-color: var(--primary);
         }
 
+        .tier-essential .order-part-btn { display: none; }
+
         .tab-content {
             display: none;
         }
@@ -4129,10 +4131,53 @@
         // ─────────────────────────────────────────────────────────────────────
         // SERVICE WORKER REGISTRATION
         // ─────────────────────────────────────────────────────────────────────
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js')
-                .then(function(reg) { console.log('SW registered:', reg.scope); })
-                .catch(function(err) { console.warn('SW registration failed:', err); });
+        // Service Worker registered conditionally after login (Pro tier only)
+        // See applyTierRestrictions()
+
+        // ─────────────────────────────────────────────────────────────────────
+        // TIER ACCESS CONFIGURATION
+        // ─────────────────────────────────────────────────────────────────────
+        var PRO_ONLY_TABS = ['purchaseOrders', 'permits', 'analytics', 'calendar'];
+        var currentUserTier = 'essential';
+
+        function hasAccess(tabName) {
+            if (currentUserTier === 'pro') return true;
+            return PRO_ONLY_TABS.indexOf(tabName) === -1;
+        }
+
+        function applyTierRestrictions() {
+            // Hide nav tabs the user cannot access
+            document.querySelectorAll('.nav-tab').forEach(function(btn) {
+                var onclick = btn.getAttribute('onclick') || '';
+                var match = onclick.match(/switchTab\('(\w+)'\)/);
+                if (!match) return;
+                var tabName = match[1];
+                btn.style.display = hasAccess(tabName) ? '' : 'none';
+            });
+            // If active tab is locked, switch to Work Orders
+            var activeTab = document.querySelector('.tab-content.active');
+            if (activeTab && !hasAccess(activeTab.id)) {
+                document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+                document.getElementById('workOrders').classList.add('active');
+                document.querySelectorAll('.nav-tab').forEach(function(btn) {
+                    btn.classList.remove('active');
+                    if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes("'workOrders'")) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
+            // Toggle body class for CSS-based hiding (parts vendor elements)
+            if (currentUserTier === 'essential') {
+                document.body.classList.add('tier-essential');
+            } else {
+                document.body.classList.remove('tier-essential');
+            }
+            // Register Service Worker only for Pro tier (offline mode)
+            if (currentUserTier === 'pro' && 'serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(function(reg) { console.log('SW registered:', reg.scope); })
+                    .catch(function(err) { console.warn('SW registration failed:', err); });
+            }
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -4239,21 +4284,22 @@
                     try {
                         var profileResult = await supabaseClient
                             .from('profiles')
-                            .select('role')
+                            .select('role, tier')
                             .eq('id', user.id)
                             .single();
                         if (profileResult.data) {
                             role = profileResult.data.role;
+                            currentUserTier = profileResult.data.tier || 'essential';
                         }
                         // Cache successful auth for offline use
-                        saveData('cachedUser', { id: user.id, email: user.email, role: role });
+                        saveData('cachedUser', { id: user.id, email: user.email, role: role, tier: currentUserTier });
                     } catch (e) {
                         var cached = loadData('cachedUser', null);
-                        if (cached && cached.id === user.id) { role = cached.role; }
+                        if (cached && cached.id === user.id) { role = cached.role; currentUserTier = cached.tier || 'essential'; }
                     }
                 } else {
                     var cached = loadData('cachedUser', null);
-                    if (cached && cached.id === user.id) { role = cached.role; }
+                    if (cached && cached.id === user.id) { role = cached.role; currentUserTier = cached.tier || 'essential'; }
                 }
             }
 
@@ -4292,6 +4338,7 @@
                     }
                 }
             }
+            applyTierRestrictions();
         }
 
         function showAuthScreen() {
@@ -4384,6 +4431,7 @@
                 // Supabase unreachable — check for cached session
                 var cached = loadData('cachedUser', null);
                 if (cached && cached.role !== 'pending') {
+                    currentUserTier = cached.tier || 'essential';
                     document.getElementById('authScreen').classList.add('hidden');
                     document.getElementById('pendingScreen').style.display = 'none';
                     document.getElementById('appContent').style.display = '';
@@ -4410,6 +4458,7 @@
                             }
                         }
                     }
+                    applyTierRestrictions();
                     return true;
                 }
             }
@@ -4621,9 +4670,9 @@
                         <div class="part-detail-row"><span class="part-detail-label">Used This Month</span><span class="part-detail-value">${p.monthlyUsage} times</span></div>
                     </div>
                     <div style="display:flex;gap:0.5rem;margin-top:1rem;">
-                        <button class="btn ${orderBtnClass}" style="flex:1;" onclick="orderPart('${escHtml(p.partNumber)}','${escHtml(p.name)}',${stock.cls !== 'in-stock'})">${orderBtnLabel}</button>
-                        <button class="btn btn-secondary btn-small" onclick="openEditPart(${p.id})">Edit</button>
-                        <button class="btn btn-danger btn-small" onclick="deletePart(${p.id})">Delete</button>
+                        ${hasAccess('purchaseOrders') ? `<button class="btn ${orderBtnClass}" style="flex:1;" onclick="orderPart('${escHtml(p.partNumber)}','${escHtml(p.name)}',${stock.cls !== 'in-stock'})">${orderBtnLabel}</button>` : ''}
+                        <button class="btn btn-secondary btn-small" onclick="openEditPart(${p.id})" style="flex:1;">Edit</button>
+                        <button class="btn btn-danger btn-small" onclick="deletePart(${p.id})" style="flex:1;">Delete</button>
                     </div>
                 </div>`;
             }).join('');
@@ -4783,6 +4832,7 @@
         // TAB SWITCHING
         // ─────────────────────────────────────────────────────────────────────
         function switchTab(tabName) {
+            if (!hasAccess(tabName)) { tabName = 'workOrders'; }
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
             document.getElementById(tabName).classList.add('active');
@@ -4821,6 +4871,7 @@
         }
 
         function switchTabByName(tabName) {
+            if (!hasAccess(tabName)) { tabName = 'workOrders'; }
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             const tabEl = document.getElementById(tabName);
@@ -6066,5 +6117,3 @@
     </script>
 </body>
 </html>
-
-offline integration
