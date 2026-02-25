@@ -4146,7 +4146,8 @@
         }
 
         function applyTierRestrictions() {
-            // Hide nav tabs the user cannot access
+            console.log('[Cradero] applyTierRestrictions — tier:', currentUserTier);
+            // Show or hide nav tabs based on access
             var hiddenCount = 0;
             var allTabs = document.querySelectorAll('.nav-tab');
             allTabs.forEach(function(btn) {
@@ -4157,9 +4158,18 @@
                 if (!hasAccess(tabName)) {
                     btn.style.display = 'none';
                     hiddenCount++;
+                } else {
+                    btn.style.display = '';
                 }
             });
-            alert('DEBUG applyTierRestrictions: found ' + allTabs.length + ' tabs, hidden ' + hiddenCount + ', tier=' + currentUserTier);
+            // Also hide the tab content panels for restricted tabs
+            PRO_ONLY_TABS.forEach(function(tabName) {
+                var panel = document.getElementById(tabName);
+                if (panel) {
+                    panel.style.display = hasAccess(tabName) ? '' : 'none';
+                }
+            });
+            console.log('[Cradero] Tabs hidden:', hiddenCount, '/ Total:', allTabs.length);
             // If active tab is locked, switch to Work Orders
             var activeTab = document.querySelector('.tab-content.active');
             if (activeTab && !hasAccess(activeTab.id)) {
@@ -4344,7 +4354,7 @@
                     }
                 }
             }
-            alert('DEBUG: currentUserTier = ' + currentUserTier + ', role = ' + role);
+            console.log('[Cradero] showApp — tier:', currentUserTier, 'role:', role);
             applyTierRestrictions();
         }
 
