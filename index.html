@@ -3627,13 +3627,54 @@
 
                     <div class="form-group">
                         <label class="form-label">Required Parts/Tools</label>
-                        <textarea class="form-textarea" placeholder="List any parts or tools needed..."></textarea>
+                        <textarea class="form-textarea" id="pmPartsTools" placeholder="List any parts or tools needed..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Checklist Items</label>
+                        <p style="font-size:0.85rem;color:var(--gray-500);margin:0 0 0.5rem;">Define the checks an engineer must complete. All items must be ticked off before the task can be marked complete.</p>
+                        <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
+                            <input type="text" class="form-input" id="pmChecklistInput" placeholder="e.g., Check belt tension" style="flex:1;margin:0;" onkeydown="if(event.key==='Enter'){event.preventDefault();addPMChecklistItem();}">
+                            <button type="button" class="btn btn-primary" onclick="addPMChecklistItem()" style="white-space:nowrap;">+ Add</button>
+                        </div>
+                        <div id="pmChecklistBuilder" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('addPMModal')">Cancel</button>
                 <button class="btn btn-primary" onclick="submitAddPM()">Schedule PM</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PM Completion Modal -->
+    <div id="completePMModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Complete PM Task</h2>
+            </div>
+            <div class="modal-body" id="completePMBody">
+                <!-- Dynamically populated -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('completePMModal')">Cancel</button>
+                <button class="btn btn-primary" id="completePMSubmitBtn" onclick="submitCompletePM()" disabled>Complete Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PM Detail Modal (read-only view of completed checklist) -->
+    <div id="pmDetailModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">PM Task Details</h2>
+            </div>
+            <div class="modal-body" id="pmDetailBody">
+                <!-- Dynamically populated -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('pmDetailModal')">Close</button>
             </div>
         </div>
     </div>
@@ -4565,11 +4606,11 @@
 
         let nextPmId = loadData('nextPmId', 6);
         let pmData = loadData('pmSchedule', [
-            { id: 'fire-alarm',    title: '🔥 Fire Alarm System - Weekly Test',    equipment: 'Facility-Wide',        frequency: 'Weekly (Every Monday)', duration: '15 minutes', assignedTo: 'Mike Johnson',    dueStatus: 'overdue',  dueText: 'Overdue by 1 day', status: 'overdue',   lastCompleted: 'Feb 5, 2026' },
-            { id: 'emerg-light',   title: '💡 Emergency Lighting - Monthly Test',   equipment: 'All Emergency Exits',  frequency: 'Monthly (1st of month)', duration: '45 minutes', assignedTo: 'Sarah Williams',  dueStatus: 'due-soon', dueText: 'Due in 2 days',    status: 'due-soon',  lastCompleted: 'Jan 1, 2026' },
-            { id: 'line3-lube',    title: 'Line 3 Filler - Monthly Lubrication',   equipment: 'Line 3 Filler',        frequency: 'Monthly',               duration: '30 minutes', assignedTo: 'Sarah Williams',  dueStatus: 'overdue',  dueText: 'Overdue by 2 days', status: 'overdue',  lastCompleted: 'Jan 12, 2026' },
-            { id: 'line1-belt',    title: 'Line 1 Conveyor - Belt Tension Check',  equipment: 'Line 1 Conveyor',      frequency: 'Weekly',                duration: '15 minutes', assignedTo: 'John Smith',      dueStatus: 'due-soon', dueText: 'Due tomorrow',     status: 'due-soon',  lastCompleted: 'Feb 6, 2026' },
-            { id: 'line2-oil',     title: 'Line 2 Mixer - Gearbox Oil Change',     equipment: 'Line 2 Mixer',         frequency: 'Quarterly',             duration: '1 hour',     assignedTo: 'Mike Johnson',    dueStatus: 'upcoming', dueText: 'Due in 5 days',    status: 'upcoming',  lastCompleted: 'Nov 14, 2025' }
+            { id: 'fire-alarm',    title: '🔥 Fire Alarm System - Weekly Test',    equipment: 'Facility-Wide',        frequency: 'Weekly (Every Monday)', duration: '15 minutes', assignedTo: 'Mike Johnson',    dueStatus: 'overdue',  dueText: 'Overdue by 1 day', status: 'overdue',   lastCompleted: 'Feb 5, 2026', checklist: [{text:'Test all call points on each floor',checked:false,note:''},{text:'Verify panel shows no faults',checked:false,note:''},{text:'Check sounder/beacon activation',checked:false,note:''},{text:'Log result in fire safety register',checked:false,note:''}] },
+            { id: 'emerg-light',   title: '💡 Emergency Lighting - Monthly Test',   equipment: 'All Emergency Exits',  frequency: 'Monthly (1st of month)', duration: '45 minutes', assignedTo: 'Sarah Williams',  dueStatus: 'due-soon', dueText: 'Due in 2 days',    status: 'due-soon',  lastCompleted: 'Jan 1, 2026', checklist: [{text:'Activate test switch on each unit',checked:false,note:''},{text:'Verify illumination for 3+ hours',checked:false,note:''},{text:'Replace any failed bulbs/batteries',checked:false,note:''},{text:'Record results in maintenance log',checked:false,note:''}] },
+            { id: 'line3-lube',    title: 'Line 3 Filler - Monthly Lubrication',   equipment: 'Line 3 Filler',        frequency: 'Monthly',               duration: '30 minutes', assignedTo: 'Sarah Williams',  dueStatus: 'overdue',  dueText: 'Overdue by 2 days', status: 'overdue',  lastCompleted: 'Jan 12, 2026', checklist: [{text:'Grease all bearing points',checked:false,note:''},{text:'Check oil level in gearbox',checked:false,note:''},{text:'Inspect seals for leaks',checked:false,note:''},{text:'Clean excess lubricant',checked:false,note:''},{text:'Record lubricant quantities used',checked:false,note:''}] },
+            { id: 'line1-belt',    title: 'Line 1 Conveyor - Belt Tension Check',  equipment: 'Line 1 Conveyor',      frequency: 'Weekly',                duration: '15 minutes', assignedTo: 'John Smith',      dueStatus: 'due-soon', dueText: 'Due tomorrow',     status: 'due-soon',  lastCompleted: 'Feb 6, 2026', checklist: [{text:'Measure belt tension with gauge',checked:false,note:''},{text:'Check belt alignment',checked:false,note:''},{text:'Inspect belt for wear or damage',checked:false,note:''},{text:'Adjust tension if out of spec',checked:false,note:''}] },
+            { id: 'line2-oil',     title: 'Line 2 Mixer - Gearbox Oil Change',     equipment: 'Line 2 Mixer',         frequency: 'Quarterly',             duration: '1 hour',     assignedTo: 'Mike Johnson',    dueStatus: 'upcoming', dueText: 'Due in 5 days',    status: 'upcoming',  lastCompleted: 'Nov 14, 2025', checklist: [{text:'Drain old oil completely',checked:false,note:''},{text:'Inspect drain plug magnet for metal particles',checked:false,note:''},{text:'Replace oil filter',checked:false,note:''},{text:'Fill with correct grade oil to spec level',checked:false,note:''},{text:'Run for 5 minutes and recheck level',checked:false,note:''},{text:'Record oil type and quantity used',checked:false,note:''}] }
         ]);
 
         // Track currently editing IDs
@@ -4812,9 +4853,13 @@
             container.innerHTML = pmData.map(pm => {
                 const itemClass = pm.dueStatus === 'overdue' ? 'pm-item overdue' : pm.dueStatus === 'due-soon' ? 'pm-item due-soon' : 'pm-item';
                 const dueDateClass = pm.dueStatus === 'overdue' ? 'overdue' : pm.dueStatus === 'due-soon' ? 'due-soon' : 'upcoming';
-                const actionBtn = pm.dueStatus === 'overdue'
+                const checkCount = pm.checklist ? pm.checklist.length : 0;
+                const checkBadge = checkCount > 0
+                    ? `<div class="wo-meta-item"><span>📋</span><span>${checkCount} checks</span></div>`
+                    : '';
+                const actionBtn = (pm.dueStatus === 'overdue' || pm.dueStatus === 'due-soon')
                     ? `<button class="btn btn-danger" onclick="completePM('${pm.id}')">Complete Now</button>`
-                    : `<button class="btn btn-primary" onclick="schedulePM('${pm.id}')">Schedule</button>`;
+                    : `<button class="btn btn-primary" onclick="completePM('${pm.id}')">Complete</button>`;
                 return `<div class="${itemClass}">
                     <div class="pm-info">
                         <div class="pm-title">${escHtml(pm.title)}</div>
@@ -4823,11 +4868,13 @@
                             <div class="wo-meta-item"><span>🔄</span><span>${escHtml(pm.frequency)}</span></div>
                             <div class="wo-meta-item"><span>⏱️</span><span>${escHtml(pm.duration)}</span></div>
                             <div class="wo-meta-item"><span>👤</span><span>${escHtml(pm.assignedTo)}</span></div>
+                            ${checkBadge}
                         </div>
                     </div>
                     <div class="due-date ${dueDateClass}">${escHtml(pm.dueText)}</div>
                     <div style="display:flex;gap:0.5rem;flex-direction:column;align-items:flex-end;">
                         ${actionBtn}
+                        <button class="btn btn-secondary btn-small" onclick="openPMDetail('${pm.id}')">View</button>
                         <button class="btn btn-danger btn-small" onclick="deletePM('${pm.id}')">Delete</button>
                     </div>
                 </div>`;
@@ -5550,16 +5597,53 @@
         // ─────────────────────────────────────────────────────────────────────
         // PM CRUD
         // ─────────────────────────────────────────────────────────────────────
+        // PM Checklist builder helpers
+        var pmChecklistItems = [];
+
+        function addPMChecklistItem() {
+            var input = document.getElementById('pmChecklistInput');
+            var text = input.value.trim();
+            if (!text) { showToast('Enter a checklist item.', 'error'); return; }
+            pmChecklistItems.push(text);
+            input.value = '';
+            input.focus();
+            renderPMChecklistBuilder();
+        }
+
+        function removePMChecklistItem(idx) {
+            pmChecklistItems.splice(idx, 1);
+            renderPMChecklistBuilder();
+        }
+
+        function renderPMChecklistBuilder() {
+            var container = document.getElementById('pmChecklistBuilder');
+            if (!container) return;
+            if (pmChecklistItems.length === 0) { container.innerHTML = ''; return; }
+            container.innerHTML = pmChecklistItems.map(function(item, i) {
+                return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;">' +
+                    '<span style="color:var(--primary);font-weight:600;">' + (i + 1) + '.</span>' +
+                    '<span style="flex:1;">' + escHtml(item) + '</span>' +
+                    '<button type="button" onclick="removePMChecklistItem(' + i + ')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;padding:0 4px;">✕</button>' +
+                '</div>';
+            }).join('');
+        }
+
         function submitAddPM() {
-            const taskName  = document.getElementById('pmTaskName').value.trim();
-            const equipment = document.getElementById('pmEquipment').value;
-            const frequency = document.getElementById('pmFrequency').value;
-            const duration  = document.getElementById('pmDuration').value.trim();
-            const assignTo  = document.getElementById('pmAssignTo').value;
-            const dueDate   = document.getElementById('pmDueDate').value;
+            const taskName    = document.getElementById('pmTaskName').value.trim();
+            const equipment   = document.getElementById('pmEquipment').value;
+            const description = document.getElementById('pmDescription').value.trim();
+            const frequency   = document.getElementById('pmFrequency').value;
+            const duration    = document.getElementById('pmDuration').value.trim();
+            const assignTo    = document.getElementById('pmAssignTo').value;
+            const dueDate     = document.getElementById('pmDueDate').value;
 
             if (!taskName || !equipment || !frequency || !assignTo || !dueDate) {
                 showToast('Please fill in all required fields.', 'error');
+                return;
+            }
+
+            if (pmChecklistItems.length === 0) {
+                showToast('Please add at least one checklist item.', 'error');
                 return;
             }
 
@@ -5570,35 +5654,184 @@
             if (diff < 0)      { dueStatus = 'overdue';  dueText = `Overdue by ${Math.abs(diff)} day(s)`; }
             else if (diff <= 3){ dueStatus = 'due-soon'; dueText = diff === 0 ? 'Due today' : diff === 1 ? 'Due tomorrow' : `Due in ${diff} days`; }
 
+            var checklist = pmChecklistItems.map(function(text) {
+                return { text: text, checked: false, note: '' };
+            });
+
             pmData.push({
                 id: 'pm-' + (nextPmId++),
                 title: taskName,
-                equipment, frequency,
+                equipment, frequency, description,
                 duration: duration || '—',
                 assignedTo: assignTo,
                 dueStatus, dueText,
                 status: dueStatus,
-                lastCompleted: '—'
+                lastCompleted: '—',
+                checklist: checklist
             });
 
             renderPM();
             closeModal('addPMModal');
             document.getElementById('addPMForm').reset();
+            pmChecklistItems = [];
+            renderPMChecklistBuilder();
             persistAllData();
             showToast('✅ PM task scheduled!', 'success');
         }
 
+        var currentCompletePMId = null;
+
         function completePM(pmId) {
-            const pm = pmData.find(p => p.id === pmId);
+            var pm = pmData.find(function(p) { return p.id === pmId; });
             if (!pm) return;
-            const now = new Date().toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+            currentCompletePMId = pmId;
+
+            // Reset checklist checked state for fresh completion
+            var checklist = pm.checklist || [];
+            checklist.forEach(function(item) { item.checked = false; item.note = ''; });
+
+            var body = document.getElementById('completePMBody');
+            var html = '<div style="margin-bottom:1.5rem;">' +
+                '<div style="font-weight:700;font-size:1.1rem;margin-bottom:0.25rem;">' + escHtml(pm.title) + '</div>' +
+                '<div style="color:var(--gray-500);font-size:0.9rem;">' +
+                    '<span>🏭 ' + escHtml(pm.equipment) + '</span> &nbsp;·&nbsp; ' +
+                    '<span>👤 ' + escHtml(pm.assignedTo) + '</span> &nbsp;·&nbsp; ' +
+                    '<span>🔄 ' + escHtml(pm.frequency) + '</span>' +
+                '</div>' +
+                (pm.description ? '<div style="margin-top:0.5rem;color:var(--gray-600);font-size:0.9rem;">' + escHtml(pm.description) + '</div>' : '') +
+            '</div>';
+
+            if (checklist.length === 0) {
+                html += '<div style="padding:1rem;background:var(--gray-100);border-radius:8px;color:var(--gray-500);">No checklist items defined for this task.</div>';
+            } else {
+                html += '<div style="font-weight:600;margin-bottom:0.75rem;">Checklist — tick off each item as you complete it:</div>';
+                html += '<div style="display:flex;flex-direction:column;gap:0.75rem;">';
+                checklist.forEach(function(item, i) {
+                    html += '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;border-left:3px solid var(--gray-300);" id="pmCheckItem' + i + '">' +
+                        '<label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-weight:500;">' +
+                            '<input type="checkbox" onchange="togglePMCheck(' + i + ')" style="width:18px;height:18px;cursor:pointer;">' +
+                            '<span>' + escHtml(item.text) + '</span>' +
+                        '</label>' +
+                        '<input type="text" placeholder="Add a note (optional)..." ' +
+                            'onchange="updatePMCheckNote(' + i + ', this.value)" ' +
+                            'style="margin-top:0.5rem;width:100%;padding:0.4rem 0.6rem;border:1px solid var(--gray-300);border-radius:6px;font-size:0.85rem;">' +
+                    '</div>';
+                });
+                html += '</div>';
+            }
+
+            body.innerHTML = html;
+            document.getElementById('completePMSubmitBtn').disabled = checklist.length > 0;
+            openModal('completePMModal');
+        }
+
+        function togglePMCheck(idx) {
+            var pm = pmData.find(function(p) { return p.id === currentCompletePMId; });
+            if (!pm || !pm.checklist) return;
+            pm.checklist[idx].checked = !pm.checklist[idx].checked;
+
+            // Update visual style
+            var itemEl = document.getElementById('pmCheckItem' + idx);
+            if (itemEl) {
+                itemEl.style.borderLeftColor = pm.checklist[idx].checked ? 'var(--success)' : 'var(--gray-300)';
+                itemEl.style.background = pm.checklist[idx].checked ? '#f0fdf4' : 'var(--gray-100)';
+            }
+
+            // Enable/disable complete button based on all items checked
+            var allChecked = pm.checklist.every(function(item) { return item.checked; });
+            document.getElementById('completePMSubmitBtn').disabled = !allChecked;
+        }
+
+        function updatePMCheckNote(idx, note) {
+            var pm = pmData.find(function(p) { return p.id === currentCompletePMId; });
+            if (!pm || !pm.checklist) return;
+            pm.checklist[idx].note = note;
+        }
+
+        function submitCompletePM() {
+            var pm = pmData.find(function(p) { return p.id === currentCompletePMId; });
+            if (!pm) return;
+
+            // Verify all checked
+            if (pm.checklist && pm.checklist.length > 0) {
+                var allChecked = pm.checklist.every(function(item) { return item.checked; });
+                if (!allChecked) { showToast('Please complete all checklist items.', 'error'); return; }
+            }
+
+            var now = new Date().toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric' });
             pm.status = 'upcoming';
             pm.dueStatus = 'upcoming';
             pm.lastCompleted = now;
             pm.dueText = 'Next due: scheduled';
+            pm.lastChecklistResults = JSON.parse(JSON.stringify(pm.checklist || []));
+            pm.completedBy = pm.assignedTo;
+            pm.completedAt = now;
+
+            // Reset checklist for next time
+            if (pm.checklist) {
+                pm.checklist.forEach(function(item) { item.checked = false; item.note = ''; });
+            }
+
+            closeModal('completePMModal');
             renderPM();
             persistAllData();
-            showToast(`✅ "${pm.title}" marked complete!`, 'success');
+            currentCompletePMId = null;
+            showToast('✅ "' + pm.title + '" completed with all checks verified!', 'success');
+        }
+
+        function openPMDetail(pmId) {
+            var pm = pmData.find(function(p) { return p.id === pmId; });
+            if (!pm) return;
+
+            var body = document.getElementById('pmDetailBody');
+            var html = '<div style="margin-bottom:1.5rem;">' +
+                '<div style="font-weight:700;font-size:1.1rem;margin-bottom:0.25rem;">' + escHtml(pm.title) + '</div>' +
+                '<div style="color:var(--gray-500);font-size:0.9rem;">' +
+                    '<span>🏭 ' + escHtml(pm.equipment) + '</span> &nbsp;·&nbsp; ' +
+                    '<span>👤 ' + escHtml(pm.assignedTo) + '</span> &nbsp;·&nbsp; ' +
+                    '<span>🔄 ' + escHtml(pm.frequency) + '</span> &nbsp;·&nbsp; ' +
+                    '<span>⏱️ ' + escHtml(pm.duration) + '</span>' +
+                '</div>' +
+                (pm.description ? '<div style="margin-top:0.5rem;color:var(--gray-600);font-size:0.9rem;">' + escHtml(pm.description) + '</div>' : '') +
+            '</div>';
+
+            // Show last completion info
+            if (pm.lastCompleted && pm.lastCompleted !== '—') {
+                html += '<div style="padding:0.75rem;background:#f0fdf4;border-radius:8px;margin-bottom:1rem;font-size:0.9rem;">' +
+                    '<strong>Last completed:</strong> ' + escHtml(pm.lastCompleted) +
+                    (pm.completedBy ? ' by ' + escHtml(pm.completedBy) : '') +
+                '</div>';
+            }
+
+            // Show checklist template
+            var checklist = pm.checklist || [];
+            var lastResults = pm.lastChecklistResults || [];
+
+            if (lastResults.length > 0) {
+                html += '<div style="font-weight:600;margin-bottom:0.75rem;">Last Completion Checklist:</div>';
+                html += '<div style="display:flex;flex-direction:column;gap:0.5rem;padding:1rem;background:var(--gray-100);border-radius:8px;">';
+                lastResults.forEach(function(item) {
+                    html += '<div style="display:flex;align-items:flex-start;gap:0.5rem;">' +
+                        '<span style="color:var(--success);font-size:1.1rem;">✅</span>' +
+                        '<div><span style="font-weight:500;">' + escHtml(item.text) + '</span>' +
+                        (item.note ? '<div style="color:var(--gray-500);font-size:0.85rem;margin-top:2px;">📝 ' + escHtml(item.note) + '</div>' : '') +
+                        '</div></div>';
+                });
+                html += '</div>';
+            } else if (checklist.length > 0) {
+                html += '<div style="font-weight:600;margin-bottom:0.75rem;">Checklist (' + checklist.length + ' items):</div>';
+                html += '<div style="display:flex;flex-direction:column;gap:0.5rem;padding:1rem;background:var(--gray-100);border-radius:8px;">';
+                checklist.forEach(function(item) {
+                    html += '<div style="display:flex;align-items:center;gap:0.5rem;">' +
+                        '<span style="color:var(--gray-400);">☐</span>' +
+                        '<span>' + escHtml(item.text) + '</span>' +
+                    '</div>';
+                });
+                html += '</div>';
+            }
+
+            body.innerHTML = html;
+            openModal('pmDetailModal');
         }
 
         function schedulePM(pmId) {
