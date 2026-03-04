@@ -5495,8 +5495,8 @@
                     </div>
                     <div class="status-badge ${statusClass}">${statusLabel}</div>
                     <div style="display:flex;gap:0.5rem;">
-                        <button class="btn btn-primary btn-small" onclick="openWorkOrderDetail(${wo.id})">View</button>
-                        <button class="btn btn-danger btn-small" onclick="deleteWorkOrder(${wo.id})">Delete</button>
+                        <button class="btn btn-primary btn-small" onclick="openWorkOrderDetail('${wo.id}')">View</button>
+                        <button class="btn btn-danger btn-small" onclick="deleteWorkOrder('${wo.id}')">Delete</button>
                     </div>
                 </div>`;
             }).join('');
@@ -5554,9 +5554,9 @@
                         })() : ''}
                     </div>
                     <div class="equipment-actions">
-                        <button class="btn btn-primary btn-small" onclick="openEquipmentHistory(${eq.id})">View History</button>
-                        <button class="btn btn-secondary btn-small" onclick="openEquipmentEdit(${eq.id})">Edit</button>
-                        <button class="btn btn-danger btn-small" onclick="deleteEquipment(${eq.id})">Delete</button>
+                        <button class="btn btn-primary btn-small" onclick="openEquipmentHistory('${eq.id}')">View History</button>
+                        <button class="btn btn-secondary btn-small" onclick="openEquipmentEdit('${eq.id}')">Edit</button>
+                        <button class="btn btn-danger btn-small" onclick="deleteEquipment('${eq.id}')">Delete</button>
                     </div>
                 </div>`;
             }).join('');
@@ -5599,8 +5599,8 @@
                     </div>
                     <div style="display:flex;gap:0.5rem;margin-top:1rem;">
                         ${hasAccess('purchaseOrders') ? `<button class="btn ${orderBtnClass}" style="flex:1;" onclick="orderPart('${escHtml(p.partNumber)}','${escHtml(p.name)}',${stock.cls !== 'in-stock'})">${orderBtnLabel}</button>` : ''}
-                        <button class="btn btn-secondary btn-small" onclick="openEditPart(${p.id})" style="flex:1;">Edit</button>
-                        <button class="btn btn-danger btn-small" onclick="deletePart(${p.id})" style="flex:1;">Delete</button>
+                        <button class="btn btn-secondary btn-small" onclick="openEditPart('${p.id}')" style="flex:1;">Edit</button>
+                        <button class="btn btn-danger btn-small" onclick="deletePart('${p.id}')" style="flex:1;">Delete</button>
                     </div>
                 </div>`;
             }).join('');
@@ -5649,7 +5649,7 @@
                     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
                         ${approveBtn}
                         <button class="btn btn-primary btn-small" onclick="openPODetail('${po.poNumber}')">View</button>
-                        <button class="btn btn-danger btn-small" onclick="deletePO(${po.id})">Delete</button>
+                        <button class="btn btn-danger btn-small" onclick="deletePO('${po.id}')">Delete</button>
                     </div>
                 </div>`;
             }).join('');
@@ -5679,7 +5679,7 @@
                     </div>
                 </div>
                 <div class="status-badge in-progress">Active</div>
-                <button class="btn btn-danger" onclick="closeHotWorkPermit(${p.id})">Close Permit</button>
+                <button class="btn btn-danger" onclick="closeHotWorkPermit('${p.id}')">Close Permit</button>
             </div>`).join('');
         }
 
@@ -5707,8 +5707,8 @@
                 </div>
                 <div class="status-badge in-progress">Active</div>
                 <div style="display:flex;gap:0.5rem;">
-                    <button class="btn btn-primary btn-small" onclick="openPermitDetail('contractor',${p.id})">View</button>
-                    <button class="btn btn-danger btn-small" onclick="closeContractorPermit(${p.id})">Close</button>
+                    <button class="btn btn-primary btn-small" onclick="openPermitDetail('contractor','${p.id}')">View</button>
+                    <button class="btn btn-danger btn-small" onclick="closeContractorPermit('${p.id}')">Close</button>
                 </div>
             </div>`).join('');
         }
@@ -8017,8 +8017,8 @@
                     + '</div>'
                     + '<div class="breakdown-status"><span class="status-badge ' + br.status + '">' + brStatusLabel(br.status) + '</span></div>'
                     + '<div class="breakdown-actions">'
-                    +   '<button class="btn btn-primary btn-small" onclick="openBreakdownDetail(' + br.id + ')">View / Edit</button>'
-                    +   '<button class="btn btn-danger btn-small" onclick="deleteBreakdown(' + br.id + ')">Delete</button>'
+                    +   '<button class="btn btn-primary btn-small" onclick="openBreakdownDetail(\'' + br.id + '\')">View / Edit</button>'
+                    +   '<button class="btn btn-danger btn-small" onclick="deleteBreakdown(\'' + br.id + '\')">Delete</button>'
                     + '</div></div>';
             }).join('');
         }
@@ -8258,7 +8258,7 @@
                 var visible = dayEvts.slice(0, 3);
                 var overflow = dayEvts.length - visible.length;
                 var pills = visible.map(function(ev) {
-                    return '<span class="cal-event-pill evt-' + ev.type + '" title="' + escHtml(ev.title) + '" onclick="showEventToast(' + ev.id + ')">' + escHtml(ev.title) + '</span>';
+                    return '<span class="cal-event-pill evt-' + ev.type + '" title="' + escHtml(ev.title) + '" onclick="showEventToast(\'' + ev.id + '\')">' + escHtml(ev.title) + '</span>';
                 }).join('');
                 if (overflow > 0) pills += '<span class="cal-more">+' + overflow + ' more</span>';
                 html += '<div class="cal-day' + (isToday ? ' today' : '') + '"><div class="cal-day-num">' + d + '</div>' + pills + '</div>';
@@ -8291,7 +8291,7 @@
                 var isToday = (dd.toDateString() === todayObj.toDateString());
                 var dayEvts = calendarEvents.filter(function(e) { return e.date === iso; });
                 var evHtml  = dayEvts.map(function(ev) {
-                    return '<div class="week-event evt-' + ev.type + '" onclick="showEventToast(' + ev.id + ')" title="' + escHtml(ev.notes || ev.title) + '">'
+                    return '<div class="week-event evt-' + ev.type + '" onclick="showEventToast(\'' + ev.id + '\')" title="' + escHtml(ev.notes || ev.title) + '">'
                         + '<div>' + escHtml(ev.title) + '</div>'
                         + '<div style="font-weight:400;font-size:0.72rem;opacity:0.85;">' + (ev.duration || '') + (ev.assignedTo ? ' \u2014 ' + escHtml(ev.assignedTo) : '') + '</div>'
                         + '</div>';
