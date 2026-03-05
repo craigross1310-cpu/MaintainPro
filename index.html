@@ -9,7 +9,7 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.97.0/dist/umd/supabase.min.js" integrity="sha384-1+ItoWbWcmVSm+Y+dJaUt4SEWNA21/jxef+Z0TSHHVy/dEUxEUEnZ1bHn6GT5hj+" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" integrity="sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/" crossorigin="anonymous"></script>
     <style>
         :root {
             --primary: #0066FF;
@@ -1506,11 +1506,11 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Password</label>
-                        <input type="password" class="form-input" id="signupPassword" required placeholder="Minimum 6 characters" minlength="6">
+                        <input type="password" class="form-input" id="signupPassword" required placeholder="Min 8 chars, upper+lower+number" minlength="8">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Confirm Password</label>
-                        <input type="password" class="form-input" id="signupPasswordConfirm" required placeholder="Re-enter your password" minlength="6">
+                        <input type="password" class="form-input" id="signupPasswordConfirm" required placeholder="Re-enter your password" minlength="8">
                     </div>
                     <button type="submit" class="btn-auth" id="signupBtn">Sign Up</button>
                 </form>
@@ -4545,7 +4545,7 @@
         }
 
         function applyTierRestrictions() {
-            console.log('[Cradero] applyTierRestrictions — tier:', currentUserTier);
+            // Tier restriction logging removed for production
             // Show or hide nav tabs based on access
             var hiddenCount = 0;
             var allTabs = document.querySelectorAll('.nav-tab');
@@ -5013,7 +5013,7 @@
                     initFormConstraints();
                 }
             }
-            console.log('[Cradero] showApp — tier:', currentUserTier, 'role:', role, 'name:', currentUserName);
+            // Sensitive data removed from console logging for production
             resetSessionTimer();
             applyTierRestrictions();
             // Set engineer dashboard dropdown to current user's name if it matches
@@ -5047,6 +5047,10 @@
 
             if (password !== confirm) {
                 showAuthMessage('Passwords do not match.', 'error');
+                return;
+            }
+            if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+                showAuthMessage('Password must be at least 8 characters with uppercase, lowercase, and a number.', 'error');
                 return;
             }
 
@@ -5173,7 +5177,13 @@
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage('LOGOUT');
             }
-            saveData('cachedUser', null);
+            // Clear all cached data from localStorage and in-memory arrays
+            clearAllData();
+            workOrdersData = []; equipmentList = []; partsData = [];
+            purchaseOrdersData = []; hotWorkPermits = []; contractorPermits = [];
+            closedHotWorkPermits = []; closedContractorPermits = [];
+            pmData = []; breakdownsData = []; calendarEvents = []; workRequestsData = [];
+            currentUserRole = ''; currentUserTier = 'essential'; currentUserName = '';
             appInitialized = false;
             showAuthScreen();
         }
@@ -5632,7 +5642,7 @@
                 const badge = getPoStatusBadge(po.status);
                 const borderStyle = po.priority === 'high' ? 'border-left: 6px solid var(--danger);' : '';
                 const tagsHtml = po.tags && po.tags.length ? `<div style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;">${po.tags.map(t => `<span style="padding:0.25rem 0.75rem;background:var(--gray-100);border-radius:20px;font-size:0.85rem;">${escHtml(t)}</span>`).join('')}</div>` : '';
-                const approveBtn = po.status === 'pending' ? `<button class="btn btn-success btn-small" onclick="approvePO('${po.poNumber}')">Approve</button>` : '';
+                const approveBtn = po.status === 'pending' ? `<button class="btn btn-success btn-small" onclick="approvePO('${escHtml(po.poNumber)}')">Approve</button>` : '';
                 return `<div class="work-order-item" style="${borderStyle}">
                     <div class="wo-priority ${po.priority}"></div>
                     <div class="wo-details">
@@ -5648,7 +5658,7 @@
                     <div class="status-badge" style="background:${badge.bg};color:${badge.color};">${badge.label}</div>
                     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
                         ${approveBtn}
-                        <button class="btn btn-primary btn-small" onclick="openPODetail('${po.poNumber}')">View</button>
+                        <button class="btn btn-primary btn-small" onclick="openPODetail('${escHtml(po.poNumber)}')">View</button>
                         <button class="btn btn-danger btn-small" onclick="deletePO('${po.id}')">Delete</button>
                     </div>
                 </div>`;
@@ -5977,6 +5987,15 @@
             return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
         }
 
+        // Role guard — returns true if current user has one of the allowed roles
+        function requireRole(allowedRoles) {
+            if (!currentUserRole || allowedRoles.indexOf(currentUserRole) === -1) {
+                showToast('You do not have permission for this action.', 'error');
+                return false;
+            }
+            return true;
+        }
+
         // ─────────────────────────────────────────────────────────────────────
         // TAB SWITCHING
         // ─────────────────────────────────────────────────────────────────────
@@ -6069,9 +6088,14 @@
             fileInput.addEventListener('change', e => handleFiles(e.target.files));
         });
 
+        var MAX_FILE_SIZE_MB = 5;
         function handleFiles(files) {
             const filePreview = document.getElementById('filePreview');
             Array.from(files).forEach(file => {
+                if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+                    showToast('File "' + file.name + '" exceeds ' + MAX_FILE_SIZE_MB + 'MB limit.', 'error');
+                    return;
+                }
                 if (file.type.startsWith('image/')) {
                     uploadedFiles.push(file);
                     const reader = new FileReader();
@@ -6095,11 +6119,11 @@
         // WORK ORDERS CRUD
         // ─────────────────────────────────────────────────────────────────────
         async function submitWorkOrder() {
-            const equipment = document.getElementById('woEquipment').value;
-            const title     = document.getElementById('woTitle').value.trim();
-            const desc      = document.getElementById('woDescription').value.trim();
+            const equipment = sanitizeInput(document.getElementById('woEquipment').value, INPUT_LIMITS.name);
+            const title     = sanitizeInput(document.getElementById('woTitle').value, INPUT_LIMITS.title);
+            const desc      = sanitizeInput(document.getElementById('woDescription').value, INPUT_LIMITS.description);
             const priority  = document.getElementById('woPriority').value;
-            const assignTo  = document.getElementById('woAssignTo').value;
+            const assignTo  = sanitizeInput(document.getElementById('woAssignTo').value, INPUT_LIMITS.name);
 
             if (!equipment || !title || !desc || !priority) {
                 showToast('Please fill in all required fields.', 'error');
@@ -6269,6 +6293,7 @@
         }
 
         async function deleteWorkOrder(woId) {
+            if (!requireRole(['admin', 'manager'])) return;
             if (!confirm('Delete this work order? This cannot be undone.')) return;
             try {
                 await CraderoAPI.workOrders.delete(woId);
@@ -6416,6 +6441,7 @@
         }
 
         async function deleteEquipment(equipId) {
+            if (!requireRole(['admin', 'manager'])) return;
             const eq = equipmentList.find(e => e.id === equipId);
             if (!eq) return;
             if (!confirm('Delete "' + eq.name + '"? This cannot be undone.')) return;
@@ -6472,12 +6498,12 @@
         }
 
         async function submitAddPart() {
-            const name     = document.getElementById('addPartName').value.trim();
-            const number   = document.getElementById('addPartNumber').value.trim();
+            const name     = sanitizeInput(document.getElementById('addPartName').value, INPUT_LIMITS.name);
+            const number   = sanitizeInput(document.getElementById('addPartNumber').value, INPUT_LIMITS.general);
             const qty      = parseInt(document.getElementById('addPartQty').value) || 0;
             const minStock = parseInt(document.getElementById('addPartMinStock').value) || 0;
-            const shelf    = document.getElementById('addPartShelf').value.trim();
-            const bin      = document.getElementById('addPartBin').value.trim();
+            const shelf    = sanitizeInput(document.getElementById('addPartShelf').value, INPUT_LIMITS.general);
+            const bin      = sanitizeInput(document.getElementById('addPartBin').value, INPUT_LIMITS.general);
 
             if (!name || !number) {
                 showToast('Part Name and Part Number are required.', 'error');
@@ -6502,6 +6528,7 @@
 
         // Edit Part Modal (reuse addPartModal with a flag)
         let editingPartId = null;
+        var currentOrder = null;
         function openEditPart(partId) {
             const p = partsData.find(x => x.id === partId);
             if (!p) return;
@@ -6556,6 +6583,7 @@
         }
 
         async function deletePart(partId) {
+            if (!requireRole(['admin', 'manager'])) return;
             const p = partsData.find(x => x.id === partId);
             if (!p) return;
             if (!confirm(`Delete "${p.name}" from inventory?`)) return;
@@ -6571,7 +6599,7 @@
         }
 
         function orderPart(partNumber, partName, isEmergency) {
-            window.currentOrder = { partNumber, partName, isEmergency };
+            currentOrder = { partNumber: partNumber, partName: partName, isEmergency: isEmergency };
             document.getElementById('orderPartName').textContent = partName;
             document.getElementById('orderPartNumber').textContent = partNumber;
             document.getElementById('orderUrgency').textContent = isEmergency ? '🚨 EMERGENCY ORDER' : 'Standard Order';
@@ -6623,7 +6651,7 @@
                 showToast('Please fill in Quantity and Vendor.', 'error');
                 return;
             }
-            const order = window.currentOrder;
+            const order = currentOrder;
             try {
                 var dbRow = {
                     supplier: vendor,
@@ -6712,6 +6740,7 @@
         }
 
         async function approvePO(poNumber) {
+            if (!requireRole(['admin', 'manager'])) return;
             if (!confirm(`Approve Purchase Order ${poNumber}?\n\nThis will commit budget funds and send the PO to the vendor.`)) return;
             const po = purchaseOrdersData.find(p => p.poNumber === poNumber);
             if (po) {
@@ -6727,6 +6756,7 @@
         }
 
         async function deletePO(poId) {
+            if (!requireRole(['admin', 'manager'])) return;
             if (!confirm('Delete this purchase order?')) return;
             try {
                 await CraderoAPI.purchaseOrders.delete(poId);
@@ -6883,10 +6913,10 @@
         // PERMITS CRUD
         // ─────────────────────────────────────────────────────────────────────
         async function submitHotWorkPermit() {
-            const desc      = document.getElementById('hwDescription').value.trim();
-            const location  = document.getElementById('hwLocation').value.trim();
-            const engineer  = document.getElementById('hwEngineer').value;
-            const fireWatch = document.getElementById('hwFireWatch').value.trim();
+            const desc      = sanitizeInput(document.getElementById('hwDescription').value, INPUT_LIMITS.description);
+            const location  = sanitizeInput(document.getElementById('hwLocation').value, INPUT_LIMITS.name);
+            const engineer  = sanitizeInput(document.getElementById('hwEngineer').value, INPUT_LIMITS.name);
+            const fireWatch = sanitizeInput(document.getElementById('hwFireWatch').value, INPUT_LIMITS.name);
             const startTime = document.getElementById('hwStartTime').value;
             const endTime   = document.getElementById('hwEndTime').value;
 
@@ -6917,6 +6947,7 @@
         }
 
         async function closeHotWorkPermit(id) {
+            if (!requireRole(['admin', 'manager'])) return;
             if (!confirm('Close this hot work permit? It will be moved to the closed permits archive.')) return;
             var permit = hotWorkPermits.find(function(p) { return p.id === id; });
             if (permit) {
@@ -6941,15 +6972,15 @@
         }
 
         async function submitContractorPermit() {
-            const desc       = document.getElementById('cpDescription').value.trim();
-            const company    = document.getElementById('cpCompany').value.trim();
-            const supervisor = document.getElementById('cpSupervisor').value.trim();
-            const phone      = document.getElementById('cpPhone').value.trim();
+            const desc       = sanitizeInput(document.getElementById('cpDescription').value, INPUT_LIMITS.description);
+            const company    = sanitizeInput(document.getElementById('cpCompany').value, INPUT_LIMITS.name);
+            const supervisor = sanitizeInput(document.getElementById('cpSupervisor').value, INPUT_LIMITS.name);
+            const phone      = sanitizeInput(document.getElementById('cpPhone').value, INPUT_LIMITS.general);
             const workers    = document.getElementById('cpWorkers').value;
-            const location   = document.getElementById('cpLocation').value.trim();
+            const location   = sanitizeInput(document.getElementById('cpLocation').value, INPUT_LIMITS.name);
             const startDate  = document.getElementById('cpStartDate').value;
             const endDate    = document.getElementById('cpEndDate').value;
-            const insurance  = document.getElementById('cpInsurance').value.trim();
+            const insurance  = sanitizeInput(document.getElementById('cpInsurance').value, INPUT_LIMITS.general);
 
             if (!desc || !company || !supervisor || !location || !startDate || !endDate || !insurance) {
                 showToast('Please fill in all required fields.', 'error');
@@ -6985,6 +7016,7 @@
         }
 
         async function closeContractorPermit(id) {
+            if (!requireRole(['admin', 'manager'])) return;
             if (!confirm('Close this contractor permit? It will be moved to the closed permits archive.')) return;
             var permit = contractorPermits.find(function(p) { return p.id === id; });
             if (permit) {
@@ -7282,10 +7314,10 @@
         }
 
         async function submitWorkRequest() {
-            var equipment = document.getElementById('requestEquipment').value;
-            var description = document.getElementById('requestDescription').value.trim();
+            var equipment = sanitizeInput(document.getElementById('requestEquipment').value, INPUT_LIMITS.name);
+            var description = sanitizeInput(document.getElementById('requestDescription').value, INPUT_LIMITS.description);
             var urgency = document.getElementById('requestUrgency').value;
-            var submitter = document.getElementById('requestSubmitter').value.trim() || currentUserName || 'Unknown';
+            var submitter = sanitizeInput(document.getElementById('requestSubmitter').value, INPUT_LIMITS.name) || currentUserName || 'Unknown';
             if (!equipment || !description) { showToast('Please select equipment and describe the issue.', 'error'); return; }
             try {
                 var r = await supabaseClient.from('work_requests').insert({ equipment: equipment, description: description, urgency: urgency, submitter: submitter }).select().single();
@@ -7302,6 +7334,7 @@
         }
 
         async function approveRequest(reqId) {
+            if (!requireRole(['admin', 'manager'])) return;
             var req = workRequestsData.find(function(r) { return r.id === reqId; });
             if (!req) return;
             var assignSel = document.getElementById('reqAssign_' + reqId);
@@ -7334,6 +7367,7 @@
         }
 
         async function declineRequest(reqId) {
+            if (!requireRole(['admin', 'manager'])) return;
             var req = workRequestsData.find(function(r) { return r.id === reqId; });
             if (!req) return;
             if (!confirm('Decline this maintenance request?')) return;
@@ -7716,6 +7750,7 @@
         }
 
         async function deletePM(pmId) {
+            if (!requireRole(['admin', 'manager'])) return;
             if (!confirm('Delete this PM task?')) return;
             var pm = pmData.find(function(p) { return p.id === pmId; });
             try {
@@ -8210,6 +8245,7 @@
         }
 
         async function deleteBreakdown(brId) {
+            if (!requireRole(['admin', 'manager'])) return;
             try {
                 await CraderoAPI.breakdowns.delete(brId);
                 logAudit('delete', 'breakdown', brId);
@@ -8258,7 +8294,7 @@
                 var visible = dayEvts.slice(0, 3);
                 var overflow = dayEvts.length - visible.length;
                 var pills = visible.map(function(ev) {
-                    return '<span class="cal-event-pill evt-' + ev.type + '" title="' + escHtml(ev.title) + '" onclick="showEventToast(\'' + ev.id + '\')">' + escHtml(ev.title) + '</span>';
+                    return '<span class="cal-event-pill evt-' + ev.type + '" title="' + escHtml(ev.title) + '" onclick="showEventToast(\'' + escHtml(ev.id) + '\')">' + escHtml(ev.title) + '</span>';
                 }).join('');
                 if (overflow > 0) pills += '<span class="cal-more">+' + overflow + ' more</span>';
                 html += '<div class="cal-day' + (isToday ? ' today' : '') + '"><div class="cal-day-num">' + d + '</div>' + pills + '</div>';
@@ -8291,7 +8327,7 @@
                 var isToday = (dd.toDateString() === todayObj.toDateString());
                 var dayEvts = calendarEvents.filter(function(e) { return e.date === iso; });
                 var evHtml  = dayEvts.map(function(ev) {
-                    return '<div class="week-event evt-' + ev.type + '" onclick="showEventToast(\'' + ev.id + '\')" title="' + escHtml(ev.notes || ev.title) + '">'
+                    return '<div class="week-event evt-' + ev.type + '" onclick="showEventToast(\'' + escHtml(ev.id) + '\')" title="' + escHtml(ev.notes || ev.title) + '">'
                         + '<div>' + escHtml(ev.title) + '</div>'
                         + '<div style="font-weight:400;font-size:0.72rem;opacity:0.85;">' + (ev.duration || '') + (ev.assignedTo ? ' \u2014 ' + escHtml(ev.assignedTo) : '') + '</div>'
                         + '</div>';
