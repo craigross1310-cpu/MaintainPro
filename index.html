@@ -5153,17 +5153,24 @@
         // ─────────────────────────────────────────────────────────────────────
         var SESSION_TIMEOUT_MS = 30 * 60 * 1000;
         var sessionTimer = null;
+        var lastActivityReset = 0;
 
         function resetSessionTimer() {
-            if (sessionTimer) clearTimeout(sessionTimer);
             if (!appInitialized) return;
+            // Throttle: only reset the timer once per 60 seconds to avoid
+            // phantom mouse movements / scroll events keeping the session alive
+            var now = Date.now();
+            if (now - lastActivityReset < 60000) return;
+            lastActivityReset = now;
+            if (sessionTimer) clearTimeout(sessionTimer);
             sessionTimer = setTimeout(function() {
                 showToast('Session expired due to inactivity. Please log in again.', 'error');
                 handleLogout();
             }, SESSION_TIMEOUT_MS);
         }
 
-        ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach(function(evt) {
+        // Use click/mousedown/keydown/touchstart — NOT mousemove (sensor drift resets timer)
+        ['mousedown', 'keydown', 'touchstart', 'click'].forEach(function(evt) {
             document.addEventListener(evt, resetSessionTimer, { passive: true });
         });
 
