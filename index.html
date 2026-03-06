@@ -1566,7 +1566,7 @@
                 <span id="offlineIndicator" style="display:none;background:#FF3D00;color:white;padding:4px 12px;border-radius:6px;font-size:0.75rem;font-weight:600;letter-spacing:0.5px;">OFFLINE</span>
                 <button class="notification-bell" onclick="toggleNotifications()">
                     🔔
-                    <span class="notification-badge" id="notificationCount">5</span>
+                    <span class="notification-badge" id="notificationCount" style="display:none;">0</span>
                 </button>
                 <button class="btn btn-primary" onclick="openModal('workOrderModal')">
                     + New Work Order
@@ -1579,40 +1579,8 @@
         <!-- Notification Dropdown -->
         <div class="notification-dropdown" id="notificationDropdown">
             <div class="notification-header">Notifications</div>
-            <div class="notification-item unread" onclick="handleNotificationClick('pm', 'fire-alarm')">
-                <div class="notification-title">🔥 Fire Alarm Test Overdue</div>
-                <div class="notification-text">Weekly fire alarm system test was due yesterday - immediate completion required for compliance</div>
-                <div class="notification-time">30 minutes ago</div>
-            </div>
-            <div class="notification-item unread" onclick="handleNotificationClick('pm', 'line3-lube')">
-                <div class="notification-title">⚠️ PM Maintenance Overdue</div>
-                <div class="notification-text">Line 3 Filler - Monthly Lubrication is 2 days overdue</div>
-                <div class="notification-time">2 hours ago</div>
-            </div>
-            <div class="notification-item unread" onclick="handleNotificationClick('workOrders', 3)">
-                <div class="notification-title">📋 Unassigned Work Order</div>
-                <div class="notification-text">Line 2 Packaging - Sensor Calibration has been unassigned for 24 hours</div>
-                <div class="notification-time">5 hours ago</div>
-            </div>
-            <div class="notification-item unread" onclick="handleNotificationClick('permits', 'hotwork')">
-                <div class="notification-title">🔥 Hot Work Permit Expiring Soon</div>
-                <div class="notification-text">Welding permit for Line 3 expires in 3 hours - ensure work is completed or extend permit</div>
-                <div class="notification-time">6 hours ago</div>
-            </div>
-            <div class="notification-item" onclick="handleNotificationClick('workOrders', 2)">
-                <div class="notification-title">✅ Work Order Completed</div>
-                <div class="notification-text">Line 1 Conveyor - Belt Replacement completed by John Smith</div>
-                <div class="notification-time">Yesterday</div>
-            </div>
-            <div class="notification-item unread" onclick="handleNotificationClick('pm', 'emergency-lighting')">
-                <div class="notification-title">💡 Emergency Lighting Test Due Soon</div>
-                <div class="notification-text">Monthly emergency lighting test is due in 2 days</div>
-                <div class="notification-time">Yesterday</div>
-            </div>
-            <div class="notification-item" onclick="handleNotificationClick('equipment', 1)">
-                <div class="notification-title">🛡️ Warranty Expired</div>
-                <div class="notification-text">Line 3 - Filler Machine warranty from FoodTech Pro has expired</div>
-                <div class="notification-time">2 days ago</div>
+            <div id="notificationItems">
+                <div class="notification-item"><div class="notification-text">Loading...</div></div>
             </div>
         </div>
     </header>
@@ -4996,7 +4964,7 @@
                     renderHotWorkPermits();
                     renderContractorPermits();
                     renderPM();
-                    updateNotificationCount();
+                    renderNotifications();
                     initializeCharts();
                     if (typeof renderBreakdowns === 'function') {
                         renderBreakdowns();
@@ -5475,40 +5443,133 @@
         // RENDER FUNCTIONS
         // ─────────────────────────────────────────────────────────────────────
 
+        var woFilterState = { type: 'all', sort: 'newest' };
+
         function renderWorkOrders() {
             const container = document.getElementById('workOrdersList');
             if (!container) return;
-            if (workOrdersData.length === 0) {
-                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">No Work Orders</div><div class="empty-state-text">Click "+ New Work Order" to create one.</div></div>';
+
+            // Build combined list of work orders, open breakdowns, and pending requests
+            var items = [];
+
+            // Add work orders (exclude completed unless filter says otherwise)
+            workOrdersData.forEach(function(wo) {
+                items.push({
+                    type: 'wo',
+                    id: wo.id,
+                    title: wo.title,
+                    equipment: wo.equipment,
+                    assignedTo: wo.assignedTo || '',
+                    status: wo.status,
+                    priority: wo.priority,
+                    created: wo.created,
+                    hasPhotos: wo.hasPhotos,
+                    fromBreakdown: wo.fromBreakdown,
+                    dateSort: wo.created || ''
+                });
+            });
+
+            // Add open/unresolved breakdowns (not yet resolved)
+            breakdownsData.forEach(function(br) {
+                if (br.status === 'resolved') return;
+                // Skip if already linked to a work order
+                if (br.linkedWoId) return;
+                items.push({
+                    type: 'breakdown',
+                    id: br.id,
+                    title: escHtml(br.faultDescription),
+                    equipment: br.machine,
+                    assignedTo: br.resolvedBy || '',
+                    status: br.status === 'in-progress' ? 'in-progress' : 'open',
+                    priority: 'high',
+                    created: br.dateISO ? formatDateISO(br.dateISO) : '',
+                    hasPhotos: false,
+                    fromBreakdown: true,
+                    dateSort: br.dateISO || ''
+                });
+            });
+
+            // Add pending work requests
+            workRequestsData.forEach(function(req) {
+                if (req.status !== 'pending') return;
+                items.push({
+                    type: 'request',
+                    id: req.id,
+                    title: req.description,
+                    equipment: req.equipment,
+                    assignedTo: req.submitter || '',
+                    status: 'pending',
+                    priority: req.urgency === 'high' ? 'high' : req.urgency === 'medium' ? 'medium' : 'low',
+                    created: req.submitted || '',
+                    hasPhotos: false,
+                    fromBreakdown: false,
+                    dateSort: req.submitted || ''
+                });
+            });
+
+            // Apply type filter
+            if (woFilterState.type !== 'all') {
+                items = items.filter(function(item) { return item.type === woFilterState.type; });
+            }
+
+            // Apply sort
+            if (woFilterState.sort === 'newest') {
+                items.sort(function(a, b) { return (b.dateSort || '').localeCompare(a.dateSort || ''); });
+            } else if (woFilterState.sort === 'oldest') {
+                items.sort(function(a, b) { return (a.dateSort || '').localeCompare(b.dateSort || ''); });
+            } else if (woFilterState.sort === 'priority') {
+                var pOrder = { high: 0, medium: 1, low: 2 };
+                items.sort(function(a, b) { return (pOrder[a.priority] || 3) - (pOrder[b.priority] || 3); });
+            }
+
+            if (items.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">No Active Items</div><div class="empty-state-text">No open work orders, breakdowns, or pending requests.</div></div>';
                 updateKPIs();
                 return;
             }
-            container.innerHTML = workOrdersData.map(wo => {
-                const assignedHtml = wo.assignedTo
-                    ? `<span>${escHtml(wo.assignedTo)}</span>`
-                    : `<span style="color: var(--danger); font-weight: 600;">Unassigned</span>`;
-                const statusLabel = wo.status === 'in-progress' ? 'In Progress' : wo.status === 'completed' ? 'Completed' : wo.status === 'on-hold' ? 'On Hold' : 'Open';
-                const statusClass = wo.status;
-                const photosHtml = wo.hasPhotos ? `<div class="wo-images">
-                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%23E5E5E5' width='60' height='60'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='12' fill='%23666'%3E📷%3C/text%3E%3C/svg%3E" class="wo-image-thumb" alt="Photo">
-                </div>` : '';
-                return `<div class="work-order-item">
-                    <div class="wo-priority ${wo.priority}"></div>
-                    <div class="wo-details">
-                        <div class="wo-title">${escHtml(wo.title)}${wo.fromBreakdown ? '<span style="background:var(--warning);color:var(--dark);font-size:0.7rem;padding:2px 7px;border-radius:4px;font-weight:700;margin-left:6px;">&#9889; Breakdown</span>' : ''}</div>
-                        <div class="wo-meta">
-                            <div class="wo-meta-item"><span>🏭</span><span>${escHtml(wo.equipment)}</span></div>
-                            <div class="wo-meta-item"><span>👤</span>${assignedHtml}</div>
-                            <div class="wo-meta-item"><span>📅</span><span>${escHtml(wo.created)}</span></div>
-                        </div>
-                        ${photosHtml}
-                    </div>
-                    <div class="status-badge ${statusClass}">${statusLabel}</div>
-                    <div style="display:flex;gap:0.5rem;">
-                        <button class="btn btn-primary btn-small" onclick="openWorkOrderDetail('${wo.id}')">View</button>
-                        <button class="btn btn-danger btn-small" onclick="deleteWorkOrder('${wo.id}')">Delete</button>
-                    </div>
-                </div>`;
+
+            container.innerHTML = items.map(function(item) {
+                var assignedHtml = item.assignedTo
+                    ? '<span>' + escHtml(item.assignedTo) + '</span>'
+                    : '<span style="color: var(--danger); font-weight: 600;">Unassigned</span>';
+                var statusLabel = item.status === 'in-progress' ? 'In Progress' : item.status === 'completed' ? 'Completed' : item.status === 'on-hold' ? 'On Hold' : item.status === 'pending' ? 'Pending Request' : 'Open';
+                var statusClass = item.status === 'pending' ? 'open' : item.status;
+
+                var typeBadge = '';
+                if (item.type === 'breakdown') {
+                    typeBadge = '<span style="background:var(--danger);color:#fff;font-size:0.7rem;padding:2px 7px;border-radius:4px;font-weight:700;margin-left:6px;">&#9889; Breakdown</span>';
+                } else if (item.type === 'request') {
+                    typeBadge = '<span style="background:var(--primary);color:#fff;font-size:0.7rem;padding:2px 7px;border-radius:4px;font-weight:700;margin-left:6px;">&#128221; Request</span>';
+                } else if (item.fromBreakdown) {
+                    typeBadge = '<span style="background:var(--warning);color:var(--dark);font-size:0.7rem;padding:2px 7px;border-radius:4px;font-weight:700;margin-left:6px;">&#9889; Breakdown</span>';
+                }
+
+                var photosHtml = item.hasPhotos ? '<div class="wo-images"><img src="data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect fill=\'%23E5E5E5\' width=\'60\' height=\'60\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'monospace\' font-size=\'12\' fill=\'%23666\'%3E&#128247;%3C/text%3E%3C/svg%3E" class="wo-image-thumb" alt="Photo"></div>' : '';
+
+                var actionBtns = '';
+                if (item.type === 'wo') {
+                    actionBtns = '<button class="btn btn-primary btn-small" onclick="openWorkOrderDetail(\'' + item.id + '\')">View</button>' +
+                        '<button class="btn btn-danger btn-small" onclick="deleteWorkOrder(\'' + item.id + '\')">Delete</button>';
+                } else if (item.type === 'breakdown') {
+                    actionBtns = '<button class="btn btn-primary btn-small" onclick="openBreakdownDetail(\'' + item.id + '\')">View</button>';
+                } else if (item.type === 'request') {
+                    actionBtns = '<button class="btn btn-primary btn-small" onclick="switchTabByName(\'workRequests\')">View in Requests</button>';
+                }
+
+                return '<div class="work-order-item">' +
+                    '<div class="wo-priority ' + item.priority + '"></div>' +
+                    '<div class="wo-details">' +
+                        '<div class="wo-title">' + escHtml(item.title) + typeBadge + '</div>' +
+                        '<div class="wo-meta">' +
+                            '<div class="wo-meta-item"><span>&#127981;</span><span>' + escHtml(item.equipment) + '</span></div>' +
+                            '<div class="wo-meta-item"><span>&#128100;</span>' + assignedHtml + '</div>' +
+                            '<div class="wo-meta-item"><span>&#128197;</span><span>' + escHtml(item.created) + '</span></div>' +
+                        '</div>' +
+                        photosHtml +
+                    '</div>' +
+                    '<div class="status-badge ' + statusClass + '">' + statusLabel + '</div>' +
+                    '<div style="display:flex;gap:0.5rem;">' + actionBtns + '</div>' +
+                '</div>';
             }).join('');
             updateKPIs();
         }
@@ -6025,16 +6086,76 @@
 
         function updateNotificationCount() {
             const unreadCount = document.querySelectorAll('.notification-item.unread').length;
-            document.getElementById('notificationCount').textContent = unreadCount;
+            var badge = document.getElementById('notificationCount');
+            if (badge) {
+                badge.textContent = unreadCount;
+                badge.style.display = unreadCount > 0 ? '' : 'none';
+            }
+        }
+
+        function renderNotifications() {
+            var container = document.getElementById('notificationItems');
+            if (!container) return;
+            var notes = [];
+
+            // Overdue / due-soon PMs
+            pmData.forEach(function(pm) {
+                if (pm.status === 'completed') return;
+                if (pm.dueStatus === 'overdue') {
+                    notes.push({ icon: '&#9888;&#65039;', title: 'PM Overdue', text: escHtml(pm.equipment) + ' — ' + escHtml(pm.title) + ' is overdue', tab: 'pm', unread: true });
+                } else if (pm.dueStatus === 'due-soon') {
+                    notes.push({ icon: '&#128161;', title: 'PM Due Soon', text: escHtml(pm.equipment) + ' — ' + escHtml(pm.title) + ' is due soon', tab: 'pm', unread: true });
+                }
+            });
+
+            // Unassigned work orders
+            workOrdersData.forEach(function(wo) {
+                if ((wo.status === 'open' || wo.status === 'in-progress') && !wo.assignedTo) {
+                    notes.push({ icon: '&#128203;', title: 'Unassigned Work Order', text: escHtml(wo.equipment) + ' — ' + escHtml(wo.title), tab: 'workOrders', id: wo.id, unread: true });
+                }
+            });
+
+            // Open breakdowns
+            breakdownsData.forEach(function(br) {
+                if (br.status !== 'resolved') {
+                    notes.push({ icon: '&#9889;', title: 'Open Breakdown', text: escHtml(br.machine) + ' — ' + escHtml(br.faultDescription), tab: 'reactive', unread: true });
+                }
+            });
+
+            // Pending work requests
+            workRequestsData.forEach(function(req) {
+                if (req.status === 'pending') {
+                    notes.push({ icon: '&#128221;', title: 'Pending Request', text: escHtml(req.equipment) + ' — ' + escHtml(req.description), tab: 'workRequests', unread: true });
+                }
+            });
+
+            // Low stock parts
+            partsData.forEach(function(p) {
+                if (p.qty <= p.minStock && p.minStock > 0) {
+                    notes.push({ icon: '&#128230;', title: 'Low Stock', text: escHtml(p.name) + ' — ' + p.qty + ' remaining (min: ' + p.minStock + ')', tab: 'parts', unread: false });
+                }
+            });
+
+            if (notes.length === 0) {
+                container.innerHTML = '<div class="notification-item"><div class="notification-text" style="color:var(--gray-600);">No notifications</div></div>';
+            } else {
+                container.innerHTML = notes.map(function(n) {
+                    return '<div class="notification-item' + (n.unread ? ' unread' : '') + '" onclick="handleNotificationClick(\'' + n.tab + '\'' + (n.id ? ', \'' + n.id + '\'' : '') + ')">' +
+                        '<div class="notification-title">' + n.icon + ' ' + n.title + '</div>' +
+                        '<div class="notification-text">' + n.text + '</div>' +
+                    '</div>';
+                }).join('');
+            }
+            updateNotificationCount();
         }
 
         function handleNotificationClick(tab, id) {
             document.getElementById('notificationDropdown').classList.remove('active');
             switchTabByName(tab);
-            if (tab === 'workOrders' && typeof id === 'number') {
-                setTimeout(() => openWorkOrderDetail(id), 300);
+            if (tab === 'workOrders' && id) {
+                setTimeout(function() { openWorkOrderDetail(id); }, 300);
             }
-            event.currentTarget.classList.remove('unread');
+            if (event && event.currentTarget) event.currentTarget.classList.remove('unread');
             updateNotificationCount();
         }
 
@@ -6308,7 +6429,39 @@
         }
 
         function showFilterOptions() {
-            showToast('Use the search bar above to filter work orders.', 'info');
+            var existing = document.getElementById('woFilterPanel');
+            if (existing) { existing.remove(); return; }
+            var panel = document.createElement('div');
+            panel.id = 'woFilterPanel';
+            panel.style.cssText = 'background:var(--gray-100);border-radius:8px;padding:1rem;margin-bottom:1rem;display:flex;gap:1rem;flex-wrap:wrap;align-items:center;';
+            panel.innerHTML =
+                '<div style="display:flex;align-items:center;gap:0.5rem;">' +
+                    '<label style="font-weight:600;font-size:0.85rem;">Type:</label>' +
+                    '<select id="woFilterType" class="form-select" style="min-width:140px;font-size:0.85rem;" onchange="applyWoFilter()">' +
+                        '<option value="all"' + (woFilterState.type === 'all' ? ' selected' : '') + '>All</option>' +
+                        '<option value="wo"' + (woFilterState.type === 'wo' ? ' selected' : '') + '>Work Orders</option>' +
+                        '<option value="breakdown"' + (woFilterState.type === 'breakdown' ? ' selected' : '') + '>Breakdowns</option>' +
+                        '<option value="request"' + (woFilterState.type === 'request' ? ' selected' : '') + '>Requests</option>' +
+                    '</select>' +
+                '</div>' +
+                '<div style="display:flex;align-items:center;gap:0.5rem;">' +
+                    '<label style="font-weight:600;font-size:0.85rem;">Sort:</label>' +
+                    '<select id="woFilterSort" class="form-select" style="min-width:140px;font-size:0.85rem;" onchange="applyWoFilter()">' +
+                        '<option value="newest"' + (woFilterState.sort === 'newest' ? ' selected' : '') + '>Newest First</option>' +
+                        '<option value="oldest"' + (woFilterState.sort === 'oldest' ? ' selected' : '') + '>Oldest First</option>' +
+                        '<option value="priority"' + (woFilterState.sort === 'priority' ? ' selected' : '') + '>Priority</option>' +
+                    '</select>' +
+                '</div>';
+            var header = document.querySelector('#workOrders .card-header');
+            if (header) header.parentNode.insertBefore(panel, header.nextSibling);
+        }
+
+        function applyWoFilter() {
+            var typeEl = document.getElementById('woFilterType');
+            var sortEl = document.getElementById('woFilterSort');
+            if (typeEl) woFilterState.type = typeEl.value;
+            if (sortEl) woFilterState.sort = sortEl.value;
+            renderWorkOrders();
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -8431,9 +8584,9 @@
             // Auth
             showAuthSection, handleLogin, handleSignUp, handleLogout,
             // Navigation & Modals
-            switchTab, toggleNotifications, handleNotificationClick, openModal, closeModal,
+            switchTab, switchTabByName, toggleNotifications, handleNotificationClick, openModal, closeModal,
             // Work Orders
-            submitWorkOrder, updateWorkOrder, deleteWorkOrder, openWorkOrderDetail, addWoComment, showFilterOptions,
+            submitWorkOrder, updateWorkOrder, deleteWorkOrder, openWorkOrderDetail, addWoComment, showFilterOptions, applyWoFilter,
             // Equipment
             submitEquipment, openEquipmentHistory, openEquipmentEdit, saveEquipmentEdit, deleteEquipment,
             // Parts
