@@ -3219,10 +3219,6 @@
                         <label class="form-label">Equipment *</label>
                         <select class="form-select" id="woEquipment" required>
                             <option value="">Select equipment...</option>
-                            <option value="Line 1 - Conveyor System">Line 1 - Conveyor System</option>
-                            <option value="Line 2 - Industrial Mixer">Line 2 - Industrial Mixer</option>
-                            <option value="Line 3 - Filler Machine">Line 3 - Filler Machine</option>
-                            <option value="Line 4 - Packaging Unit">Line 4 - Packaging Unit</option>
                         </select>
                     </div>
 
@@ -3938,12 +3934,6 @@
                         <label class="form-label">Equipment *</label>
                         <select class="form-select" id="pmEquipment" required>
                             <option value="">Select equipment...</option>
-                            <option value="Line 1 - Conveyor System">Line 1 - Conveyor System</option>
-                            <option value="Line 2 - Industrial Mixer">Line 2 - Industrial Mixer</option>
-                            <option value="Line 3 - Filler Machine">Line 3 - Filler Machine</option>
-                            <option value="Line 4 - Packaging Unit">Line 4 - Packaging Unit</option>
-                            <option value="Facility-Wide">Facility-Wide</option>
-                            <option value="All Emergency Exits">All Emergency Exits</option>
                         </select>
                     </div>
 
@@ -5017,6 +5007,7 @@
             resetSessionTimer();
             applyTierRestrictions();
             populateEngineerDropdowns();
+            populateEquipmentDropdowns();
             // Set engineer dashboard dropdown to current user's name if it matches
             var engSelect = document.getElementById('myTasksEngineerSelect');
             if (engSelect && currentUserName) {
@@ -5289,6 +5280,27 @@
             });
         }
 
+        // Populate equipment dropdowns in WO and PM modals from live data
+        function populateEquipmentDropdowns() {
+            var ids = ['woEquipment', 'pmEquipment'];
+            ids.forEach(function(id) {
+                var sel = document.getElementById(id);
+                if (!sel) return;
+                var current = sel.value;
+                var html = '<option value="">Select equipment...</option>';
+                equipmentList.forEach(function(eq) {
+                    html += '<option value="' + escHtml(eq.name) + '">' + escHtml(eq.name) + '</option>';
+                });
+                // Add facility-wide options for PM
+                if (id === 'pmEquipment') {
+                    html += '<option value="Facility-Wide">Facility-Wide</option>';
+                    html += '<option value="All Emergency Exits">All Emergency Exits</option>';
+                }
+                sel.innerHTML = html;
+                if (current) sel.value = current;
+            });
+        }
+
         // ─────────────────────────────────────────────────────────────────────
         // FIELD MAPPERS — translate Supabase snake_case to client camelCase
         // ─────────────────────────────────────────────────────────────────────
@@ -5414,12 +5426,26 @@
             return p;
         }
         function mapPmFromDb(row) {
+            var dueStatus = row.due_status || 'upcoming';
+            var dueText = '';
+            if (dueStatus === 'completed') {
+                dueText = 'Completed' + (row.last_completed_at ? ': ' + new Date(row.last_completed_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '');
+            } else if (row.next_due_date) {
+                var today = new Date(); today.setHours(0,0,0,0);
+                var due = new Date(row.next_due_date + 'T00:00:00');
+                var diff = Math.ceil((due - today) / 86400000);
+                if (diff < 0) { dueStatus = 'overdue'; dueText = 'Overdue by ' + Math.abs(diff) + ' day(s)'; }
+                else if (diff === 0) { dueStatus = 'due-soon'; dueText = 'Due today'; }
+                else if (diff === 1) { dueStatus = 'due-soon'; dueText = 'Due tomorrow'; }
+                else if (diff <= 3) { dueStatus = 'due-soon'; dueText = 'Due in ' + diff + ' days'; }
+                else { dueText = 'Due in ' + diff + ' days'; }
+            }
             return {
                 id: row.id, title: row.title || '',
-                equipment: '', frequency: row.frequency || '',
+                equipment: row.equipment_name || '', frequency: row.frequency || '',
                 duration: row.duration || '', assignedTo: row.assigned_to || '',
-                dueStatus: row.due_status || 'upcoming', dueText: '',
-                status: row.due_status || 'upcoming',
+                dueStatus: dueStatus, dueText: dueText,
+                status: dueStatus,
                 lastCompleted: row.last_completed_at ? new Date(row.last_completed_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '',
                 scheduledDate: row.next_due_date || '',
                 checklist: row.checklist || [], description: row.description || ''
@@ -5506,6 +5532,7 @@
         // Track currently editing IDs
         let currentEditEquipId = null;
         let currentDetailWoId = null;
+        let currentDetailPoId = null;
         let currentEditPermitType = null;
         let currentEditPermitId = null;
 
@@ -6357,6 +6384,7 @@
                 var dbRow = await CraderoAPI.equipment.create(mapEquipToDb({ name, equipId, manufacturer: mfr, model, location: loc, installDate: date || '', status, criticality, warrantyExpiry, warrantyProvider, warrantyNotes }));
                 equipmentList.push(mapEquipFromDb(dbRow));
                 renderEquipment();
+                populateEquipmentDropdowns();
                 closeModal('equipmentModal');
                 document.getElementById('equipmentForm').reset();
                 showToast('Equipment added successfully!', 'success');
@@ -6453,6 +6481,7 @@
             try {
                 await CraderoAPI.equipment.update(eq.id, mapEquipToDb(eq));
                 renderEquipment();
+                populateEquipmentDropdowns();
                 closeModal('equipmentEditModal');
                 showToast('Equipment updated!', 'success');
             } catch (e) {
@@ -6470,6 +6499,7 @@
                 logAudit('delete', 'equipment', equipId);
                 equipmentList = equipmentList.filter(e => e.id !== equipId);
                 renderEquipment();
+                populateEquipmentDropdowns();
                 showToast('Equipment deleted.', 'info');
             } catch (e) {
                 console.error('[Cradero] Failed to delete equipment:', e);
@@ -7521,6 +7551,7 @@
             try {
                 var dbRow = {
                     title: taskName, description: description,
+                    equipment_name: equipment,
                     frequency: frequency, duration: duration || '',
                     assigned_to: assignTo, next_due_date: dueDate,
                     due_status: dueStatus, is_active: true,
@@ -7651,7 +7682,8 @@
                 var nowDate = new Date();
                 var now = nowDate.toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric' });
                 // Create a pm_completion record
-                await CraderoAPI.pm.complete(pm.id, {
+                await CraderoAPI.pm.complete({
+                    pm_task_id: pm.id,
                     completed_by: pm.assignedTo,
                     completed_at: nowDate.toISOString(),
                     checklist_results: pm.checklist || [],
@@ -8604,7 +8636,7 @@
             // Equipment
             submitEquipment, openEquipmentHistory, openEquipmentEdit, saveEquipmentEdit, deleteEquipment,
             // Parts
-            openAddPartModal, submitAddPart, openEditPart, deletePart, orderPart,
+            openAddPartModal, submitAddPart, openEditPart, saveEditPart, deletePart, orderPart,
             addPartSupplier, removePartSupplier, submitPartOrder,
             // Purchase Orders
             filterPOs, openPODetail, approvePO, deletePO, addLineItem, removeLineItem, submitCreatePO, downloadPOPDF,
@@ -8621,7 +8653,7 @@
             submitBreakdown, filterBreakdowns, clearBreakdownFilter,
             openBreakdownDetail, saveBreakdownEdit, deleteBreakdown, toggleBrResolutionField,
             // Calendar
-            prevPeriod, nextPeriod, toggleCalendarView, submitAddCalendarEvent, showEventToast,
+            prevPeriod, nextPeriod, toggleCalendarView, submitAddCalendarEvent, showEventToast, deleteCalendarEvent,
             // Work Requests
             submitWorkRequest, filterWorkRequests, clearRequestFilter, approveRequest, declineRequest,
             // Engineer Dashboard
