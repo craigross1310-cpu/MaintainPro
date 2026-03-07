@@ -1,3 +1,6 @@
+# Supabase config (contains anon key)
+config.js
+
 # Environment variables and secrets
 .env
 .env.local
