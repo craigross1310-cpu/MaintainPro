@@ -1579,41 +1579,7 @@
         <!-- Notification Dropdown -->
         <div class="notification-dropdown" id="notificationDropdown">
             <div class="notification-header">Notifications</div>
-            <div class="notification-item unread" onclick="handleNotificationClick(this,'pm', 'fire-alarm')">
-                <div class="notification-title">🔥 Fire Alarm Test Overdue</div>
-                <div class="notification-text">Weekly fire alarm system test was due yesterday - immediate completion required for compliance</div>
-                <div class="notification-time">30 minutes ago</div>
-            </div>
-            <div class="notification-item unread" onclick="handleNotificationClick(this,'pm', 'line3-lube')">
-                <div class="notification-title">⚠️ PM Maintenance Overdue</div>
-                <div class="notification-text">Line 3 Filler - Monthly Lubrication is 2 days overdue</div>
-                <div class="notification-time">2 hours ago</div>
-            </div>
-            <div class="notification-item unread" onclick="handleNotificationClick(this,'workOrders', 3)">
-                <div class="notification-title">📋 Unassigned Work Order</div>
-                <div class="notification-text">Line 2 Packaging - Sensor Calibration has been unassigned for 24 hours</div>
-                <div class="notification-time">5 hours ago</div>
-            </div>
-            <div class="notification-item unread" onclick="handleNotificationClick(this,'permits', 'hotwork')">
-                <div class="notification-title">🔥 Hot Work Permit Expiring Soon</div>
-                <div class="notification-text">Welding permit for Line 3 expires in 3 hours - ensure work is completed or extend permit</div>
-                <div class="notification-time">6 hours ago</div>
-            </div>
-            <div class="notification-item" onclick="handleNotificationClick(this,'workOrders', 2)">
-                <div class="notification-title">✅ Work Order Completed</div>
-                <div class="notification-text">Line 1 Conveyor - Belt Replacement completed by John Smith</div>
-                <div class="notification-time">Yesterday</div>
-            </div>
-            <div class="notification-item unread" onclick="handleNotificationClick(this,'pm', 'emergency-lighting')">
-                <div class="notification-title">💡 Emergency Lighting Test Due Soon</div>
-                <div class="notification-text">Monthly emergency lighting test is due in 2 days</div>
-                <div class="notification-time">Yesterday</div>
-            </div>
-            <div class="notification-item" onclick="handleNotificationClick(this,'equipment', 1)">
-                <div class="notification-title">🛡️ Warranty Expired</div>
-                <div class="notification-text">Line 3 - Filler Machine warranty from FoodTech Pro has expired</div>
-                <div class="notification-time">2 days ago</div>
-            </div>
+            <div id="notificationItems"></div>
         </div>
     </header>
 
@@ -1678,106 +1644,7 @@
                     <input type="text" class="search-input" placeholder="Search work orders by equipment, description, or assigned engineer...">
                 </div>
 
-                <div class="work-orders-list" id="workOrdersList">
-                    <div class="work-order-item">
-                        <div class="wo-priority high"></div>
-                        <div class="wo-details">
-                            <div class="wo-title">Line 3 Filler - Motor Overheating</div>
-                            <div class="wo-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏭</span>
-                                    <span>Line 3 Filler</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>👤</span>
-                                    <span style="color: var(--danger); font-weight: 600;">Unassigned</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📅</span>
-                                    <span>Created 2 hours ago</span>
-                                </div>
-                            </div>
-                            <div class="wo-images">
-                                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%23E5E5E5' width='60' height='60'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='12' fill='%23666'%3E📷%3C/text%3E%3C/svg%3E" class="wo-image-thumb" alt="Photo 1">
-                                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%23E5E5E5' width='60' height='60'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='12' fill='%23666'%3E📷%3C/text%3E%3C/svg%3E" class="wo-image-thumb" alt="Photo 2">
-                            </div>
-                        </div>
-                        <div class="status-badge open">Open</div>
-                        <button class="btn btn-primary" onclick="openWorkOrderDetail(1)">View Details</button>
-                    </div>
-
-                    <div class="work-order-item">
-                        <div class="wo-priority medium"></div>
-                        <div class="wo-details">
-                            <div class="wo-title">Line 1 Conveyor - Belt Replacement</div>
-                            <div class="wo-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏭</span>
-                                    <span>Line 1 Conveyor</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>👤</span>
-                                    <span>John Smith</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📅</span>
-                                    <span>Started 1 hour ago</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="status-badge in-progress">In Progress</div>
-                        <button class="btn btn-primary" onclick="openWorkOrderDetail(2)">View Details</button>
-                    </div>
-
-                    <div class="work-order-item">
-                        <div class="wo-priority low"></div>
-                        <div class="wo-details">
-                            <div class="wo-title">Line 2 Packaging - Sensor Calibration</div>
-                            <div class="wo-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏭</span>
-                                    <span>Line 2 Packaging</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>👤</span>
-                                    <span style="color: var(--danger); font-weight: 600;">Unassigned</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📅</span>
-                                    <span>Created yesterday</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="status-badge open">Open</div>
-                        <button class="btn btn-primary" onclick="openWorkOrderDetail(3)">View Details</button>
-                    </div>
-
-                    <div class="work-order-item">
-                        <div class="wo-priority high"></div>
-                        <div class="wo-details">
-                            <div class="wo-title">Line 4 Mixer - Bearing Noise Investigation</div>
-                            <div class="wo-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏭</span>
-                                    <span>Line 4 Mixer</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>👤</span>
-                                    <span>Mike Johnson</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📅</span>
-                                    <span>Started 3 hours ago</span>
-                                </div>
-                            </div>
-                            <div class="wo-images">
-                                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%23E5E5E5' width='60' height='60'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='12' fill='%23666'%3E📷%3C/text%3E%3C/svg%3E" class="wo-image-thumb" alt="Photo 1">
-                            </div>
-                        </div>
-                        <div class="status-badge in-progress">In Progress</div>
-                        <button class="btn btn-primary" onclick="openWorkOrderDetail(4)">View Details</button>
-                    </div>
-                </div>
+                <div class="work-orders-list" id="workOrdersList"></div>
             </div>
         </div>
 
@@ -1794,139 +1661,7 @@
                     <input type="text" class="search-input" placeholder="Search equipment by name, ID, or location...">
                 </div>
 
-                <div class="equipment-grid" id="equipmentGrid">
-                    <div class="equipment-card">
-                        <div class="equipment-header">
-                            <div>
-                                <div class="equipment-name">Line 3 - Filler Machine</div>
-                                <div class="equipment-id">EQ-FL-003</div>
-                            </div>
-                            <div class="equipment-status down">Down</div>
-                        </div>
-                        <div class="equipment-info">
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Location</span>
-                                <span class="equipment-info-value">Production Floor - Line 3</span>
-                            </div>
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Manufacturer</span>
-                                <span class="equipment-info-value">FoodTech Pro</span>
-                            </div>
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Install Date</span>
-                                <span class="equipment-info-value">Jan 2021</span>
-                            </div>
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Work Orders (30d)</span>
-                                <span class="equipment-info-value">8 total</span>
-                            </div>
-                        </div>
-                        <div class="equipment-actions">
-                            <button class="btn btn-primary btn-small" onclick="openEquipmentHistory(1)">View History</button>
-                            <button class="btn btn-secondary btn-small" onclick="openEquipmentEdit(1)">Edit</button>
-                            <button class="btn btn-danger btn-small" onclick="deleteEquipment(1)">Delete</button>
-                        </div>
-                    </div>
-
-                    <div class="equipment-card">
-                        <div class="equipment-header">
-                            <div>
-                                <div class="equipment-name">Line 1 - Conveyor System</div>
-                                <div class="equipment-id">EQ-CV-001</div>
-                            </div>
-                            <div class="equipment-status maintenance">Maintenance</div>
-                        </div>
-                        <div class="equipment-info">
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Location</span>
-                                <span class="equipment-info-value">Production Floor - Line 1</span>
-                            </div>
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Manufacturer</span>
-                                <span class="equipment-info-value">ConveyorMax</span>
-                            </div>
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Install Date</span>
-                                <span class="equipment-info-value">Mar 2020</span>
-                            </div>
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Work Orders (30d)</span>
-                                <span class="equipment-info-value">3 total</span>
-                            </div>
-                        </div>
-                        <div class="equipment-actions">
-                            <button class="btn btn-primary btn-small" onclick="openEquipmentHistory(2)">View History</button>
-                            <button class="btn btn-secondary btn-small" onclick="openEquipmentEdit(2)">Edit</button>
-                            <button class="btn btn-danger btn-small" onclick="deleteEquipment(2)">Delete</button>
-                        </div>
-                    </div>
-
-                    <div class="equipment-card">
-                        <div class="equipment-header">
-                            <div>
-                                <div class="equipment-name">Line 2 - Industrial Mixer</div>
-                                <div class="equipment-id">EQ-MX-002</div>
-                            </div>
-                            <div class="equipment-status operational">Operational</div>
-                        </div>
-                        <div class="equipment-info">
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Location</span>
-                                <span class="equipment-info-value">Production Floor - Line 2</span>
-                            </div>
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Manufacturer</span>
-                                <span class="equipment-info-value">MixMaster Industrial</span>
-                            </div>
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Install Date</span>
-                                <span class="equipment-info-value">Aug 2019</span>
-                            </div>
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Work Orders (30d)</span>
-                                <span class="equipment-info-value">2 total</span>
-                            </div>
-                        </div>
-                        <div class="equipment-actions">
-                            <button class="btn btn-primary btn-small" onclick="openEquipmentHistory(3)">View History</button>
-                            <button class="btn btn-secondary btn-small" onclick="openEquipmentEdit(3)">Edit</button>
-                            <button class="btn btn-danger btn-small" onclick="deleteEquipment(3)">Delete</button>
-                        </div>
-                    </div>
-
-                    <div class="equipment-card">
-                        <div class="equipment-header">
-                            <div>
-                                <div class="equipment-name">Line 4 - Packaging Unit</div>
-                                <div class="equipment-id">EQ-PK-004</div>
-                            </div>
-                            <div class="equipment-status operational">Operational</div>
-                        </div>
-                        <div class="equipment-info">
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Location</span>
-                                <span class="equipment-info-value">Production Floor - Line 4</span>
-                            </div>
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Manufacturer</span>
-                                <span class="equipment-info-value">PackPro Systems</span>
-                            </div>
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Install Date</span>
-                                <span class="equipment-info-value">Dec 2020</span>
-                            </div>
-                            <div class="equipment-info-row">
-                                <span class="equipment-info-label">Work Orders (30d)</span>
-                                <span class="equipment-info-value">4 total</span>
-                            </div>
-                        </div>
-                        <div class="equipment-actions">
-                            <button class="btn btn-primary btn-small" onclick="openEquipmentHistory(4)">View History</button>
-                            <button class="btn btn-secondary btn-small" onclick="openEquipmentEdit(4)">Edit</button>
-                            <button class="btn btn-danger btn-small" onclick="deleteEquipment(4)">Delete</button>
-                        </div>
-                    </div>
-                </div>
+                <div class="equipment-grid" id="equipmentGrid"></div>
             </div>
         </div>
 
@@ -1943,122 +1678,14 @@
                     <input type="text" class="search-input" placeholder="Search parts by name, number, or location...">
                 </div>
 
-                <div class="parts-grid" id="partsGrid">
-                    <div class="part-card">
-                        <div class="part-header">
-                            <div>
-                                <div class="part-name">Motor Bearing 6205</div>
-                                <div class="part-number">PN-MB-6205-001</div>
-                            </div>
-                            <div class="stock-indicator in-stock">In Stock</div>
-                        </div>
-                        <div class="part-details">
-                            <div class="part-detail-row">
-                                <span class="part-detail-label">Quantity</span>
-                                <span class="part-detail-value">15 units</span>
-                            </div>
-                            <div class="part-detail-row">
-                                <span class="part-detail-label">Location</span>
-                                <span class="part-detail-value">Shelf B3, Bin 12</span>
-                            </div>
-                            <div class="part-detail-row">
-                                <span class="part-detail-label">Min Stock</span>
-                                <span class="part-detail-value">8 units</span>
-                            </div>
-                            <div class="part-detail-row">
-                                <span class="part-detail-label">Used This Month</span>
-                                <span class="part-detail-value">3 times</span>
-                            </div>
-                        </div>
-                        <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="orderPart('PN-MB-6205-001', 'Motor Bearing 6205')">Order More</button>
-                    </div>
-
-                    <div class="part-card">
-                        <div class="part-header">
-                            <div>
-                                <div class="part-name">Conveyor Belt 48"</div>
-                                <div class="part-number">PN-CB-48-002</div>
-                            </div>
-                            <div class="stock-indicator low-stock">Low Stock</div>
-                        </div>
-                        <div class="part-details">
-                            <div class="part-detail-row">
-                                <span class="part-detail-label">Quantity</span>
-                                <span class="part-detail-value">2 units</span>
-                            </div>
-                            <div class="part-detail-row">
-                                <span class="part-detail-label">Location</span>
-                                <span class="part-detail-value">Shelf A1, Bin 5</span>
-                            </div>
-                            <div class="part-detail-row">
-                                <span class="part-detail-label">Min Stock</span>
-                                <span class="part-detail-value">4 units</span>
-                            </div>
-                            <div class="part-detail-row">
-                                <span class="part-detail-label">Used This Month</span>
-                                <span class="part-detail-value">1 time</span>
-                            </div>
-                        </div>
-                        <button class="btn btn-danger" style="width: 100%; margin-top: 1rem;" onclick="orderPart('PN-CB-48-002', 'Conveyor Belt 48', true)">🚨 Order Now</button>
-                    </div>
-
-                    <div class="part-card">
-                        <div class="part-header">
-                            <div>
-                                <div class="part-name">Proximity Sensor M18</div>
-                                <div class="part-number">PN-PS-M18-004</div>
-                            </div>
-                            <div class="stock-indicator out-of-stock">Out of Stock</div>
-                        </div>
-                        <div class="part-details">
-                            <div class="part-detail-row">
-                                <span class="part-detail-label">Quantity</span>
-                                <span class="part-detail-value">0 units</span>
-                            </div>
-                            <div class="part-detail-row">
-                                <span class="part-detail-label">Location</span>
-                                <span class="part-detail-value">Shelf D4, Bin 15</span>
-                            </div>
-                            <div class="part-detail-row">
-                                <span class="part-detail-label">Min Stock</span>
-                                <span class="part-detail-value">5 units</span>
-                            </div>
-                            <div class="part-detail-row">
-                                <span class="part-detail-label">Used This Month</span>
-                                <span class="part-detail-value">2 times</span>
-                            </div>
-                        </div>
-                        <button class="btn btn-danger" style="width: 100%; margin-top: 1rem;" onclick="orderPart('PN-PS-M18-004', 'Proximity Sensor M18', true)">🚨 Emergency Order</button>
-                    </div>
-                </div>
+                <div class="parts-grid" id="partsGrid"></div>
             </div>
         </div>
 
         <!-- Purchase Orders Tab -->
         <div id="purchaseOrders" class="tab-content">
             <!-- PO Summary Stats -->
-            <div class="stats-grid" style="margin-bottom: 2rem;">
-                <div class="stat-card">
-                    <div class="stat-label">Open POs</div>
-                    <div class="stat-value">8</div>
-                    <div class="stat-change positive">3 pending approval</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Total Value (Open)</div>
-                    <div class="stat-value">£4,235</div>
-                    <div class="stat-change negative">↑ £850 this week</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">This Month Spending</div>
-                    <div class="stat-value">£12,847</div>
-                    <div class="stat-change positive">↓ 12% vs last month</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">YTD Parts Budget</div>
-                    <div class="stat-value">£28,340</div>
-                    <div class="stat-change positive">47% of annual budget</div>
-                </div>
-            </div>
+            <div class="stats-grid" style="margin-bottom: 2rem;" id="poSummaryStats"></div>
 
             <!-- Quick Filters -->
             <div class="card" style="margin-bottom: 2rem;">
@@ -2085,237 +1712,7 @@
                     <input type="text" class="search-input" placeholder="Search POs by number, vendor, or part...">
                 </div>
 
-                <div class="work-orders-list" id="poList">
-                    <!-- PO 1 - Emergency Order -->
-                    <div class="work-order-item" style="border-left: 6px solid var(--danger);">
-                        <div class="wo-priority high"></div>
-                        <div class="wo-details">
-                            <div class="wo-title">PO-2026-00145 - Emergency Parts Order</div>
-                            <div class="wo-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏢</span>
-                                    <span>Grainger</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📦</span>
-                                    <span>3 items</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>💰</span>
-                                    <span style="font-weight: 700; color: var(--dark);">£1,245.00</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📅</span>
-                                    <span>Created: Today, 10:30 AM</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>🚚</span>
-                                    <span style="color: var(--warning); font-weight: 600;">Expected: Same Day</span>
-                                </div>
-                            </div>
-                            <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                <span style="padding: 0.25rem 0.75rem; background: var(--gray-100); border-radius: 20px; font-size: 0.85rem;">Proximity Sensor M18 (5x)</span>
-                                <span style="padding: 0.25rem 0.75rem; background: var(--gray-100); border-radius: 20px; font-size: 0.85rem;">Motor Bearing 6205 (2x)</span>
-                                <span style="padding: 0.25rem 0.75rem; background: var(--gray-100); border-radius: 20px; font-size: 0.85rem;">Conveyor Belt (1x)</span>
-                            </div>
-                        </div>
-                        <div class="status-badge" style="background: rgba(255, 179, 0, 0.1); color: var(--warning);">ORDERED</div>
-                        <button class="btn btn-primary" onclick="openPODetail('PO-2026-00145')">View Details</button>
-                    </div>
-
-                    <!-- PO 2 - Awaiting Approval -->
-                    <div class="work-order-item">
-                        <div class="wo-priority medium"></div>
-                        <div class="wo-details">
-                            <div class="wo-title">PO-2026-00144 - Monthly Restock Order</div>
-                            <div class="wo-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏢</span>
-                                    <span>RS Components</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📦</span>
-                                    <span>12 items</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>💰</span>
-                                    <span style="font-weight: 700; color: var(--dark);">£2,890.00</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📅</span>
-                                    <span>Created: Yesterday</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>👤</span>
-                                    <span>Requested by: John Smith</span>
-                                </div>
-                            </div>
-                            <div style="margin-top: 0.75rem;">
-                                <span style="padding: 0.5rem 1rem; background: rgba(255, 179, 0, 0.1); color: var(--warning); border-radius: 8px; font-size: 0.9rem; font-weight: 600;">
-                                    ⏳ Awaiting Manager Approval
-                                </span>
-                            </div>
-                        </div>
-                        <div class="status-badge" style="background: rgba(0, 102, 255, 0.1); color: var(--primary);">PENDING</div>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <button class="btn btn-success btn-small" onclick="approvePO('PO-2026-00144')">Approve</button>
-                            <button class="btn btn-primary btn-small" onclick="openPODetail('PO-2026-00144')">View</button>
-                        </div>
-                    </div>
-
-                    <!-- PO 3 - In Transit -->
-                    <div class="work-order-item">
-                        <div class="wo-priority low"></div>
-                        <div class="wo-details">
-                            <div class="wo-title">PO-2026-00143 - Preventive Maintenance Parts</div>
-                            <div class="wo-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏢</span>
-                                    <span>Motion Industries</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📦</span>
-                                    <span>8 items</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>💰</span>
-                                    <span style="font-weight: 700; color: var(--dark);">£1,567.50</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📅</span>
-                                    <span>Ordered: Feb 12</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>🚚</span>
-                                    <span style="color: var(--success); font-weight: 600;">In Transit - Arrives Tomorrow</span>
-                                </div>
-                            </div>
-                            <div style="margin-top: 0.75rem;">
-                                <span style="padding: 0.5rem 1rem; background: var(--gray-100); border-radius: 8px; font-size: 0.85rem;">
-                                    📍 Tracking: 1Z999AA10123456784
-                                </span>
-                            </div>
-                        </div>
-                        <div class="status-badge" style="background: rgba(255, 179, 0, 0.1); color: var(--warning);">IN TRANSIT</div>
-                        <button class="btn btn-primary" onclick="openPODetail('PO-2026-00143')">Track Order</button>
-                    </div>
-
-                    <!-- PO 4 - Received -->
-                    <div class="work-order-item">
-                        <div class="wo-priority low"></div>
-                        <div class="wo-details">
-                            <div class="wo-title">PO-2026-00142 - Line 3 Repair Parts</div>
-                            <div class="wo-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏢</span>
-                                    <span>Local Supplier - BearingMax</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📦</span>
-                                    <span>5 items</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>💰</span>
-                                    <span style="font-weight: 700; color: var(--dark);">£532.00</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📅</span>
-                                    <span>Received: Today, 8:45 AM</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>✅</span>
-                                    <span style="color: var(--success); font-weight: 600;">Inventory Updated</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="status-badge completed">RECEIVED</div>
-                        <button class="btn btn-secondary btn-small" onclick="openPODetail('PO-2026-00142')">View Details</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Spending Analysis -->
-            <div class="card" style="margin-top: 2rem;">
-                <div class="card-header">
-                    <h2 class="card-title">Spending Analysis</h2>
-                    <select class="form-select" style="width: 200px;">
-                        <option>This Month</option>
-                        <option>Last 30 Days</option>
-                        <option>Last 90 Days</option>
-                        <option>Year to Date</option>
-                    </select>
-                </div>
-
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
-                    <!-- By Vendor -->
-                    <div>
-                        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: var(--dark);">Spending by Vendor</h3>
-                        <div class="metric-list">
-                            <div class="metric-item">
-                                <span class="metric-label">Grainger</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">£4,532</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">RS Components</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">£3,890</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Motion Industries</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">£2,145</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Local Suppliers</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">£2,280</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- By Category -->
-                    <div>
-                        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: var(--dark);">Spending by Category</h3>
-                        <div class="metric-list">
-                            <div class="metric-item">
-                                <span class="metric-label">Bearings</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">£3,245</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Belts & Chains</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">£2,890</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Sensors</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">£2,567</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Electrical</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">£4,145</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- By Budget Code -->
-                    <div>
-                        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: var(--dark);">Spending by Budget Code</h3>
-                        <div class="metric-list">
-                            <div class="metric-item">
-                                <span class="metric-label">Emergency Repairs</span>
-                                <span class="metric-value" style="font-size: 1.2rem; color: var(--danger);">£5,234</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Maintenance Budget</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">£4,567</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Line Operating</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">£2,346</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Capital Projects</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">£700</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <div class="work-orders-list" id="poList"></div>
             </div>
         </div>
 
@@ -2370,49 +1767,7 @@
                     <button class="btn btn-primary" onclick="openModal('hotWorkPermitModal')">+ Issue Hot Work Permit</button>
                 </div>
 
-                <div class="work-orders-list" id="hotWorkList">
-                    <div class="work-order-item" style="border-left: 6px solid var(--danger);">
-                        <div class="wo-priority high"></div>
-                        <div class="wo-details">
-                            <div class="wo-title">🔥 Welding Work - Line 3 Filler Repair</div>
-                            <div class="wo-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏭</span>
-                                    <span>Production Floor - Line 3</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>👤</span>
-                                    <span>Mike Johnson</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📅</span>
-                                    <span>Valid until: 5:00 PM today</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>⏱️</span>
-                                    <span style="color: var(--danger); font-weight: 600;">Expires in 3 hours</span>
-                                </div>
-                            </div>
-                            <div class="wo-meta" style="margin-top: 0.5rem;">
-                                <div class="wo-meta-item">
-                                    <span>✅</span>
-                                    <span>Fire extinguisher on-site</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>✅</span>
-                                    <span>Fire watch assigned</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>✅</span>
-                                    <span>Area cleared</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="status-badge in-progress">Active</div>
-                        <button class="btn btn-danger" onclick="closePermit('hotwork', 1)">Close Permit</button>
-                    </div>
-                </div>
-
+                <div class="work-orders-list" id="hotWorkList"></div>
                 <div class="empty-state" style="padding: 2rem;">
                     <p style="color: var(--gray-600); font-size: 0.95rem;">
                         ⚠️ Hot work permits are required for welding, cutting, grinding, or any work that produces sparks or flames. 
@@ -2428,130 +1783,7 @@
                     <button class="btn btn-primary" onclick="openModal('contractorPermitModal')">+ Issue Contractor Permit</button>
                 </div>
 
-                <div class="work-orders-list" id="contractorPermitsList">
-                    <div class="work-order-item">
-                        <div class="wo-priority low"></div>
-                        <div class="wo-details">
-                            <div class="wo-title">HVAC System Maintenance - XYZ Mechanical</div>
-                            <div class="wo-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏢</span>
-                                    <span>XYZ Mechanical Services</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>👤</span>
-                                    <span>Supervisor: Tom Davis</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📅</span>
-                                    <span>Valid: Feb 13-14, 2026</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>⏱️</span>
-                                    <span>Expires tomorrow</span>
-                                </div>
-                            </div>
-                            <div class="wo-meta" style="margin-top: 0.5rem;">
-                                <div class="wo-meta-item">
-                                    <span>✅</span>
-                                    <span>Safety orientation completed</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>✅</span>
-                                    <span>Insurance verified</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>✅</span>
-                                    <span>Tools inspected</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="status-badge in-progress">Active</div>
-                        <button class="btn btn-primary" onclick="openPermitDetail('contractor', 1)">View Details</button>
-                    </div>
-
-                    <div class="work-order-item">
-                        <div class="wo-priority low"></div>
-                        <div class="wo-details">
-                            <div class="wo-title">Electrical Panel Upgrade - ABC Electric</div>
-                            <div class="wo-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏢</span>
-                                    <span>ABC Electric Co.</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>👤</span>
-                                    <span>Supervisor: Lisa Chen</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📅</span>
-                                    <span>Valid: Feb 13-15, 2026</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>⏱️</span>
-                                    <span>Expires in 2 days</span>
-                                </div>
-                            </div>
-                            <div class="wo-meta" style="margin-top: 0.5rem;">
-                                <div class="wo-meta-item">
-                                    <span>✅</span>
-                                    <span>Safety orientation completed</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>✅</span>
-                                    <span>Insurance verified</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>✅</span>
-                                    <span>Lock-out tag-out trained</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="status-badge in-progress">Active</div>
-                        <button class="btn btn-primary" onclick="openPermitDetail('contractor', 2)">View Details</button>
-                    </div>
-
-                    <div class="work-order-item">
-                        <div class="wo-priority medium"></div>
-                        <div class="wo-details">
-                            <div class="wo-title">Fire Suppression System Inspection - SafeGuard Fire</div>
-                            <div class="wo-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏢</span>
-                                    <span>SafeGuard Fire Protection</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>👤</span>
-                                    <span>Supervisor: Robert Martinez</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>📅</span>
-                                    <span>Valid: Feb 13, 2026</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>⏱️</span>
-                                    <span style="color: var(--warning); font-weight: 600;">Expires tonight</span>
-                                </div>
-                            </div>
-                            <div class="wo-meta" style="margin-top: 0.5rem;">
-                                <div class="wo-meta-item">
-                                    <span>✅</span>
-                                    <span>Safety orientation completed</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>✅</span>
-                                    <span>Insurance verified</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>✅</span>
-                                    <span>Equipment certified</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="status-badge in-progress">Active</div>
-                        <button class="btn btn-primary" onclick="openPermitDetail('contractor', 3)">View Details</button>
-                    </div>
-                </div>
+                <div class="work-orders-list" id="contractorPermitsList"></div>
             </div>
 
             <!-- Closed Permits Archive -->
@@ -2609,147 +1841,7 @@
                     <button class="btn btn-secondary" onclick="clearPMFilter()" style="align-self:flex-end;">Clear</button>
                 </div>
 
-                <div class="pm-list" id="pmList">
-                    <div class="pm-item overdue">
-                        <div class="pm-info">
-                            <div class="pm-title">🔥 Fire Alarm System - Weekly Test</div>
-                            <div class="pm-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏭</span>
-                                    <span>Facility-Wide</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>🔄</span>
-                                    <span>Weekly (Every Monday)</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>⏱️</span>
-                                    <span>15 minutes</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>👤</span>
-                                    <span>Mike Johnson</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="due-date overdue">
-                            Overdue by 1 day
-                        </div>
-                        <button class="btn btn-danger" onclick="completePM('fire-alarm')">Complete Now</button>
-                    </div>
-
-                    <div class="pm-item due-soon">
-                        <div class="pm-info">
-                            <div class="pm-title">💡 Emergency Lighting - Monthly Test</div>
-                            <div class="pm-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏭</span>
-                                    <span>All Emergency Exits</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>🔄</span>
-                                    <span>Monthly (1st of month)</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>⏱️</span>
-                                    <span>45 minutes</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>👤</span>
-                                    <span>Sarah Williams</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="due-date due-soon">
-                            Due in 2 days
-                        </div>
-                        <button class="btn btn-primary" onclick="schedulePM('emergency-lighting')">Schedule</button>
-                    </div>
-
-                    <div class="pm-item overdue">
-                        <div class="pm-info">
-                            <div class="pm-title">Line 3 Filler - Monthly Lubrication</div>
-                            <div class="pm-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏭</span>
-                                    <span>Line 3 Filler</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>🔄</span>
-                                    <span>Monthly</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>⏱️</span>
-                                    <span>30 minutes</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>👤</span>
-                                    <span>Sarah Williams</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="due-date overdue">
-                            Overdue by 2 days
-                        </div>
-                        <button class="btn btn-danger" onclick="completePM('line3-lube')">Complete Now</button>
-                    </div>
-
-                    <div class="pm-item due-soon">
-                        <div class="pm-info">
-                            <div class="pm-title">Line 1 Conveyor - Belt Tension Check</div>
-                            <div class="pm-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏭</span>
-                                    <span>Line 1 Conveyor</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>🔄</span>
-                                    <span>Weekly</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>⏱️</span>
-                                    <span>15 minutes</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>👤</span>
-                                    <span>John Smith</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="due-date due-soon">
-                            Due tomorrow
-                        </div>
-                        <button class="btn btn-primary" onclick="schedulePM('line1-belt')">Schedule</button>
-                    </div>
-
-                    <div class="pm-item">
-                        <div class="pm-info">
-                            <div class="pm-title">Line 2 Mixer - Gearbox Oil Change</div>
-                            <div class="pm-meta">
-                                <div class="wo-meta-item">
-                                    <span>🏭</span>
-                                    <span>Line 2 Mixer</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>🔄</span>
-                                    <span>Quarterly</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>⏱️</span>
-                                    <span>1 hour</span>
-                                </div>
-                                <div class="wo-meta-item">
-                                    <span>👤</span>
-                                    <span>Mike Johnson</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="due-date upcoming">
-                            Due in 5 days
-                        </div>
-                        <button class="btn btn-primary" onclick="schedulePM('line2-oil')">Schedule</button>
-                    </div>
-                </div>
+                <div class="pm-list" id="pmList"></div>
             </div>
         </div>
 
@@ -2758,103 +1850,17 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Today's Activity Log</h2>
-                    <input type="date" class="form-input" style="width: 200px;" value="2026-02-13">
+                    <input type="date" class="form-input" style="width: 200px;" id="activityDateInput">
                 </div>
 
-                <div class="activity-timeline">
-                    <div class="activity-item">
-                        <div class="activity-dot completed"></div>
-                        <div class="activity-content">
-                            <div class="activity-header">
-                                <div class="activity-title">✅ Work Order Completed</div>
-                                <div class="activity-time">14:30</div>
-                            </div>
-                            <div class="activity-description">
-                                Line 1 Conveyor - Belt Replacement completed successfully
-                            </div>
-                            <div class="activity-meta">
-                                <span>👤 John Smith</span>
-                                <span>⏱️ Duration: 2.5 hours</span>
-                                <span>🔧 Parts Used: 1 conveyor belt</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="activity-item">
-                        <div class="activity-dot in-progress"></div>
-                        <div class="activity-content">
-                            <div class="activity-header">
-                                <div class="activity-title">🔧 Work Order In Progress</div>
-                                <div class="activity-time">11:15</div>
-                            </div>
-                            <div class="activity-description">
-                                Line 4 Mixer - Bearing Noise Investigation started
-                            </div>
-                            <div class="activity-meta">
-                                <span>👤 Mike Johnson</span>
-                                <span>⏱️ Elapsed: 3 hours 45 minutes</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="activity-item">
-                        <div class="activity-dot created"></div>
-                        <div class="activity-content">
-                            <div class="activity-header">
-                                <div class="activity-title">📋 New Work Order Created</div>
-                                <div class="activity-time">09:20</div>
-                            </div>
-                            <div class="activity-description">
-                                Line 3 Filler - Motor Overheating (High Priority)
-                            </div>
-                            <div class="activity-meta">
-                                <span>👤 Unassigned</span>
-                                <span>📸 2 photos attached</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="activity-item">
-                        <div class="activity-dot completed"></div>
-                        <div class="activity-content">
-                            <div class="activity-header">
-                                <div class="activity-title">✅ PM Task Completed</div>
-                                <div class="activity-time">08:00</div>
-                            </div>
-                            <div class="activity-description">
-                                Line 2 Packaging - Daily Safety Inspection completed
-                            </div>
-                            <div class="activity-meta">
-                                <span>👤 Sarah Williams</span>
-                                <span>⏱️ Duration: 20 minutes</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <div class="activity-timeline" id="activityTimeline"></div>
             </div>
 
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Daily Summary</h2>
                 </div>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">Work Orders Created</div>
-                        <div class="stat-value">3</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Work Orders Completed</div>
-                        <div class="stat-value">2</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">PM Tasks Completed</div>
-                        <div class="stat-value">1</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Total Downtime</div>
-                        <div class="stat-value">1.5h</div>
-                    </div>
-                </div>
+                <div class="stats-grid" id="dailySummaryStats"></div>
             </div>
         </div>
 
@@ -2919,28 +1925,7 @@
                             <div class="chart-title">Top 5 Problem Equipment</div>
                             <div class="chart-subtitle">By work order count (30 days)</div>
                         </div>
-                        <div class="metric-list">
-                            <div class="metric-item">
-                                <span class="metric-label">Line 3 Filler</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">8</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Line 4 Packaging</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">4</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Line 1 Conveyor</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">3</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Line 2 Mixer</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">2</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Compressor Unit</span>
-                                <span class="metric-value" style="font-size: 1.2rem;">2</span>
-                            </div>
-                        </div>
+                        <div class="metric-list" id="top5EquipmentList"></div>
                     </div>
 
                     <div class="chart-card">
@@ -2948,24 +1933,7 @@
                             <div class="chart-title">Maintenance Cost Breakdown</div>
                             <div class="chart-subtitle">This month</div>
                         </div>
-                        <div class="metric-list">
-                            <div class="metric-item">
-                                <span class="metric-label">Labor Costs</span>
-                                <span class="metric-value">£12,450</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Parts Costs</span>
-                                <span class="metric-value">£8,230</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Contractor Costs</span>
-                                <span class="metric-value">£3,500</span>
-                            </div>
-                            <div class="metric-item" style="background: var(--primary); color: white;">
-                                <span class="metric-label" style="color: white;">Total</span>
-                                <span class="metric-value" style="color: white;">£24,180</span>
-                            </div>
-                        </div>
+                        <div class="metric-list" id="costBreakdownList"></div>
                     </div>
 
                     <div class="chart-card">
@@ -2973,24 +1941,7 @@
                             <div class="chart-title">PM Completion Rate</div>
                             <div class="chart-subtitle">This month</div>
                         </div>
-                        <div class="metric-list">
-                            <div class="metric-item">
-                                <span class="metric-label">Completed On Time</span>
-                                <span class="metric-value" style="color: var(--success);">47</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Completed Late</span>
-                                <span class="metric-value" style="color: var(--warning);">3</span>
-                            </div>
-                            <div class="metric-item">
-                                <span class="metric-label">Currently Overdue</span>
-                                <span class="metric-value" style="color: var(--danger);">1</span>
-                            </div>
-                            <div class="metric-item" style="background: var(--success); color: white;">
-                                <span class="metric-label" style="color: white;">Compliance Rate</span>
-                                <span class="metric-value" style="color: white;">94%</span>
-                            </div>
-                        </div>
+                        <div class="metric-list" id="pmCompletionList"></div>
                     </div>
 
                     <div class="chart-card">
@@ -5002,7 +3953,7 @@
                     renderHotWorkPermits();
                     renderContractorPermits();
                     renderPM();
-                    updateNotificationCount();
+                    refreshDashboards();
                     initializeCharts();
                     if (typeof renderBreakdowns === 'function') {
                         renderBreakdowns();
@@ -5926,9 +4877,20 @@
         }
 
         function updateKPIs() {
-            const openWo = workOrdersData.filter(wo => wo.status === 'open' || wo.status === 'in-progress').length;
+            var openWo = workOrdersData.filter(function(wo) { return wo.status === 'open' || wo.status === 'in-progress'; }).length;
             document.getElementById('openWorkOrders').textContent = openWo;
             document.getElementById('totalEquipment').textContent = equipmentList.length;
+        }
+
+        function refreshDashboards() {
+            updateKPIs();
+            renderNotifications();
+            renderActivityLog();
+            renderDailySummary();
+            renderTop5Equipment();
+            renderPOStats();
+            renderPMCompletionStats();
+            renderCostBreakdown();
         }
 
         function renderProAnalytics() {
@@ -6072,6 +5034,225 @@
         function escHtml(str) {
             if (!str) return '';
             return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // DYNAMIC NOTIFICATIONS (from real data)
+        // ─────────────────────────────────────────────────────────────────────
+        function renderNotifications() {
+            var container = document.getElementById('notificationItems');
+            if (!container) return;
+            var items = [];
+
+            // Overdue PM tasks
+            pmData.forEach(function(pm) {
+                if (pm.dueStatus === 'overdue') {
+                    items.push({ unread: true, icon: '⚠️', title: 'PM Maintenance Overdue', text: escHtml(pm.title) + ' — ' + escHtml(pm.equipment), tab: 'pm', id: pm.id, sort: 1 });
+                } else if (pm.dueStatus === 'due-soon') {
+                    items.push({ unread: true, icon: '🔔', title: 'PM Task Due Soon', text: escHtml(pm.title) + ' — ' + escHtml(pm.equipment), tab: 'pm', id: pm.id, sort: 3 });
+                }
+            });
+
+            // Unassigned open work orders
+            workOrdersData.forEach(function(wo) {
+                if (wo.status === 'open' && !wo.assignedTo) {
+                    items.push({ unread: true, icon: '📋', title: 'Unassigned Work Order', text: escHtml(wo.title) + ' — ' + escHtml(wo.equipment), tab: 'workOrders', id: wo.id, sort: 2 });
+                }
+            });
+
+            // High-priority open work orders
+            workOrdersData.forEach(function(wo) {
+                if (wo.status === 'open' && wo.priority === 'high' && wo.assignedTo) {
+                    items.push({ unread: true, icon: '🔥', title: 'High Priority Work Order', text: escHtml(wo.title) + ' — ' + escHtml(wo.equipment), tab: 'workOrders', id: wo.id, sort: 2 });
+                }
+            });
+
+            // Low stock parts
+            partsData.forEach(function(p) {
+                if (p.qty <= p.minStock) {
+                    items.push({ unread: true, icon: '📦', title: p.qty === 0 ? 'Part Out of Stock' : 'Part Low Stock', text: escHtml(p.name) + ' (' + escHtml(p.partNumber) + ') — Qty: ' + p.qty, tab: 'parts', id: null, sort: 4 });
+                }
+            });
+
+            // Equipment that is down
+            equipmentList.forEach(function(eq) {
+                if (eq.status === 'down') {
+                    items.push({ unread: true, icon: '🛑', title: 'Equipment Down', text: escHtml(eq.name) + ' is currently down', tab: 'equipment', id: eq.id, sort: 1 });
+                }
+            });
+
+            // Sort by priority
+            items.sort(function(a, b) { return a.sort - b.sort; });
+
+            if (items.length === 0) {
+                container.innerHTML = '<div style="padding:1rem;color:var(--gray-500);text-align:center;">No notifications</div>';
+            } else {
+                container.innerHTML = items.slice(0, 10).map(function(n) {
+                    var onclick = 'handleNotificationClick(this,\'' + n.tab + '\',' + (typeof n.id === 'number' ? n.id : 'null') + ')';
+                    return '<div class="notification-item' + (n.unread ? ' unread' : '') + '" onclick="' + onclick + '">' +
+                        '<div class="notification-title">' + n.icon + ' ' + n.title + '</div>' +
+                        '<div class="notification-text">' + n.text + '</div>' +
+                    '</div>';
+                }).join('');
+            }
+            updateNotificationCount();
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // DYNAMIC ACTIVITY LOG (from real work orders & PM)
+        // ─────────────────────────────────────────────────────────────────────
+        function renderActivityLog() {
+            var container = document.getElementById('activityTimeline');
+            if (!container) return;
+            var dateInput = document.getElementById('activityDateInput');
+            if (dateInput && !dateInput.value) {
+                dateInput.value = new Date().toISOString().slice(0, 10);
+            }
+
+            var activities = [];
+
+            // Build activities from work orders
+            workOrdersData.forEach(function(wo) {
+                if (!wo.created) return;
+                var dotClass = wo.status === 'completed' ? 'completed' : wo.status === 'in-progress' ? 'in-progress' : 'created';
+                var icon = wo.status === 'completed' ? '✅' : wo.status === 'in-progress' ? '🔧' : '📋';
+                var label = wo.status === 'completed' ? 'Work Order Completed' : wo.status === 'in-progress' ? 'Work Order In Progress' : 'Work Order Created';
+                activities.push({
+                    date: new Date(wo.created),
+                    dotClass: dotClass,
+                    icon: icon,
+                    title: label,
+                    desc: escHtml(wo.title) + ' — ' + escHtml(wo.equipment),
+                    meta: wo.assignedTo ? '👤 ' + escHtml(wo.assignedTo) : '👤 Unassigned'
+                });
+            });
+
+            // Build activities from PM tasks
+            pmData.forEach(function(pm) {
+                if (pm.dueStatus === 'completed') {
+                    activities.push({
+                        date: pm.lastCompleted ? new Date(pm.lastCompleted) : new Date(),
+                        dotClass: 'completed',
+                        icon: '✅',
+                        title: 'PM Task Completed',
+                        desc: escHtml(pm.title) + ' — ' + escHtml(pm.equipment),
+                        meta: pm.assignedTo ? '👤 ' + escHtml(pm.assignedTo) : ''
+                    });
+                }
+            });
+
+            // Sort by date descending
+            activities.sort(function(a, b) { return b.date - a.date; });
+
+            if (activities.length === 0) {
+                container.innerHTML = '<div style="padding:1rem;color:var(--gray-500);text-align:center;">No recent activity</div>';
+                return;
+            }
+
+            container.innerHTML = activities.slice(0, 10).map(function(a) {
+                var timeStr = a.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                return '<div class="activity-item">' +
+                    '<div class="activity-dot ' + a.dotClass + '"></div>' +
+                    '<div class="activity-content">' +
+                        '<div class="activity-header">' +
+                            '<div class="activity-title">' + a.icon + ' ' + a.title + '</div>' +
+                            '<div class="activity-time">' + timeStr + '</div>' +
+                        '</div>' +
+                        '<div class="activity-description">' + a.desc + '</div>' +
+                        (a.meta ? '<div class="activity-meta"><span>' + a.meta + '</span></div>' : '') +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // DYNAMIC DAILY SUMMARY (from real data)
+        // ─────────────────────────────────────────────────────────────────────
+        function renderDailySummary() {
+            var container = document.getElementById('dailySummaryStats');
+            if (!container) return;
+            var today = new Date().toISOString().slice(0, 10);
+            var woCreated = workOrdersData.filter(function(wo) { return wo.created && wo.created.slice(0, 10) === today; }).length;
+            var woCompleted = workOrdersData.filter(function(wo) { return wo.status === 'completed' && wo.created && wo.created.slice(0, 10) === today; }).length;
+            var pmCompleted = pmData.filter(function(pm) { return pm.dueStatus === 'completed' && pm.lastCompleted && pm.lastCompleted.slice(0, 10) === today; }).length;
+            var downEquip = equipmentList.filter(function(eq) { return eq.status === 'down'; }).length;
+            container.innerHTML =
+                '<div class="stat-card"><div class="stat-label">Work Orders Created</div><div class="stat-value">' + woCreated + '</div></div>' +
+                '<div class="stat-card"><div class="stat-label">Work Orders Completed</div><div class="stat-value">' + woCompleted + '</div></div>' +
+                '<div class="stat-card"><div class="stat-label">PM Tasks Completed</div><div class="stat-value">' + pmCompleted + '</div></div>' +
+                '<div class="stat-card"><div class="stat-label">Equipment Down</div><div class="stat-value">' + downEquip + '</div></div>';
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // DYNAMIC TOP 5 PROBLEM EQUIPMENT (from real data)
+        // ─────────────────────────────────────────────────────────────────────
+        function renderTop5Equipment() {
+            var container = document.getElementById('top5EquipmentList');
+            if (!container) return;
+            var sorted = equipmentList.slice().sort(function(a, b) { return (b.workOrders30d || 0) - (a.workOrders30d || 0); }).slice(0, 5);
+            if (sorted.length === 0 || (sorted[0].workOrders30d || 0) === 0) {
+                container.innerHTML = '<div class="metric-item"><span class="metric-label" style="color:var(--gray-600);">No work orders in the last 30 days</span></div>';
+                return;
+            }
+            container.innerHTML = sorted.filter(function(eq) { return eq.workOrders30d > 0; }).map(function(eq) {
+                return '<div class="metric-item"><span class="metric-label">' + escHtml(eq.name) + '</span><span class="metric-value" style="font-size:1.2rem;">' + (eq.workOrders30d || 0) + '</span></div>';
+            }).join('');
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // DYNAMIC PO STATS (from real data)
+        // ─────────────────────────────────────────────────────────────────────
+        function renderPOStats() {
+            var container = document.getElementById('poSummaryStats');
+            if (!container) return;
+            var openPOs = purchaseOrdersData.filter(function(po) { return po.status !== 'received' && po.status !== 'cancelled'; });
+            var pendingApproval = purchaseOrdersData.filter(function(po) { return po.status === 'pending'; }).length;
+            var totalOpenValue = openPOs.reduce(function(sum, po) { return sum + (parseFloat(po.total) || 0); }, 0);
+            container.innerHTML =
+                '<div class="stat-card"><div class="stat-label">Open POs</div><div class="stat-value">' + openPOs.length + '</div>' +
+                    (pendingApproval > 0 ? '<div class="stat-change">' + pendingApproval + ' pending approval</div>' : '') + '</div>' +
+                '<div class="stat-card"><div class="stat-label">Total Value (Open)</div><div class="stat-value">£' + totalOpenValue.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0}) + '</div></div>' +
+                '<div class="stat-card"><div class="stat-label">Total POs</div><div class="stat-value">' + purchaseOrdersData.length + '</div></div>' +
+                '<div class="stat-card"><div class="stat-label">Received</div><div class="stat-value">' + purchaseOrdersData.filter(function(po) { return po.status === 'received'; }).length + '</div></div>';
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // DYNAMIC PM COMPLETION & COST BREAKDOWN (from real data)
+        // ─────────────────────────────────────────────────────────────────────
+        function renderPMCompletionStats() {
+            var container = document.getElementById('pmCompletionList');
+            if (!container) return;
+            var completed = pmData.filter(function(pm) { return pm.dueStatus === 'completed'; }).length;
+            var overdue = pmData.filter(function(pm) { return pm.dueStatus === 'overdue'; }).length;
+            var dueSoon = pmData.filter(function(pm) { return pm.dueStatus === 'due-soon'; }).length;
+            var total = pmData.length;
+            var rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+            container.innerHTML =
+                '<div class="metric-item"><span class="metric-label">Completed</span><span class="metric-value" style="color:var(--success);">' + completed + '</span></div>' +
+                '<div class="metric-item"><span class="metric-label">Due Soon</span><span class="metric-value" style="color:var(--warning);">' + dueSoon + '</span></div>' +
+                '<div class="metric-item"><span class="metric-label">Currently Overdue</span><span class="metric-value" style="color:var(--danger);">' + overdue + '</span></div>' +
+                '<div class="metric-item" style="background:var(--success);color:white;"><span class="metric-label" style="color:white;">Compliance Rate</span><span class="metric-value" style="color:white;">' + rate + '%</span></div>';
+        }
+
+        function renderCostBreakdown() {
+            var container = document.getElementById('costBreakdownList');
+            if (!container) return;
+            // Calculate from work order time tracking and labor rates
+            var laborRates = loadData('laborRates', {});
+            var laborTotal = 0;
+            workOrdersData.forEach(function(wo) {
+                if (wo.timeSpent && wo.assignedTo) {
+                    var rate = laborRates[wo.assignedTo] || 25;
+                    laborTotal += wo.timeSpent * rate;
+                }
+            });
+            // Parts cost from PO data
+            var partsTotal = purchaseOrdersData.filter(function(po) { return po.status === 'received'; }).reduce(function(sum, po) { return sum + (parseFloat(po.total) || 0); }, 0);
+            var grandTotal = laborTotal + partsTotal;
+            container.innerHTML =
+                '<div class="metric-item"><span class="metric-label">Labor Costs</span><span class="metric-value">£' + Math.round(laborTotal).toLocaleString() + '</span></div>' +
+                '<div class="metric-item"><span class="metric-label">Parts/Materials</span><span class="metric-value">£' + Math.round(partsTotal).toLocaleString() + '</span></div>' +
+                '<div class="metric-item" style="background:var(--primary);color:white;"><span class="metric-label" style="color:white;">Total</span><span class="metric-value" style="color:white;">£' + Math.round(grandTotal).toLocaleString() + '</span></div>';
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -6221,6 +5402,7 @@
                 document.getElementById('workOrderForm').reset();
                 document.getElementById('filePreview').innerHTML = '';
                 uploadedFiles = [];
+                refreshDashboards();
                 showToast('Work order created successfully!', 'success');
             } catch (e) {
                 console.error('[Cradero] Failed to create work order:', e);
@@ -6313,6 +5495,7 @@
                 renderWorkOrders();
                 if (typeof renderEngineerDashboard === 'function') renderEngineerDashboard();
                 closeModal('workOrderDetailModal');
+                refreshDashboards();
                 showToast('Work order updated!', 'success');
             } catch (e) {
                 console.error('[Cradero] Failed to update work order:', e);
@@ -6377,6 +5560,7 @@
                 logAudit('delete', 'work_order', woId);
                 workOrdersData = workOrdersData.filter(w => w.id !== woId);
                 renderWorkOrders();
+                refreshDashboards();
                 showToast('Work order deleted.', 'info');
             } catch (e) {
                 console.error('[Cradero] Failed to delete work order:', e);
@@ -6416,6 +5600,7 @@
                 populateEquipmentDropdowns();
                 closeModal('equipmentModal');
                 document.getElementById('equipmentForm').reset();
+                refreshDashboards();
                 showToast('Equipment added successfully!', 'success');
             } catch (e) {
                 console.error('[Cradero] Failed to add equipment:', e);
@@ -6512,6 +5697,7 @@
                 renderEquipment();
                 populateEquipmentDropdowns();
                 closeModal('equipmentEditModal');
+                refreshDashboards();
                 showToast('Equipment updated!', 'success');
             } catch (e) {
                 console.error('[Cradero] Failed to update equipment:', e);
@@ -6529,6 +5715,7 @@
                 equipmentList = equipmentList.filter(e => e.id !== equipId);
                 renderEquipment();
                 populateEquipmentDropdowns();
+                refreshDashboards();
                 showToast('Equipment deleted.', 'info');
             } catch (e) {
                 console.error('[Cradero] Failed to delete equipment:', e);
@@ -6618,6 +5805,7 @@
                 document.getElementById('addPartForm').reset();
                 partSupplierItems = [];
                 renderPartSupplierBuilder();
+                refreshDashboards();
                 showToast('Part added to inventory!', 'success');
             } catch (err) {
                 showToast('Failed to add part: ' + err.message, 'error');
@@ -6673,6 +5861,7 @@
                 btn.setAttribute('onclick', 'submitAddPart()');
                 document.querySelector('#addPartModal .modal-title').textContent = 'Add New Part';
                 editingPartId = null;
+                refreshDashboards();
                 showToast('Part updated!', 'success');
             } catch (err) {
                 showToast('Failed to update part: ' + err.message, 'error');
@@ -6688,6 +5877,7 @@
                 logAudit('delete', 'part', partId);
                 partsData = partsData.filter(x => x.id !== partId);
                 renderParts();
+                refreshDashboards();
                 showToast('Part removed from inventory.', 'info');
             } catch (err) {
                 showToast('Failed to delete part: ' + err.message, 'error');
@@ -6764,6 +5954,7 @@
                 renderPurchaseOrders();
                 closeModal('orderPartModal');
                 document.getElementById('orderPartForm').reset();
+                refreshDashboards();
                 showToast((created.po_number || 'PO') + ' created and added to Purchase Orders!', 'success');
             } catch (err) {
                 showToast('Failed to create order: ' + err.message, 'error');
@@ -6813,6 +6004,7 @@
                 renderPurchaseOrders();
                 closeModal('createPOModal');
                 document.getElementById('createPOForm').reset();
+                refreshDashboards();
                 showToast((created.po_number || 'PO') + ' created — awaiting approval.', 'success');
             } catch (err) {
                 showToast('Failed to create PO: ' + err.message, 'error');
@@ -6845,6 +6037,7 @@
                     await CraderoAPI.purchaseOrders.update(po.id, { status: 'ordered', approved_by: currentUserName || 'User' });
                     po.status = 'ordered';
                     renderPurchaseOrders();
+                    refreshDashboards();
                     showToast(poNumber + ' approved and sent to vendor!', 'success');
                 } catch (err) {
                     showToast('Failed to approve PO: ' + err.message, 'error');
@@ -6859,6 +6052,7 @@
                 logAudit('delete', 'purchase_order', poId);
                 purchaseOrdersData = purchaseOrdersData.filter(p => p.id !== poId);
                 renderPurchaseOrders();
+                refreshDashboards();
                 showToast('Purchase order deleted.', 'info');
             } catch (err) {
                 showToast('Failed to delete PO: ' + err.message, 'error');
@@ -7036,6 +6230,7 @@
                 closeModal('hotWorkPermitModal');
                 document.getElementById('hotWorkPermitForm').reset();
                 updatePermitStats();
+                refreshDashboards();
                 showToast('Hot work permit issued!', 'success');
             } catch (err) {
                 showToast('Failed to create permit: ' + err.message, 'error');
@@ -7059,6 +6254,7 @@
                     renderHotWorkPermits();
                     renderClosedPermits();
                     updatePermitStats();
+                    refreshDashboards();
                     showToast('Hot work permit closed and archived.', 'info');
                 } catch (err) {
                     showToast('Failed to close permit: ' + err.message, 'error');
@@ -7104,6 +6300,7 @@
                 closeModal('contractorPermitModal');
                 document.getElementById('contractorPermitForm').reset();
                 updatePermitStats();
+                refreshDashboards();
                 showToast('Contractor permit issued!', 'success');
             } catch (err) {
                 showToast('Failed to create permit: ' + err.message, 'error');
@@ -7127,6 +6324,7 @@
                     renderContractorPermits();
                     renderClosedPermits();
                     updatePermitStats();
+                    refreshDashboards();
                     showToast('Contractor permit closed and archived.', 'info');
                 } catch (err) {
                     showToast('Failed to close permit: ' + err.message, 'error');
@@ -7194,6 +6392,7 @@
                         renderClosedPermits();
                         updatePermitStats();
                         closeModal('permitDetailModal');
+                        refreshDashboards();
                         showToast('Permit closed and archived.', 'info');
                     } catch (err) {
                         showToast('Failed to close permit: ' + err.message, 'error');
@@ -7760,6 +6959,7 @@
                 renderPM();
                 if (typeof renderEngineerDashboard === 'function') renderEngineerDashboard();
                 currentCompletePMId = null;
+                refreshDashboards();
                 showToast('"' + pm.title + '" completed with all checks verified!', 'success');
             } catch (err) {
                 showToast('Failed to complete PM: ' + err.message, 'error');
@@ -7833,8 +7033,10 @@
             try {
                 await CraderoAPI.pm.update(pm.id, { assigned_to: newEngineer });
                 pm.assignedTo = newEngineer;
-                showToast('PM reassigned to ' + newEngineer + '.', 'success');
+                renderPM();
                 if (typeof renderEngineerDashboard === 'function') renderEngineerDashboard();
+                refreshDashboards();
+                showToast('PM reassigned to ' + newEngineer + '.', 'success');
             } catch (err) {
                 showToast('Failed to reassign PM: ' + err.message, 'error');
             }
@@ -7848,6 +7050,7 @@
                 logAudit('delete', 'pm_task', pm ? pm.id : pmId);
                 pmData = pmData.filter(p => p.id !== pmId);
                 renderPM();
+                refreshDashboards();
                 showToast('PM task removed.', 'info');
             } catch (err) {
                 showToast('Failed to delete PM: ' + err.message, 'error');
@@ -8412,6 +7615,7 @@
                 document.getElementById('logBreakdownForm').reset();
                 renderBreakdowns();
                 populateEquipDropdown('brFilterMachine', true);
+                refreshDashboards();
                 showToast('Breakdown logged' + (linkedWoId ? ' \u2014 Work Order raised.' : '.'), 'success');
             } catch (err) {
                 showToast('Failed to log breakdown: ' + err.message, 'error');
@@ -8478,6 +7682,7 @@
 
                 closeModal('breakdownDetailModal');
                 renderBreakdowns();
+                refreshDashboards();
                 showToast('Breakdown updated.', 'success');
             } catch (err) {
                 showToast('Failed to update breakdown: ' + err.message, 'error');
@@ -8491,6 +7696,7 @@
                 logAudit('delete', 'breakdown', brId);
                 breakdownsData = breakdownsData.filter(function(b) { return b.id !== brId; });
                 renderBreakdowns();
+                refreshDashboards();
                 showToast('Breakdown deleted.', 'info');
             } catch (err) {
                 showToast('Failed to delete breakdown: ' + err.message, 'error');
