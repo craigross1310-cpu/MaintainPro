@@ -1636,12 +1636,47 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Active Work Orders</h2>
-                    <button class="btn btn-secondary" onclick="showFilterOptions()">Filter & Sort</button>
+                    <button class="btn btn-secondary" onclick="toggleWoFilter()">Filter & Sort</button>
                 </div>
 
                 <div class="search-bar">
                     <span class="search-icon">🔍</span>
-                    <input type="text" class="search-input" placeholder="Search work orders by equipment, description, or assigned engineer...">
+                    <input type="text" class="search-input" id="woSearchInput" placeholder="Search work orders by equipment, description, or assigned engineer..." oninput="searchWorkOrders()">
+                </div>
+
+                <div id="woFilterPanel" style="display:none;padding:1rem;background:var(--gray-100);border-radius:8px;margin-bottom:1rem;">
+                    <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="woFilterStatus" style="min-width:140px;">
+                                <option value="">All Statuses</option>
+                                <option value="open">Open</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="on-hold">On Hold</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Priority</label>
+                            <select class="form-select" id="woFilterPriority" style="min-width:140px;">
+                                <option value="">All Priorities</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Sort By</label>
+                            <select class="form-select" id="woSortBy" style="min-width:160px;">
+                                <option value="newest">Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="priority">Priority (High→Low)</option>
+                                <option value="status">Status</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary btn-small" onclick="applyWoFilter()" style="align-self:flex-end;">Apply</button>
+                        <button class="btn btn-secondary btn-small" onclick="clearWoFilter()" style="align-self:flex-end;">Clear</button>
+                    </div>
                 </div>
 
                 <div class="work-orders-list" id="workOrdersList"></div>
@@ -1658,7 +1693,7 @@
 
                 <div class="search-bar">
                     <span class="search-icon">🔍</span>
-                    <input type="text" class="search-input" placeholder="Search equipment by name, ID, or location...">
+                    <input type="text" class="search-input" id="eqSearchInput" placeholder="Search equipment by name, ID, or location..." oninput="searchEquipment()">
                 </div>
 
                 <div class="equipment-grid" id="equipmentGrid"></div>
@@ -1675,7 +1710,7 @@
 
                 <div class="search-bar">
                     <span class="search-icon">🔍</span>
-                    <input type="text" class="search-input" placeholder="Search parts by name, number, or location...">
+                    <input type="text" class="search-input" id="partsSearchInput" placeholder="Search parts by name, number, or location..." oninput="searchParts()">
                 </div>
 
                 <div class="parts-grid" id="partsGrid"></div>
@@ -1709,7 +1744,7 @@
 
                 <div class="search-bar">
                     <span class="search-icon">🔍</span>
-                    <input type="text" class="search-input" placeholder="Search POs by number, vendor, or part...">
+                    <input type="text" class="search-input" id="poSearchInput" placeholder="Search POs by number, vendor, or part..." oninput="searchPOs()">
                 </div>
 
                 <div class="work-orders-list" id="poList"></div>
@@ -1812,7 +1847,7 @@
 
                 <div class="search-bar">
                     <span class="search-icon">🔍</span>
-                    <input type="text" class="search-input" placeholder="Search PM tasks by equipment or description...">
+                    <input type="text" class="search-input" id="pmSearchInput" placeholder="Search PM tasks by equipment or description..." oninput="searchPMs()">
                 </div>
 
                 <div class="filter-bar">
@@ -1850,7 +1885,7 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Today's Activity Log</h2>
-                    <input type="date" class="form-input" style="width: 200px;" id="activityDateInput">
+                    <input type="date" class="form-input" style="width: 200px;" id="activityDateInput" onchange="renderActivityLog(); renderDailySummary()">
                 </div>
 
                 <div class="activity-timeline" id="activityTimeline"></div>
@@ -4515,15 +4550,16 @@
         // RENDER FUNCTIONS
         // ─────────────────────────────────────────────────────────────────────
 
-        function renderWorkOrders() {
+        function renderWorkOrders(data) {
+            data = data || workOrdersData;
             const container = document.getElementById('workOrdersList');
             if (!container) return;
-            if (workOrdersData.length === 0) {
+            if (data.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">No Work Orders</div><div class="empty-state-text">Click "+ New Work Order" to create one.</div></div>';
                 updateKPIs();
                 return;
             }
-            container.innerHTML = workOrdersData.map(wo => {
+            container.innerHTML = data.map(wo => {
                 const assignedHtml = wo.assignedTo
                     ? `<span>${escHtml(wo.assignedTo)}</span>`
                     : `<span style="color: var(--danger); font-weight: 600;">Unassigned</span>`;
@@ -4553,15 +4589,16 @@
             updateKPIs();
         }
 
-        function renderEquipment() {
+        function renderEquipment(data) {
+            data = data || equipmentList;
             const container = document.getElementById('equipmentGrid');
             if (!container) return;
-            if (equipmentList.length === 0) {
+            if (data.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚙️</div><div class="empty-state-title">No Equipment</div><div class="empty-state-text">Click "+ Add Equipment" to add some.</div></div>';
                 updateKPIs();
                 return;
             }
-            container.innerHTML = equipmentList.map(eq => {
+            container.innerHTML = data.map(eq => {
                 const statusLabel = eq.status === 'operational' ? 'Operational' : eq.status === 'maintenance' ? 'Maintenance' : 'Down';
                 const installFormatted = eq.installDate ? new Date(eq.installDate).toLocaleString('en-GB', { month: 'short', year: 'numeric' }) : 'N/A';
                 const critColors = { A: '#dc2626', B: '#f59e0b', C: '#22c55e' };
@@ -4619,14 +4656,15 @@
             return { cls: 'in-stock', label: 'In Stock' };
         }
 
-        function renderParts() {
+        function renderParts(data) {
+            data = data || partsData;
             const container = document.getElementById('partsGrid');
             if (!container) return;
-            if (partsData.length === 0) {
+            if (data.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔧</div><div class="empty-state-title">No Parts</div><div class="empty-state-text">Click "+ Add Part" to add inventory.</div></div>';
                 return;
             }
-            container.innerHTML = partsData.map(p => {
+            container.innerHTML = data.map(p => {
                 const stock = getStockStatus(p.qty, p.minStock);
                 const orderBtnClass = stock.cls === 'in-stock' ? 'btn-primary' : 'btn-danger';
                 const orderBtnLabel = stock.cls === 'in-stock' ? 'Order More' : (stock.cls === 'low-stock' ? '🚨 Order Now' : '🚨 Emergency Order');
@@ -4670,10 +4708,10 @@
 
         let currentPoFilter = 'all';
 
-        function renderPurchaseOrders() {
+        function renderPurchaseOrders(data) {
             const container = document.getElementById('poList');
             if (!container) return;
-            const filtered = currentPoFilter === 'all' ? purchaseOrdersData : purchaseOrdersData.filter(po => po.status === currentPoFilter);
+            const filtered = data || (currentPoFilter === 'all' ? purchaseOrdersData : purchaseOrdersData.filter(po => po.status === currentPoFilter));
             if (filtered.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📦</div><div class="empty-state-title">No Purchase Orders</div><div class="empty-state-text">No orders match this filter.</div></div>';
                 return;
@@ -4768,16 +4806,22 @@
             const container = document.getElementById('pmList');
             if (!container) return;
 
-            // Populate equipment filter dropdown
+            // Populate equipment filter dropdown dynamically from equipmentList
             var eqSelect = document.getElementById('pmFilterEquipment');
-            if (eqSelect && eqSelect.options.length <= 1) {
+            if (eqSelect) {
+                var prevVal = eqSelect.value;
                 var equipments = [];
+                equipmentList.forEach(function(eq) {
+                    if (eq.name && equipments.indexOf(eq.name) === -1) equipments.push(eq.name);
+                });
+                // Also include any equipment names from PM data not in equipmentList
                 pmData.forEach(function(pm) {
-                    if (equipments.indexOf(pm.equipment) === -1) equipments.push(pm.equipment);
+                    if (pm.equipment && equipments.indexOf(pm.equipment) === -1) equipments.push(pm.equipment);
                 });
                 equipments.sort();
                 eqSelect.innerHTML = '<option value="">All Equipment</option>' +
                     equipments.map(function(eq) { return '<option value="' + escHtml(eq) + '">' + escHtml(eq) + '</option>'; }).join('');
+                if (prevVal) eqSelect.value = prevVal;
             }
 
             if (data.length === 0) {
@@ -5108,12 +5152,15 @@
             if (dateInput && !dateInput.value) {
                 dateInput.value = new Date().toISOString().slice(0, 10);
             }
+            var selectedDate = dateInput ? dateInput.value : new Date().toISOString().slice(0, 10);
 
             var activities = [];
 
             // Build activities from work orders
             workOrdersData.forEach(function(wo) {
                 if (!wo.created) return;
+                var woDate = wo.created.slice(0, 10);
+                if (woDate !== selectedDate) return;
                 var dotClass = wo.status === 'completed' ? 'completed' : wo.status === 'in-progress' ? 'in-progress' : 'created';
                 var icon = wo.status === 'completed' ? '✅' : wo.status === 'in-progress' ? '🔧' : '📋';
                 var label = wo.status === 'completed' ? 'Work Order Completed' : wo.status === 'in-progress' ? 'Work Order In Progress' : 'Work Order Created';
@@ -5130,8 +5177,11 @@
             // Build activities from PM tasks
             pmData.forEach(function(pm) {
                 if (pm.dueStatus === 'completed') {
+                    var pmDateRaw = pm.lastCompleted || new Date().toISOString();
+                    var pmDate = pmDateRaw.slice(0, 10);
+                    if (pmDate !== selectedDate) return;
                     activities.push({
-                        date: pm.lastCompleted ? new Date(pm.lastCompleted) : new Date(),
+                        date: new Date(pmDateRaw),
                         dotClass: 'completed',
                         icon: '✅',
                         title: 'PM Task Completed',
@@ -5141,15 +5191,31 @@
                 }
             });
 
+            // Build activities from breakdowns
+            breakdownsData.forEach(function(br) {
+                if (!br.dateISO) return;
+                if (br.dateISO.slice(0, 10) !== selectedDate) return;
+                var dotClass = br.status === 'resolved' ? 'completed' : br.status === 'in-progress' ? 'in-progress' : 'created';
+                var icon = br.status === 'resolved' ? '✅' : '⚠️';
+                activities.push({
+                    date: new Date(br.dateISO),
+                    dotClass: dotClass,
+                    icon: icon,
+                    title: 'Breakdown — ' + escHtml(br.status || 'reported'),
+                    desc: escHtml(br.description || br.machine || ''),
+                    meta: br.machine ? '🏭 ' + escHtml(br.machine) : ''
+                });
+            });
+
             // Sort by date descending
             activities.sort(function(a, b) { return b.date - a.date; });
 
             if (activities.length === 0) {
-                container.innerHTML = '<div style="padding:1rem;color:var(--gray-500);text-align:center;">No recent activity</div>';
+                container.innerHTML = '<div style="padding:1rem;color:var(--gray-500);text-align:center;">No activity found for ' + selectedDate + '</div>';
                 return;
             }
 
-            container.innerHTML = activities.slice(0, 10).map(function(a) {
+            container.innerHTML = activities.map(function(a) {
                 var timeStr = a.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 return '<div class="activity-item">' +
                     '<div class="activity-dot ' + a.dotClass + '"></div>' +
@@ -5171,7 +5237,8 @@
         function renderDailySummary() {
             var container = document.getElementById('dailySummaryStats');
             if (!container) return;
-            var today = new Date().toISOString().slice(0, 10);
+            var dateInput = document.getElementById('activityDateInput');
+            var today = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().slice(0, 10);
             var woCreated = workOrdersData.filter(function(wo) { return wo.created && wo.created.slice(0, 10) === today; }).length;
             var woCompleted = workOrdersData.filter(function(wo) { return wo.status === 'completed' && wo.created && wo.created.slice(0, 10) === today; }).length;
             var pmCompleted = pmData.filter(function(pm) { return pm.dueStatus === 'completed' && pm.lastCompleted && pm.lastCompleted.slice(0, 10) === today; }).length;
@@ -5568,8 +5635,82 @@
             }
         }
 
-        function showFilterOptions() {
-            showToast('Use the search bar above to filter work orders.', 'info');
+        function toggleWoFilter() {
+            var panel = document.getElementById('woFilterPanel');
+            if (panel) panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        }
+
+        function searchWorkOrders() {
+            var term = (document.getElementById('woSearchInput').value || '').trim().toLowerCase();
+            if (!term) { renderWorkOrders(); return; }
+            var filtered = workOrdersData.filter(function(wo) {
+                var searchable = ((wo.title || '') + ' ' + (wo.equipment || '') + ' ' + (wo.description || '') + ' ' + (wo.assignedTo || '')).toLowerCase();
+                return searchable.indexOf(term) !== -1;
+            });
+            renderWorkOrders(filtered);
+        }
+
+        function applyWoFilter() {
+            var status = document.getElementById('woFilterStatus').value;
+            var priority = document.getElementById('woFilterPriority').value;
+            var sortBy = document.getElementById('woSortBy').value;
+            var filtered = workOrdersData.slice();
+            if (status) filtered = filtered.filter(function(wo) { return wo.status === status; });
+            if (priority) filtered = filtered.filter(function(wo) { return wo.priority === priority; });
+            var priorityOrder = { high: 0, medium: 1, low: 2 };
+            if (sortBy === 'newest') filtered.sort(function(a, b) { return (b.created || '').localeCompare(a.created || ''); });
+            else if (sortBy === 'oldest') filtered.sort(function(a, b) { return (a.created || '').localeCompare(b.created || ''); });
+            else if (sortBy === 'priority') filtered.sort(function(a, b) { return (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1); });
+            else if (sortBy === 'status') filtered.sort(function(a, b) { return (a.status || '').localeCompare(b.status || ''); });
+            renderWorkOrders(filtered);
+        }
+
+        function clearWoFilter() {
+            document.getElementById('woFilterStatus').value = '';
+            document.getElementById('woFilterPriority').value = '';
+            document.getElementById('woSortBy').value = 'newest';
+            document.getElementById('woSearchInput').value = '';
+            renderWorkOrders();
+        }
+
+        function searchEquipment() {
+            var term = (document.getElementById('eqSearchInput').value || '').trim().toLowerCase();
+            if (!term) { renderEquipment(); return; }
+            var filtered = equipmentList.filter(function(eq) {
+                var searchable = ((eq.name || '') + ' ' + (eq.equipId || '') + ' ' + (eq.location || '') + ' ' + (eq.manufacturer || '') + ' ' + (eq.model || '')).toLowerCase();
+                return searchable.indexOf(term) !== -1;
+            });
+            renderEquipment(filtered);
+        }
+
+        function searchParts() {
+            var term = (document.getElementById('partsSearchInput').value || '').trim().toLowerCase();
+            if (!term) { renderParts(); return; }
+            var filtered = partsData.filter(function(p) {
+                var searchable = ((p.name || '') + ' ' + (p.partNumber || '') + ' ' + (p.shelf || '') + ' ' + (p.bin || '')).toLowerCase();
+                return searchable.indexOf(term) !== -1;
+            });
+            renderParts(filtered);
+        }
+
+        function searchPOs() {
+            var term = (document.getElementById('poSearchInput').value || '').trim().toLowerCase();
+            if (!term) { renderPurchaseOrders(); return; }
+            var filtered = purchaseOrdersData.filter(function(po) {
+                var searchable = ((po.poNumber || '') + ' ' + (po.title || '') + ' ' + (po.vendor || '') + ' ' + (po.status || '')).toLowerCase();
+                return searchable.indexOf(term) !== -1;
+            });
+            renderPurchaseOrders(filtered);
+        }
+
+        function searchPMs() {
+            var term = (document.getElementById('pmSearchInput').value || '').trim().toLowerCase();
+            if (!term) { renderPM(); return; }
+            var filtered = pmData.filter(function(pm) {
+                var searchable = ((pm.title || '') + ' ' + (pm.equipment || '') + ' ' + (pm.description || '') + ' ' + (pm.assignedTo || '')).toLowerCase();
+                return searchable.indexOf(term) !== -1;
+            });
+            renderPM(filtered);
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -7879,7 +8020,9 @@
             // Navigation & Modals
             switchTab, toggleNotifications, handleNotificationClick, openModal, closeModal,
             // Work Orders
-            submitWorkOrder, updateWorkOrder, deleteWorkOrder, openWorkOrderDetail, addWoComment, showFilterOptions,
+            submitWorkOrder, updateWorkOrder, deleteWorkOrder, openWorkOrderDetail, addWoComment,
+            toggleWoFilter, searchWorkOrders, applyWoFilter, clearWoFilter,
+            searchEquipment, searchParts, searchPOs, searchPMs,
             // Equipment
             submitEquipment, openEquipmentHistory, openEquipmentEdit, saveEquipmentEdit, deleteEquipment,
             // Parts
@@ -7905,6 +8048,8 @@
             submitWorkRequest, filterWorkRequests, clearRequestFilter, approveRequest, declineRequest,
             // Engineer Dashboard
             renderEngineerDashboard,
+            // Daily Activity
+            renderActivityLog, renderDailySummary,
             // Files
             removeFile
         ];
