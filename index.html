@@ -4311,7 +4311,7 @@
                 id: row.id,
                 woId: row.wo_number || ('WO-' + new Date(row.created_at).getFullYear() + '-' + String(row.id).padStart(3, '0')),
                 title: row.title || '', equipment: row.equipment_name || '',
-                priority: row.priority || 'medium', status: row.status || 'open',
+                priority: row.priority || 'medium', status: (row.status || 'open').replace(/_/g, '-'),
                 assignedTo: row.assigned_to || '', createdBy: row.created_by || row.requested_by || '',
                 created: row.created_at ? new Date(row.created_at).toLocaleString('en-GB', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit', hour12:true }).replace(',', ' -') : '',
                 description: row.description || row.notes || '',
@@ -4325,7 +4325,7 @@
             if (wo.title !== undefined) obj.title = wo.title;
             if (wo.equipment !== undefined) obj.equipment_name = wo.equipment;
             if (wo.priority !== undefined) obj.priority = wo.priority;
-            if (wo.status !== undefined) obj.status = wo.status;
+            if (wo.status !== undefined) obj.status = wo.status.replace(/-/g, '_');
             if (wo.assignedTo !== undefined) obj.assigned_to = wo.assignedTo;
             if (wo.createdBy !== undefined) obj.created_by = wo.createdBy;
             if (wo.description !== undefined) obj.description = wo.description;
