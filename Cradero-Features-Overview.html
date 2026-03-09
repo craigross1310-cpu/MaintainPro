@@ -269,7 +269,7 @@
         <h1>Cradero</h1>
         <div class="subtitle">Complete Maintenance Management Software</div>
         <div class="doc-title">Feature Overview &amp; Product Guide</div>
-        <div class="doc-meta">Prepared for Engineering Team Meeting &bull; February 2026</div>
+        <div class="doc-meta">Feature Overview &bull; March 2026</div>
     </div>
 
     <!-- CONTENT -->
@@ -293,11 +293,13 @@
                 <li><strong>Priority levels</strong> &mdash; High, Medium, Low &mdash; with visual colour coding</li>
                 <li><strong>Status tracking</strong> &mdash; Open, In Progress, On Hold, Completed</li>
                 <li><strong>Engineer assignment</strong> &mdash; assign or reassign to any team member</li>
-                <li><strong>Photo attachments</strong> &mdash; drag-and-drop image upload with preview</li>
+                <li><strong>Photo attachments</strong> &mdash; upload photos on creation and add more photos from the detail view at any time</li>
+                <li><strong>Parts usage tracking</strong> &mdash; book out parts to work orders with automatic stock deduction and low-stock warnings</li>
+                <li><strong>Return parts to stores</strong> &mdash; remove booked parts if unused, automatically restoring inventory stock levels</li>
                 <li><strong>Comments thread</strong> &mdash; timestamped comments from any team member</li>
                 <li><strong>Time tracking</strong> &mdash; start time, finish time, auto-calculated total job time</li>
                 <li><strong>Machine downtime logging</strong> &mdash; record downtime per work order</li>
-                <li><strong>Search</strong> &mdash; full-text search across all work orders</li>
+                <li><strong>Search &amp; filter</strong> &mdash; full-text search, filter by status, priority, and sort by date or priority</li>
             </ul>
         </div>
 
@@ -320,6 +322,8 @@
                 <li><strong>Full parts register</strong> &mdash; name, part number, quantity, minimum stock level, shelf/bin location</li>
                 <li><strong>Stock status indicators</strong> &mdash; In Stock, Low Stock, Out of Stock (auto-calculated)</li>
                 <li><strong>Monthly usage tracking</strong> &mdash; records how many times each part has been used</li>
+                <li><strong>Book out to jobs</strong> &mdash; parts can be booked out to both work orders and PM tasks, with automatic stock deduction</li>
+                <li><strong>Return to stores</strong> &mdash; unused parts can be returned, automatically restoring stock levels</li>
                 <li><strong>Compatible equipment linking</strong> &mdash; associate parts with specific machines</li>
                 <li><strong>Edit and delete</strong> parts</li>
                 <li><strong>Reorder functionality</strong> &mdash; order more stock directly from the parts screen</li>
@@ -333,10 +337,14 @@
                 <li><strong>Checklists</strong> &mdash; step-by-step checks that must all be ticked before completion</li>
                 <li><strong>Per-item notes</strong> &mdash; engineers add notes to individual checklist items during completion</li>
                 <li><strong>Start/finish time capture</strong> on completion</li>
+                <li><strong>Parts usage on completion</strong> &mdash; book out parts during PM completion with automatic stock deduction and low-stock alerts</li>
+                <li><strong>Raise work order from PM</strong> &mdash; if issues are found that cannot be fixed at the time, raise a work order directly from the PM completion screen with issue title, description, and priority</li>
+                <li><strong>Manager/Admin editing</strong> &mdash; managers and admins can edit PM tasks including title, description, frequency, duration, assigned engineer, equipment, and add or remove checklist items</li>
+                <li><strong>Manager/Admin photo upload</strong> &mdash; managers and admins can attach photos during PM completion for documentation</li>
                 <li><strong>Due status tracking</strong> &mdash; Overdue, Due Soon, Upcoming, Completed</li>
                 <li><strong>Reassignment</strong> &mdash; reassign PM tasks to different engineers from the list</li>
                 <li><strong>Filters</strong> &mdash; by status (Complete / Scheduled / Unscheduled), equipment, and date range</li>
-                <li><strong>Audit trail</strong> &mdash; view completed checklist results and notes from previous completions</li>
+                <li><strong>Audit trail</strong> &mdash; view completed checklist results, notes, parts used, and photos from previous completions</li>
             </ul>
         </div>
 
@@ -393,13 +401,32 @@
             </ul>
         </div>
 
+        <div class="feature-section no-break">
+            <h3>10. Dark Mode</h3>
+            <ul>
+                <li><strong>Toggle dark mode</strong> from the header with one click</li>
+                <li><strong>Full theme support</strong> &mdash; all components, modals, charts, and cards adapt to dark theme</li>
+                <li><strong>Preference saved</strong> per user session</li>
+            </ul>
+        </div>
+
+        <div class="feature-section no-break">
+            <h3>11. Role-Based Access Control</h3>
+            <ul>
+                <li><strong>Admin</strong> &mdash; full access to all features, approve new users, manage all data</li>
+                <li><strong>Manager</strong> &mdash; approve work requests, approve purchase orders, edit PM tasks (add/remove checklist items, change frequency, reassign), attach photos to PM completions, delete records</li>
+                <li><strong>Engineer</strong> &mdash; create/edit work orders, complete PM tasks, log breakdowns, book out parts, submit work requests</li>
+                <li><strong>Pending</strong> &mdash; newly registered users are blocked until admin approval</li>
+            </ul>
+        </div>
+
         <!-- ============================================================ -->
         <div class="page-break"></div>
         <h2>Pro Tier Features</h2>
         <p>Everything in Essential, plus the following:</p>
 
         <div class="feature-section pro no-break">
-            <h3>10. Purchase Orders</h3>
+            <h3>12. Purchase Orders</h3>
             <ul>
                 <li><strong>Create purchase orders</strong> with vendor, line items, quantities, unit prices, auto-calculated totals</li>
                 <li><strong>Approval workflow</strong> &mdash; pending POs require manager approval before being sent</li>
@@ -414,7 +441,7 @@
         </div>
 
         <div class="feature-section pro no-break">
-            <h3>11. Permits Management</h3>
+            <h3>13. Permits Management</h3>
             <h4>Hot Work Permits</h4>
             <ul>
                 <li><strong>Issue permits</strong> for welding, cutting, grinding, or any spark-producing work</li>
@@ -433,7 +460,7 @@
         </div>
 
         <div class="feature-section pro no-break">
-            <h3>12. Analytics &amp; Reports</h3>
+            <h3>14. Analytics &amp; Reports</h3>
             <h4>Interactive Dashboards</h4>
             <ul>
                 <li><strong>Equipment Downtime by Line</strong> &mdash; bar chart showing hours per production line</li>
@@ -459,7 +486,7 @@
         </div>
 
         <div class="feature-section pro no-break">
-            <h3>13. Maintenance Calendar</h3>
+            <h3>15. Maintenance Calendar</h3>
             <ul>
                 <li><strong>Month view</strong> &mdash; full calendar grid with colour-coded event pills</li>
                 <li><strong>Week view</strong> &mdash; 7-day column layout with detailed event cards</li>
@@ -470,7 +497,7 @@
         </div>
 
         <div class="feature-section pro no-break">
-            <h3>14. Supplier Management</h3>
+            <h3>16. Supplier Management</h3>
             <ul>
                 <li><strong>Multiple suppliers per part</strong> &mdash; supplier name, part number, unit price, lead time</li>
                 <li><strong>Supplier comparison panel</strong> &mdash; side-by-side pricing and lead times when ordering</li>
@@ -479,7 +506,26 @@
         </div>
 
         <div class="feature-section pro no-break">
-            <h3>15. Offline Mode</h3>
+            <h3>17. Equipment QR Codes</h3>
+            <ul>
+                <li><strong>Generate QR codes</strong> for any equipment asset directly from the equipment card</li>
+                <li><strong>Printable</strong> &mdash; one-click print to label printers or standard printers</li>
+                <li><strong>Encoded data</strong> &mdash; contains equipment ID for quick scanning and lookup</li>
+            </ul>
+        </div>
+
+        <div class="feature-section pro no-break">
+            <h3>18. Audit Trail</h3>
+            <ul>
+                <li><strong>Full audit log</strong> of all create, update, delete, and complete actions</li>
+                <li><strong>Filterable</strong> by action type, entity type, and date range</li>
+                <li><strong>Tracks</strong> who did what, when, and to which record</li>
+                <li><strong>Parts returns</strong> logged when parts are returned to stores</li>
+            </ul>
+        </div>
+
+        <div class="feature-section pro no-break">
+            <h3>19. Offline Mode</h3>
             <ul>
                 <li><strong>Service Worker</strong> for offline capability</li>
                 <li><strong>Cached authentication</strong> &mdash; app works when internet is unavailable</li>
@@ -501,22 +547,28 @@
                 </tr>
             </thead>
             <tbody>
-                <tr><td>Work Orders</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
+                <tr><td>Work Orders (with photo upload &amp; parts tracking)</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>Equipment Management</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
-                <tr><td>Parts Inventory</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
+                <tr><td>Parts Inventory (book out &amp; return to stores)</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>Preventive Maintenance &amp; Checklists</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
+                <tr><td>PM Parts Booking &amp; Raise Work Orders</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
+                <tr><td>Manager/Admin PM Editing</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>Daily Activity Log</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>Reactive Maintenance</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>My Tasks Dashboard</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>Work Requests</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>Notifications</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
-                <tr><td>Search</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
+                <tr><td>Dark Mode</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
+                <tr><td>Search &amp; Filters</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
+                <tr><td>Role-Based Access Control</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>Purchase Orders</td><td><span class="dash">&mdash;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>Permits (Hot Work + Contractor)</td><td><span class="dash">&mdash;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>Analytics &amp; Reports</td><td><span class="dash">&mdash;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>CSV Exports</td><td><span class="dash">&mdash;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>Maintenance Calendar</td><td><span class="dash">&mdash;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>Supplier Management</td><td><span class="dash">&mdash;</span></td><td><span class="check">&#10003;</span></td></tr>
+                <tr><td>Equipment QR Codes</td><td><span class="dash">&mdash;</span></td><td><span class="check">&#10003;</span></td></tr>
+                <tr><td>Audit Trail</td><td><span class="dash">&mdash;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>Equipment Health Scores</td><td><span class="dash">&mdash;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>MTTR / MTBF Metrics</td><td><span class="dash">&mdash;</span></td><td><span class="check">&#10003;</span></td></tr>
                 <tr><td>Technician Workload Analytics</td><td><span class="dash">&mdash;</span></td><td><span class="check">&#10003;</span></td></tr>
@@ -532,10 +584,13 @@
         <div class="workflow no-break">
             <h4>Work Order Lifecycle</h4>
             <ol>
-                <li>Work order created (manually, from work request approval, or auto-raised from breakdown)</li>
+                <li>Work order created (manually, from work request approval, from breakdown, or raised during PM completion)</li>
                 <li>Assigned to engineer</li>
                 <li>Engineer starts work &mdash; status moves to In Progress, start time recorded</li>
+                <li>Parts booked out from inventory as they are used (with automatic stock deduction)</li>
+                <li>Additional photos attached from the detail view as work progresses</li>
                 <li>Engineer adds comments and tracks time</li>
+                <li>Unused parts returned to stores (stock automatically restored)</li>
                 <li>Work completed &mdash; finish time recorded, total job time auto-calculated</li>
                 <li>Machine downtime logged</li>
             </ol>
@@ -548,9 +603,23 @@
                 <li>Engineer clicks &ldquo;Complete Now&rdquo;</li>
                 <li>Start time pre-filled, each checklist item must be ticked off</li>
                 <li>Optional notes added per checklist item</li>
+                <li>Parts used during the PM can be booked out from inventory</li>
+                <li>If issues are found, &ldquo;Raise Work Order&rdquo; option creates a linked WO with issue details</li>
+                <li>Managers/admins can attach photos for documentation</li>
                 <li>Finish time entered</li>
-                <li>All items verified &mdash; task marked complete</li>
-                <li>Checklist results saved for audit trail</li>
+                <li>All items verified &mdash; task marked complete, parts deducted from stock</li>
+                <li>Next due date auto-calculated based on frequency</li>
+            </ol>
+        </div>
+
+        <div class="workflow no-break">
+            <h4>PM Completion &rarr; Work Order Flow</h4>
+            <ol>
+                <li>During PM completion, engineer discovers an issue that cannot be fixed immediately</li>
+                <li>Engineer ticks &ldquo;Raise Work Order for issues found?&rdquo;</li>
+                <li>Enters issue title, description, and priority</li>
+                <li>On PM submission, work order is auto-created with the PM&rsquo;s equipment pre-filled</li>
+                <li>Work order appears in the main work orders list for assignment and tracking</li>
             </ol>
         </div>
 
@@ -594,16 +663,16 @@
                 <tr><th>Role</th><th colspan="2">Capabilities</th></tr>
             </thead>
             <tbody>
-                <tr><td><strong>Admin</strong></td><td colspan="2">Full access, approve users, approve work requests, manage all data</td></tr>
-                <tr><td><strong>Manager</strong></td><td colspan="2">Approve work requests, approve purchase orders, full operational access</td></tr>
-                <tr><td><strong>Engineer</strong></td><td colspan="2">Create/edit work orders, complete PM tasks, log breakdowns, submit work requests</td></tr>
+                <tr><td><strong>Admin</strong></td><td colspan="2">Full access, approve users, approve work requests, edit PM tasks, attach photos to PMs, delete records, manage all data</td></tr>
+                <tr><td><strong>Manager</strong></td><td colspan="2">Approve work requests, approve purchase orders, edit PM tasks (checklist, frequency, assignment), attach photos to PM completions, delete records</td></tr>
+                <tr><td><strong>Engineer</strong></td><td colspan="2">Create/edit work orders, complete PM tasks, book out &amp; return parts, raise work orders from PMs, log breakdowns, submit work requests</td></tr>
                 <tr><td><strong>Pending</strong></td><td colspan="2">Blocked from app access until admin approval</td></tr>
             </tbody>
         </table>
 
         <!-- ============================================================ -->
         <div class="doc-footer">
-            <p>Cradero v1.0 &bull; Feature Overview &bull; February 2026</p>
+            <p>Cradero v1.1 &bull; Feature Overview &bull; March 2026</p>
         </div>
 
     </div>
