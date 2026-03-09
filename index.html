@@ -1316,7 +1316,7 @@
             .modal { width: 100%; max-width: 100%; max-height: 100vh; border-radius: 0; }
             .modal-overlay.active { align-items: stretch; }
 
-            .notification-dropdown { right: 0.5rem; left: 0.5rem; width: auto; }
+            .notification-dropdown { right: 0.5rem; left: 0.5rem; width: auto; top: 100%; }
 
             /* Filter bars */
             .filter-bar { flex-direction: column; gap: 0.5rem; }
@@ -2912,6 +2912,17 @@
                         <label class="form-label">Notes</label>
                         <textarea class="form-textarea" id="editNotes" placeholder="Any additional information..."></textarea>
                     </div>
+
+                    <div class="form-group pro-only-feature" id="editSopSection">
+                        <label class="form-label">Standard Operating Procedures (SOPs)</label>
+                        <div id="existingSopList" style="margin-bottom:0.75rem;"></div>
+                        <div id="pendingSopList" style="margin-bottom:0.75rem;"></div>
+                        <label style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.6rem 1.2rem;background:var(--gray-100);border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:500;">
+                            📎 Attach SOP Document
+                            <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple onchange="handleEquipSopFiles(this)" style="display:none;">
+                        </label>
+                        <p style="font-size:0.8rem;color:var(--gray-600);margin-top:0.25rem;">PDF, Word, or image files</p>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -4393,6 +4404,30 @@
             if (typeof renderEngineerDashboard === 'function') renderEngineerDashboard();
             if (typeof renderProAnalytics === 'function') renderProAnalytics();
             if (typeof updatePermitStats === 'function') updatePermitStats();
+            if (role === 'production') applyProductionRestrictions();
+        }
+
+        function applyProductionRestrictions() {
+            if (currentUserTier !== 'pro') return; // Production role is a Pro feature
+            // Hide all nav tabs except Work Requests
+            document.querySelectorAll('.nav-tab').forEach(function(btn) {
+                var onclick = btn.getAttribute('onclick') || '';
+                if (onclick.indexOf("switchTab('workRequests')") === -1) {
+                    btn.style.display = 'none';
+                }
+            });
+            // Hide header buttons: New Work Order, dark mode toggle
+            var headerBtns = document.querySelectorAll('.header-actions .btn-primary');
+            headerBtns.forEach(function(b) {
+                if (b.textContent.indexOf('New Work Order') !== -1) b.style.display = 'none';
+            });
+            // Hide stats grid / dashboard KPIs
+            var pageHeader = document.querySelector('.page-header');
+            if (pageHeader) pageHeader.style.display = 'none';
+            var statsGrid = document.querySelector('.stats-grid');
+            if (statsGrid) statsGrid.style.display = 'none';
+            // Switch to Work Requests tab
+            switchTab('workRequests');
         }
 
         function showAuthScreen() {
@@ -4626,7 +4661,7 @@
         function engineerOptions(selectedName, placeholder) {
             placeholder = placeholder || 'Select engineer...';
             var html = '<option value="">' + escHtml(placeholder) + '</option>';
-            var names = staffProfiles.map(function(p) { return p.full_name || p.email || ''; }).filter(Boolean).sort();
+            var names = staffProfiles.filter(function(p) { return p.role !== 'production'; }).map(function(p) { return p.full_name || p.email || ''; }).filter(Boolean).sort();
             names.forEach(function(name) {
                 html += '<option value="' + escHtml(name) + '"' + (name === selectedName ? ' selected' : '') + '>' + escHtml(name) + '</option>';
             });
@@ -4720,7 +4755,8 @@
                 criticality: row.criticality || 'B',
                 warrantyExpiry: row.warranty_expiry || '',
                 warrantyProvider: row.warranty_provider || '',
-                warrantyNotes: row.warranty_notes || ''
+                warrantyNotes: row.warranty_notes || '',
+                sopUrls: row.sop_urls || []
             };
         }
         function mapEquipToDb(eq) {
@@ -4736,6 +4772,7 @@
             if (eq.warrantyExpiry !== undefined) obj.warranty_expiry = eq.warrantyExpiry || null;
             if (eq.warrantyProvider !== undefined) obj.warranty_provider = eq.warrantyProvider;
             if (eq.warrantyNotes !== undefined) obj.warranty_notes = eq.warrantyNotes;
+            if (eq.sopUrls !== undefined) obj.sop_urls = eq.sopUrls;
             return obj;
         }
         function mapPartFromDb(row) {
@@ -5721,9 +5758,12 @@
         }
 
         document.addEventListener('click', function(e) {
-            const bell = document.querySelector('.notification-bell');
+            const bells = document.querySelectorAll('.notification-bell');
             const dropdown = document.getElementById('notificationDropdown');
-            if (bell && dropdown && !bell.contains(e.target) && !dropdown.contains(e.target)) {
+            if (!dropdown) return;
+            let clickedBell = false;
+            bells.forEach(function(b) { if (b.contains(e.target)) clickedBell = true; });
+            if (!clickedBell && !dropdown.contains(e.target)) {
                 dropdown.classList.remove('active');
             }
         });
@@ -6549,7 +6589,76 @@
                             '</div>';
                     }).join('') + '</div></div>';
             }
+            // Add SOPs section (Pro only)
+            if (hasAccess('analytics') && eq.sopUrls && eq.sopUrls.length > 0) {
+                document.getElementById('equipHistoryContent').innerHTML +=
+                    '<div class="form-group pro-only-feature"><label class="form-label" style="color:var(--primary);font-weight:700;">Standard Operating Procedures</label>' +
+                    '<div style="display:flex;flex-direction:column;gap:0.5rem;">' +
+                    eq.sopUrls.map(function(sop) {
+                        return '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">' +
+                            '<span style="font-weight:600;">📄 ' + escHtml(sop.name) + '</span>' +
+                            '<a href="' + escHtml(sop.url) + '" target="_blank" class="btn btn-primary btn-small" style="min-height:28px;">View / Download</a>' +
+                            '</div>';
+                    }).join('') +
+                    '</div></div>';
+            }
             openModal('equipmentHistoryModal');
+        }
+
+        // ── SOP Document Management ──
+        var equipSopFiles = [];
+
+        function handleEquipSopFiles(input) {
+            var files = Array.from(input.files);
+            files.forEach(function(f) {
+                if (f.size > 10 * 1024 * 1024) { showToast('File "' + f.name + '" exceeds 10MB limit.', 'error'); return; }
+                equipSopFiles.push(f);
+            });
+            input.value = '';
+            renderPendingSops();
+        }
+
+        function removeEquipSopFile(index) {
+            equipSopFiles.splice(index, 1);
+            renderPendingSops();
+        }
+
+        function renderPendingSops() {
+            var container = document.getElementById('pendingSopList');
+            if (!container) return;
+            if (equipSopFiles.length === 0) { container.innerHTML = ''; return; }
+            container.innerHTML = equipSopFiles.map(function(f, i) {
+                return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;margin-bottom:0.25rem;">' +
+                    '<span style="flex:1;font-size:0.85rem;">📄 ' + escHtml(f.name) + '</span>' +
+                    '<button type="button" class="btn btn-danger btn-small" style="min-height:28px;padding:0 0.5rem;" onclick="removeEquipSopFile(' + i + ')">&times;</button>' +
+                    '</div>';
+            }).join('');
+        }
+
+        function renderExistingSops(sopUrls) {
+            var container = document.getElementById('existingSopList');
+            if (!container) return;
+            if (!sopUrls || sopUrls.length === 0) { container.innerHTML = ''; return; }
+            container.innerHTML = sopUrls.map(function(sop, i) {
+                return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;margin-bottom:0.25rem;">' +
+                    '<span style="flex:1;font-size:0.85rem;">📄 ' + escHtml(sop.name) + '</span>' +
+                    '<a href="' + escHtml(sop.url) + '" target="_blank" class="btn btn-secondary btn-small" style="min-height:28px;padding:0 0.5rem;">View</a>' +
+                    '<button type="button" class="btn btn-danger btn-small" style="min-height:28px;padding:0 0.5rem;" onclick="removeExistingSop(' + i + ')">&times;</button>' +
+                    '</div>';
+            }).join('');
+        }
+
+        async function removeExistingSop(index) {
+            var eq = equipmentList.find(function(e) { return e.id === currentEditEquipId; });
+            if (!eq || !eq.sopUrls) return;
+            eq.sopUrls.splice(index, 1);
+            try {
+                await CraderoAPI.equipment.update(eq.id, { sop_urls: eq.sopUrls });
+                renderExistingSops(eq.sopUrls);
+                showToast('SOP removed.', 'info');
+            } catch (e) {
+                showToast('Failed to remove SOP.', 'error');
+            }
         }
 
         function openEquipmentEdit(equipId) {
@@ -6567,6 +6676,9 @@
             document.getElementById('editWarrantyExpiry').value   = eq.warrantyExpiry || '';
             document.getElementById('editWarrantyProvider').value = eq.warrantyProvider || '';
             document.getElementById('editWarrantyNotes').value    = eq.warrantyNotes || '';
+            equipSopFiles = [];
+            renderPendingSops();
+            renderExistingSops(eq.sopUrls || []);
             openModal('equipmentEditModal');
         }
 
@@ -6585,6 +6697,21 @@
             eq.warrantyProvider = document.getElementById('editWarrantyProvider').value.trim();
             eq.warrantyNotes   = document.getElementById('editWarrantyNotes').value.trim();
             try {
+                // Upload any pending SOP files
+                if (equipSopFiles.length > 0) {
+                    var existingSops = eq.sopUrls || [];
+                    for (var si = 0; si < equipSopFiles.length; si++) {
+                        var sopFile = equipSopFiles[si];
+                        var safeName = sopFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                        var sopPath = eq.id + '/' + Date.now() + '_' + safeName;
+                        var upResult = await supabaseClient.storage.from('equipment-sops').upload(sopPath, sopFile);
+                        if (upResult.error) { console.error('[Cradero] SOP upload error:', upResult.error); continue; }
+                        var pubUrl = supabaseClient.storage.from('equipment-sops').getPublicUrl(sopPath);
+                        existingSops.push({ name: sopFile.name, url: pubUrl.data.publicUrl });
+                    }
+                    eq.sopUrls = existingSops;
+                    equipSopFiles = [];
+                }
                 await CraderoAPI.equipment.update(eq.id, mapEquipToDb(eq));
                 renderEquipment();
                 populateEquipmentDropdowns();
@@ -9190,7 +9317,9 @@
             // QR Codes
             showEquipQR, printQRCode,
             // Audit Trail
-            loadAuditTrail, filterAuditTrail
+            loadAuditTrail, filterAuditTrail,
+            // SOP Documents
+            handleEquipSopFiles, removeEquipSopFile, removeExistingSop
         ];
         _expose.forEach(function(fn) { window[fn.name] = fn; });
 
