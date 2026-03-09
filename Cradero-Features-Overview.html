@@ -650,12 +650,59 @@
             <tr><td>Frontend</td><td>Single HTML file, vanilla JavaScript, CSS custom properties</td></tr>
             <tr><td>Authentication</td><td>Supabase Auth (email / password)</td></tr>
             <tr><td>Database</td><td>Supabase (PostgreSQL)</td></tr>
+            <tr><td>File Storage</td><td>Supabase Storage (photos for work orders and PM completions)</td></tr>
             <tr><td>Charts</td><td>Chart.js 4.4.0</td></tr>
             <tr><td>Data Persistence</td><td>localStorage with prefix-based namespacing</td></tr>
             <tr><td>Offline Support</td><td>Service Worker + cached auth (Pro tier)</td></tr>
             <tr><td>Fonts</td><td>Work Sans, IBM Plex Mono (Google Fonts)</td></tr>
-            <tr><td>Security</td><td>Content Security Policy headers</td></tr>
         </table>
+
+        <!-- ============================================================ -->
+        <h2>Security</h2>
+
+        <div class="feature-section no-break">
+            <h3>Authentication &amp; Session Management</h3>
+            <ul>
+                <li><strong>Supabase Auth</strong> &mdash; industry-standard email/password authentication with secure token handling</li>
+                <li><strong>Session timeout</strong> &mdash; automatic logout after 30 minutes of inactivity (click, keydown, or touch &mdash; not passive mouse movement)</li>
+                <li><strong>Throttled session reset</strong> &mdash; timer only resets once per 60 seconds to prevent phantom sensor activity keeping sessions alive</li>
+                <li><strong>Pending user approval</strong> &mdash; new sign-ups are blocked from accessing the application until an admin approves their account</li>
+                <li><strong>Password requirements</strong> &mdash; minimum 6 characters with confirmation field to prevent typos</li>
+            </ul>
+        </div>
+
+        <div class="feature-section no-break">
+            <h3>Data Protection</h3>
+            <ul>
+                <li><strong>XSS prevention</strong> &mdash; all user-supplied data is escaped via <code>escHtml()</code> before rendering to the page, preventing cross-site scripting attacks</li>
+                <li><strong>Input sanitisation</strong> &mdash; dedicated <code>sanitizeInput()</code> function trims and truncates all user input to enforced character limits</li>
+                <li><strong>Input length limits</strong> &mdash; field-specific maximums enforced (titles: 200 chars, descriptions: 2,000 chars, comments: 1,000 chars, names: 150 chars)</li>
+                <li><strong>Auto-applied maxlength</strong> &mdash; all text inputs and textareas automatically have <code>maxlength</code> attributes set on page load</li>
+                <li><strong>Safe file naming</strong> &mdash; uploaded photo filenames are sanitised to remove special characters before storage</li>
+            </ul>
+        </div>
+
+        <div class="feature-section no-break">
+            <h3>Access Control</h3>
+            <ul>
+                <li><strong>Role-based permissions</strong> &mdash; Admin, Manager, Engineer, and Pending roles control what each user can see and do</li>
+                <li><strong>Delete protection</strong> &mdash; only managers and admins can delete records (work orders, equipment, parts, PMs, breakdowns)</li>
+                <li><strong>PM edit protection</strong> &mdash; only managers and admins can edit PM task definitions (checklists, frequency, assignment)</li>
+                <li><strong>Tier-based feature gating</strong> &mdash; Pro-only features are hidden and inaccessible on Essential tier accounts</li>
+                <li><strong>IIFE encapsulation</strong> &mdash; all application logic runs inside an Immediately Invoked Function Expression; internal data variables (user role, tier, work order data, etc.) cannot be accessed or tampered with via browser DevTools</li>
+                <li><strong>Controlled function exposure</strong> &mdash; only functions needed by HTML event handlers are explicitly exposed to the global scope via the <code>_expose</code> array</li>
+            </ul>
+        </div>
+
+        <div class="feature-section no-break">
+            <h3>Audit &amp; Accountability</h3>
+            <ul>
+                <li><strong>Full audit trail</strong> &mdash; every create, update, delete, and complete action is logged with timestamp, user, entity type, and entity ID</li>
+                <li><strong>Parts tracking</strong> &mdash; all parts booked out and returned to stores are logged with quantities and associated job references</li>
+                <li><strong>Created-by tracking</strong> &mdash; work orders, breakdowns, and other records store who created them</li>
+                <li><strong>PM completion history</strong> &mdash; checklist results, notes, parts used, and photos from every PM completion are permanently recorded</li>
+            </ul>
+        </div>
 
         <h3>User Roles</h3>
         <table>
