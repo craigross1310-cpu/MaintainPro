@@ -492,27 +492,6 @@
             gap: 0.5rem;
         }
 
-        .wo-images {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 0.75rem;
-        }
-
-        .wo-image-thumb {
-            width: 60px;
-            height: 60px;
-            border-radius: 6px;
-            object-fit: cover;
-            cursor: pointer;
-            border: 2px solid var(--gray-200);
-            transition: all 0.2s;
-        }
-
-        .wo-image-thumb:hover {
-            transform: scale(1.05);
-            border-color: var(--primary);
-        }
-
         .status-badge {
             padding: 0.5rem 1rem;
             border-radius: 20px;
@@ -2178,9 +2157,7 @@
                 <div style="margin-bottom:1rem;">
                     <label style="font-weight:600;margin-right:0.5rem;">Viewing tasks for:</label>
                     <select class="form-select" id="myTasksEngineerSelect" onchange="renderEngineerDashboard()" style="display:inline-block;width:auto;min-width:180px;">
-                        <option value="John Smith">John Smith</option>
-                        <option value="Mike Johnson">Mike Johnson</option>
-                        <option value="Sarah Williams">Sarah Williams</option>
+                        <option value="">Select engineer...</option>
                     </select>
                 </div>
 
@@ -2377,9 +2354,6 @@
                             <label class="form-label">Assign To Engineer</label>
                             <select class="form-select" id="woAssignTo">
                                 <option value="">Unassigned</option>
-                                <option value="John Smith">John Smith</option>
-                                <option value="Mike Johnson">Mike Johnson</option>
-                                <option value="Sarah Williams">Sarah Williams</option>
                             </select>
                         </div>
                     </div>
@@ -2518,9 +2492,6 @@
                             <label class="form-label">Assigned Engineer *</label>
                             <select class="form-select" id="hwEngineer" required>
                                 <option value="">Select engineer...</option>
-                                <option value="John Smith">John Smith</option>
-                                <option value="Mike Johnson">Mike Johnson</option>
-                                <option value="Sarah Williams">Sarah Williams</option>
                             </select>
                         </div>
 
@@ -2691,14 +2662,14 @@
                     <div class="form-group">
                         <label class="form-label">Work Order ID</label>
                         <div style="font-family: 'IBM Plex Mono', monospace; font-size: 1.1rem; color: var(--dark); font-weight: 600;">
-                            <span id="woDetailId">WO-2024-001</span>
+                            <span id="woDetailId"></span>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Equipment</label>
-                            <div style="font-weight: 600; color: var(--dark);" id="woDetailEquipment">Line 3 Filler</div>
+                            <div style="font-weight: 600; color: var(--dark);" id="woDetailEquipment"></div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Priority</label>
@@ -2710,9 +2681,7 @@
 
                     <div class="form-group">
                         <label class="form-label">Description</label>
-                        <div style="padding: 1rem; background: var(--gray-100); border-radius: 8px; line-height: 1.6;" id="woDetailDescription">
-                            Motor temperature reading above normal range. Noticed unusual heat during production run. Requires immediate inspection to prevent potential failure.
-                        </div>
+                        <div style="padding: 1rem; background: var(--gray-100); border-radius: 8px; line-height: 1.6;" id="woDetailDescription"></div>
                     </div>
 
                     <div class="form-row">
@@ -2731,11 +2700,11 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Created</label>
-                            <div id="woDetailCreated">Feb 13, 2026 - 9:20 AM</div>
+                            <div id="woDetailCreated"></div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Created By</label>
-                            <div id="woDetailCreatedBy">Sarah Williams</div>
+                            <div id="woDetailCreatedBy"></div>
                         </div>
                     </div>
 
@@ -2805,9 +2774,6 @@
                         <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                             <select class="form-select" id="woUpdateAssign" style="flex: 1; min-width: 200px;">
                                 <option value="">Reassign to...</option>
-                                <option value="John Smith">John Smith</option>
-                                <option value="Mike Johnson">Mike Johnson</option>
-                                <option value="Sarah Williams">Sarah Williams</option>
                             </select>
                             <select class="form-select" id="woUpdateStatus" style="flex: 1; min-width: 200px;">
                                 <option value="">Change status...</option>
@@ -3117,9 +3083,6 @@
                             <label class="form-label">Assign To *</label>
                             <select class="form-select" id="pmAssignTo" required>
                                 <option value="">Select engineer...</option>
-                                <option value="John Smith">John Smith</option>
-                                <option value="Mike Johnson">Mike Johnson</option>
-                                <option value="Sarah Williams">Sarah Williams</option>
                             </select>
                         </div>
 
@@ -3498,9 +3461,6 @@
                             <label class="form-label">Assigned Engineer</label>
                             <select class="form-select" id="brEngineer">
                                 <option value="">Select engineer...</option>
-                                <option>John Smith</option>
-                                <option>Mike Johnson</option>
-                                <option>Sarah Williams</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -3573,9 +3533,6 @@
                         <label class="form-label">Resolved By</label>
                         <select class="form-select" id="brEditEngineer">
                             <option value="">Select engineer...</option>
-                            <option>John Smith</option>
-                            <option>Mike Johnson</option>
-                            <option>Sarah Williams</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -3651,9 +3608,6 @@
                             <label class="form-label">Assigned To</label>
                             <select class="form-select" id="calAssignedTo">
                                 <option value="">Unassigned</option>
-                                <option>John Smith</option>
-                                <option>Mike Johnson</option>
-                                <option>Sarah Williams</option>
                             </select>
                         </div>
                         <div class="form-group">
