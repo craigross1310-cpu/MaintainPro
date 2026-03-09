@@ -1298,28 +1298,6 @@
         .week-event.evt-inspection { color: var(--dark); }
 
         /* Responsive */
-        /* ── Bulk Actions ── */
-        .bulk-action-bar {
-            display: none;
-            position: fixed;
-            bottom: 1.5rem;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--dark);
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-            z-index: 999;
-            gap: 1rem;
-            align-items: center;
-            font-size: 0.9rem;
-            font-weight: 600;
-            animation: slideUp 0.2s ease;
-        }
-        .bulk-action-bar.visible { display: flex; }
-        .bulk-action-bar .btn { min-height: 36px; font-size: 0.85rem; }
-        .bulk-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); margin-right: 8px; flex-shrink: 0; }
 
         /* ── Tablet ── */
         @media (max-width: 1024px) {
@@ -2319,12 +2297,6 @@
         </div>
     </div>
 
-    <!-- Bulk Action Bar -->
-    <div class="bulk-action-bar" id="bulkActionBar">
-        <span id="bulkSelectedCount">0 selected</span>
-        <button class="btn btn-danger btn-small" onclick="bulkDelete()">Delete Selected</button>
-        <button class="btn btn-secondary btn-small" onclick="bulkClearSelection()">Cancel</button>
-    </div>
 
     <!-- Submit Request Modal -->
     <div id="submitRequestModal" class="modal-overlay">
@@ -2769,9 +2741,15 @@
 
                     <div class="form-group">
                         <label class="form-label">Attached Photos</label>
-                        <div id="woDetailPhotos" style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect fill='%23E5E5E5' width='150' height='150'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='20' fill='%23666'%3E📷 Photo 1%3C/text%3E%3C/svg%3E" style="width: 150px; height: 150px; border-radius: 8px; border: 2px solid var(--gray-300); cursor: pointer;">
-                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect fill='%23E5E5E5' width='150' height='150'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='20' fill='%23666'%3E📷 Photo 2%3C/text%3E%3C/svg%3E" style="width: 150px; height: 150px; border-radius: 8px; border: 2px solid var(--gray-300); cursor: pointer;">
+                        <div id="woDetailPhotos" style="display: flex; gap: 1rem; flex-wrap: wrap;"></div>
+                        <div style="margin-top:0.75rem;">
+                            <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Add More Photos</label>
+                            <div id="woDetailUploadArea" style="border:2px dashed var(--gray-300);border-radius:8px;padding:1rem;text-align:center;cursor:pointer;" onclick="document.getElementById('woDetailFileInput').click()">
+                                <div style="color:var(--gray-500);font-size:0.85rem;">Click or drag photos here</div>
+                                <input type="file" id="woDetailFileInput" multiple accept="image/*" style="display:none;" onchange="handleWoDetailFiles(this.files)">
+                            </div>
+                            <div id="woDetailFilePreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:0.5rem;"></div>
+                            <button type="button" class="btn btn-primary btn-small" id="woDetailUploadBtn" style="display:none;margin-top:0.5rem;" onclick="uploadWoDetailPhotos()">Upload Photos</button>
                         </div>
                     </div>
 
@@ -3201,6 +3179,22 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('pmDetailModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit PM Modal (Manager/Admin only) -->
+    <div id="editPMModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Edit PM Task</h2>
+            </div>
+            <div class="modal-body" id="editPMBody">
+                <!-- Dynamically populated -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('editPMModal')">Cancel</button>
+                <button class="btn btn-success" onclick="submitEditPM()">Save Changes</button>
             </div>
         </div>
     </div>
@@ -3961,59 +3955,6 @@
             win.print();
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // BULK ACTIONS
-        // ─────────────────────────────────────────────────────────────────────
-        function updateBulkSelection() {
-            var checked = document.querySelectorAll('.bulk-checkbox:checked');
-            var bar = document.getElementById('bulkActionBar');
-            var countEl = document.getElementById('bulkSelectedCount');
-            if (checked.length > 0) {
-                bar.classList.add('visible');
-                countEl.textContent = checked.length + ' selected';
-            } else {
-                bar.classList.remove('visible');
-            }
-        }
-
-        function bulkClearSelection() {
-            document.querySelectorAll('.bulk-checkbox:checked').forEach(function(cb) { cb.checked = false; });
-            document.getElementById('bulkActionBar').classList.remove('visible');
-        }
-
-        async function bulkDelete() {
-            if (!canDelete()) return;
-            var checked = document.querySelectorAll('.bulk-checkbox:checked');
-            if (checked.length === 0) return;
-            if (!confirm('Delete ' + checked.length + ' selected item(s)? This cannot be undone.')) return;
-
-            var errors = 0;
-            for (var i = 0; i < checked.length; i++) {
-                var type = checked[i].getAttribute('data-type');
-                var id = checked[i].getAttribute('data-id');
-                try {
-                    if (type === 'wo') {
-                        await CraderoAPI.workOrders.delete(id);
-                        logAudit('delete', 'work_order', id);
-                        workOrdersData = workOrdersData.filter(function(w) { return w.id !== id; });
-                    } else if (type === 'equip') {
-                        await CraderoAPI.equipment.delete(id);
-                        logAudit('delete', 'equipment', id);
-                        equipmentList = equipmentList.filter(function(e) { return e.id !== id; });
-                    } else if (type === 'part') {
-                        await CraderoAPI.parts.delete(id);
-                        logAudit('delete', 'part', id);
-                        partsData = partsData.filter(function(p) { return p.id !== id; });
-                    }
-                } catch (err) { errors++; console.error('[Cradero] Bulk delete error:', err); }
-            }
-
-            bulkClearSelection();
-            renderWorkOrders(); renderEquipment(); renderParts();
-            populateEquipmentDropdowns();
-            refreshDashboards();
-            showToast('Deleted ' + (checked.length - errors) + ' item(s).' + (errors > 0 ? ' ' + errors + ' failed.' : ''), errors > 0 ? 'warning' : 'info');
-        }
 
         function canDelete() {
             if (currentUserRole === 'admin' || currentUserRole === 'manager') return true;
@@ -5039,11 +4980,7 @@
                     : `<span style="color: var(--danger); font-weight: 600;">Unassigned</span>`;
                 const statusLabel = wo.status === 'in-progress' ? 'In Progress' : wo.status === 'completed' ? 'Completed' : wo.status === 'on-hold' ? 'On Hold' : 'Open';
                 const statusClass = wo.status;
-                const photosHtml = wo.hasPhotos ? `<div class="wo-images">
-                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%23E5E5E5' width='60' height='60'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='12' fill='%23666'%3E📷%3C/text%3E%3C/svg%3E" class="wo-image-thumb" alt="Photo">
-                </div>` : '';
                 return `<div class="work-order-item">
-                    <input type="checkbox" class="bulk-checkbox" data-type="wo" data-id="${wo.id}" onchange="updateBulkSelection()">
                     <div class="wo-priority ${wo.priority}"></div>
                     <div class="wo-details">
                         <div class="wo-title">${escHtml(wo.title)}${wo.fromBreakdown ? '<span style="background:var(--warning);color:var(--dark);font-size:0.7rem;padding:2px 7px;border-radius:4px;font-weight:700;margin-left:6px;">&#9889; Breakdown</span>' : ''}</div>
@@ -5052,7 +4989,6 @@
                             <div class="wo-meta-item"><span>👤</span>${assignedHtml}</div>
                             <div class="wo-meta-item"><span>📅</span><span>${escHtml(wo.created)}</span></div>
                         </div>
-                        ${photosHtml}
                     </div>
                     <div class="status-badge ${statusClass}">${statusLabel}</div>
                     <div style="display:flex;gap:0.5rem;">
@@ -5087,9 +5023,6 @@
                     else warrantyBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;background:rgba(34,197,94,0.1);color:#22c55e;">Warranty Active</span>';
                 }
                 return `<div class="equipment-card">
-                    <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">
-                        <input type="checkbox" class="bulk-checkbox" data-type="equip" data-id="${eq.id}" onchange="updateBulkSelection()">
-                    </div>
                     <div class="equipment-header">
                         <div>
                             <div class="equipment-name">${escHtml(eq.name)}</div>
@@ -5148,9 +5081,6 @@
                 const orderBtnClass = stock.cls === 'in-stock' ? 'btn-primary' : 'btn-danger';
                 const orderBtnLabel = stock.cls === 'in-stock' ? 'Order More' : (stock.cls === 'low-stock' ? '🚨 Order Now' : '🚨 Emergency Order');
                 return `<div class="part-card">
-                    <div style="margin-bottom:4px;">
-                        <input type="checkbox" class="bulk-checkbox" data-type="part" data-id="${p.id}" onchange="updateBulkSelection()">
-                    </div>
                     <div class="part-header">
                         <div>
                             <div class="part-name">${escHtml(p.name)}</div>
@@ -5348,6 +5278,7 @@
                     <div style="display:flex;gap:0.5rem;flex-direction:column;align-items:flex-end;">
                         ${actionBtn}
                         <button class="btn btn-secondary btn-small" onclick="openPMDetail('${pm.id}')">View</button>
+                        ${(currentUserRole === 'admin' || currentUserRole === 'manager') ? '<button class="btn btn-secondary btn-small" onclick="openEditPM(\'' + pm.id + '\')">Edit</button>' : ''}
                         <button class="btn btn-danger btn-small" onclick="deletePM('${pm.id}')">Delete</button>
                     </div>
                 </div>`;
@@ -6037,6 +5968,13 @@
             populateWoPartsDropdown();
             loadWoPartsUsage(woId);
 
+            // Reset photo upload state
+            woDetailUploadedFiles = [];
+            var woDetailPreview = document.getElementById('woDetailFilePreview');
+            if (woDetailPreview) woDetailPreview.innerHTML = '';
+            var woDetailUploadBtn = document.getElementById('woDetailUploadBtn');
+            if (woDetailUploadBtn) { woDetailUploadBtn.style.display = 'none'; woDetailUploadBtn.disabled = false; woDetailUploadBtn.textContent = 'Upload Photos'; }
+
             // Pre-fill update selects
             const assignSel = document.getElementById('woUpdateAssign');
             const statusSel = document.getElementById('woUpdateStatus');
@@ -6179,6 +6117,181 @@
                 showToast(qty + 'x ' + part.name + ' recorded.', 'success');
             } catch (err) {
                 showToast('Failed to record part usage: ' + err.message, 'error');
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // PM PARTS USAGE (during completion)
+        // ─────────────────────────────────────────────────────────────────────
+        var pmPartsUsed = [];
+
+        function populatePMPartsDropdown() {
+            var sel = document.getElementById('pmPartSelect');
+            if (!sel) return;
+            var html = '<option value="">Select part...</option>';
+            partsData.forEach(function(p) {
+                html += '<option value="' + p.id + '">' + escHtml(p.name) + ' (' + p.qty + ' in stock)</option>';
+            });
+            sel.innerHTML = html;
+        }
+
+        function addPMPartUsage() {
+            var partId = document.getElementById('pmPartSelect').value;
+            var qty = parseInt(document.getElementById('pmPartQty').value) || 1;
+            if (!partId) { showToast('Please select a part.', 'error'); return; }
+            if (qty < 1) { showToast('Quantity must be at least 1.', 'error'); return; }
+
+            var part = partsData.find(function(p) { return p.id === partId; });
+            if (!part) return;
+            if (part.qty < qty) {
+                showToast('Insufficient stock! Only ' + part.qty + ' available.', 'error');
+                return;
+            }
+
+            pmPartsUsed.push({ partId: partId, partName: part.name, qty: qty });
+            document.getElementById('pmPartSelect').value = '';
+            document.getElementById('pmPartQty').value = '1';
+            renderPMPartsUsed();
+        }
+
+        function removePMPartUsage(idx) {
+            pmPartsUsed.splice(idx, 1);
+            renderPMPartsUsed();
+        }
+
+        function renderPMPartsUsed() {
+            var container = document.getElementById('pmPartsUsedList');
+            if (!container) return;
+            if (pmPartsUsed.length === 0) {
+                container.innerHTML = '<div style="color:var(--gray-500);font-size:0.85rem;font-style:italic;">No parts added yet.</div>';
+                return;
+            }
+            var html = '<div style="display:flex;flex-direction:column;gap:4px;">';
+            pmPartsUsed.forEach(function(u, i) {
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--gray-100);border-radius:4px;font-size:0.85rem;">' +
+                    '<span>' + escHtml(u.partName) + ' x' + u.qty + '</span>' +
+                    '<button type="button" onclick="removePMPartUsage(' + i + ')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1rem;padding:0 4px;">&times;</button>' +
+                    '</div>';
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function togglePMRaiseWO() {
+            var fields = document.getElementById('pmRaiseWOFields');
+            var checked = document.getElementById('pmRaiseWO').checked;
+            if (fields) fields.style.display = checked ? '' : 'none';
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // PM PHOTO UPLOAD (manager/admin only during completion)
+        // ─────────────────────────────────────────────────────────────────────
+        var pmUploadedFiles = [];
+
+        function handlePMFiles(files) {
+            var preview = document.getElementById('pmFilePreview');
+            Array.from(files).forEach(function(file) {
+                if (file.type.startsWith('image/')) {
+                    pmUploadedFiles.push(file);
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        var item = document.createElement('div');
+                        item.style.cssText = 'position:relative;display:inline-block;';
+                        item.innerHTML = '<img src="' + e.target.result + '" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:2px solid var(--gray-300);">' +
+                            '<button type="button" onclick="removePMFile(this,\'' + escHtml(file.name) + '\')" style="position:absolute;top:-6px;right:-6px;background:var(--danger);color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:20px;text-align:center;">&times;</button>';
+                        preview.appendChild(item);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function removePMFile(button, fileName) {
+            pmUploadedFiles = pmUploadedFiles.filter(function(f) { return f.name !== fileName; });
+            button.parentElement.remove();
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // WO DETAIL PHOTO UPLOAD
+        // ─────────────────────────────────────────────────────────────────────
+        var woDetailUploadedFiles = [];
+
+        function handleWoDetailFiles(files) {
+            var preview = document.getElementById('woDetailFilePreview');
+            Array.from(files).forEach(function(file) {
+                if (file.type.startsWith('image/')) {
+                    woDetailUploadedFiles.push(file);
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        var item = document.createElement('div');
+                        item.style.cssText = 'position:relative;display:inline-block;';
+                        item.innerHTML = '<img src="' + e.target.result + '" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:2px solid var(--gray-300);">' +
+                            '<button type="button" onclick="removeWoDetailFile(this,\'' + escHtml(file.name) + '\')" style="position:absolute;top:-6px;right:-6px;background:var(--danger);color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:20px;text-align:center;">&times;</button>';
+                        preview.appendChild(item);
+                    };
+                    reader.readAsDataURL(file);
+                    // Show upload button
+                    var btn = document.getElementById('woDetailUploadBtn');
+                    if (btn) btn.style.display = '';
+                }
+            });
+        }
+
+        function removeWoDetailFile(button, fileName) {
+            woDetailUploadedFiles = woDetailUploadedFiles.filter(function(f) { return f.name !== fileName; });
+            button.parentElement.remove();
+            if (woDetailUploadedFiles.length === 0) {
+                var btn = document.getElementById('woDetailUploadBtn');
+                if (btn) btn.style.display = 'none';
+            }
+        }
+
+        async function uploadWoDetailPhotos() {
+            if (!currentDetailWoId || woDetailUploadedFiles.length === 0) return;
+            var wo = workOrdersData.find(function(w) { return w.id === currentDetailWoId; });
+            if (!wo) return;
+
+            var btn = document.getElementById('woDetailUploadBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Uploading...'; }
+
+            var photoUrls = wo.photoUrls ? wo.photoUrls.slice() : [];
+            for (var fi = 0; fi < woDetailUploadedFiles.length; fi++) {
+                var file = woDetailUploadedFiles[fi];
+                var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                var filePath = currentDetailWoId + '/' + Date.now() + '_' + safeName;
+                try {
+                    var upResult = await supabaseClient.storage.from('work-order-photos').upload(filePath, file);
+                    if (upResult.error) { console.error('[Cradero] Photo upload error:', upResult.error); continue; }
+                    var pubUrl = supabaseClient.storage.from('work-order-photos').getPublicUrl(filePath);
+                    if (pubUrl.data && pubUrl.data.publicUrl) photoUrls.push(pubUrl.data.publicUrl);
+                } catch (upErr) { console.error('[Cradero] Photo upload failed:', upErr); }
+            }
+
+            try {
+                await CraderoAPI.workOrders.update(currentDetailWoId, { photo_urls: photoUrls, has_photos: true });
+                wo.photoUrls = photoUrls;
+                wo.hasPhotos = true;
+
+                // Refresh photos display
+                var photosHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+                photoUrls.forEach(function(url) {
+                    photosHtml += '<a href="' + escHtml(url) + '" target="_blank" style="display:block;">' +
+                        '<img src="' + escHtml(url) + '" style="width:150px;height:150px;object-fit:cover;border-radius:8px;border:2px solid var(--gray-300);cursor:pointer;" loading="lazy">' +
+                        '</a>';
+                });
+                photosHtml += '</div>';
+                document.getElementById('woDetailPhotos').innerHTML = photosHtml;
+
+                // Clear upload state
+                woDetailUploadedFiles = [];
+                var preview = document.getElementById('woDetailFilePreview');
+                if (preview) preview.innerHTML = '';
+                if (btn) { btn.style.display = 'none'; btn.disabled = false; btn.textContent = 'Upload Photos'; }
+
+                showToast('Photos uploaded successfully!', 'success');
+            } catch (err) {
+                showToast('Failed to save photos: ' + err.message, 'error');
+                if (btn) { btn.disabled = false; btn.textContent = 'Upload Photos'; }
             }
         }
 
@@ -7682,7 +7795,59 @@
                 html += '</div>';
             }
 
+            // Parts usage section
+            html += '<div style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:1.5rem;">' +
+                '<label style="font-weight:700;font-size:0.95rem;display:block;margin-bottom:0.5rem;">Parts Used</label>' +
+                '<div id="pmPartsUsedList" style="margin-bottom:0.5rem;"><div style="color:var(--gray-500);font-size:0.85rem;font-style:italic;">No parts added yet.</div></div>' +
+                '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end;">' +
+                    '<select class="form-select" id="pmPartSelect" style="flex:2;min-width:150px;"><option value="">Select part...</option></select>' +
+                    '<input type="number" class="form-input" id="pmPartQty" placeholder="Qty" min="1" value="1" style="flex:0 0 80px;">' +
+                    '<button type="button" class="btn btn-primary btn-small" onclick="addPMPartUsage()">+ Add</button>' +
+                '</div>' +
+            '</div>';
+
+            // Raise work order section
+            html += '<div style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:1.5rem;">' +
+                '<label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-weight:600;margin-bottom:0.75rem;">' +
+                    '<input type="checkbox" id="pmRaiseWO" onchange="togglePMRaiseWO()" style="width:18px;height:18px;cursor:pointer;">' +
+                    '<span>Raise Work Order for issues found?</span>' +
+                '</label>' +
+                '<div id="pmRaiseWOFields" style="display:none;padding:1rem;background:var(--gray-100);border-radius:8px;">' +
+                    '<div class="form-group" style="margin-bottom:0.75rem;">' +
+                        '<label class="form-label" style="font-size:0.85rem;">Issue Title *</label>' +
+                        '<input type="text" class="form-input" id="pmWOIssueTitle" placeholder="Brief description of the issue...">' +
+                    '</div>' +
+                    '<div class="form-group" style="margin-bottom:0.75rem;">' +
+                        '<label class="form-label" style="font-size:0.85rem;">Issue Description</label>' +
+                        '<textarea class="form-input" id="pmWOIssueDesc" rows="3" placeholder="Detailed description of what was found..."></textarea>' +
+                    '</div>' +
+                    '<div class="form-group">' +
+                        '<label class="form-label" style="font-size:0.85rem;">Priority</label>' +
+                        '<select class="form-select" id="pmWOIssuePriority">' +
+                            '<option value="medium">Medium</option>' +
+                            '<option value="high">High</option>' +
+                            '<option value="low">Low</option>' +
+                        '</select>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+            // Manager/admin photo upload section
+            if (currentUserRole === 'admin' || currentUserRole === 'manager') {
+                html += '<div style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:1.5rem;">' +
+                    '<label style="font-weight:700;font-size:0.95rem;display:block;margin-bottom:0.5rem;">Attach Photos</label>' +
+                    '<div id="pmFileUploadArea" style="border:2px dashed var(--gray-300);border-radius:8px;padding:1.5rem;text-align:center;cursor:pointer;transition:border-color 0.2s;" onclick="document.getElementById(\'pmFileInput\').click()">' +
+                        '<div style="color:var(--gray-500);font-size:0.9rem;">Click or drag photos here</div>' +
+                        '<input type="file" id="pmFileInput" multiple accept="image/*" style="display:none;" onchange="handlePMFiles(this.files)">' +
+                    '</div>' +
+                    '<div id="pmFilePreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:0.5rem;"></div>' +
+                '</div>';
+            }
+
             body.innerHTML = html;
+            pmPartsUsed = [];
+            populatePMPartsDropdown();
+            pmUploadedFiles = [];
             document.getElementById('completePMSubmitBtn').disabled = checklist.length > 0;
             openModal('completePMModal');
         }
@@ -7739,17 +7904,63 @@
             var finishTime = document.getElementById('pmFinishTime').value;
             if (!startTime || !finishTime) { showToast('Please enter start and finish times.', 'error'); return; }
 
+            // Validate raise WO fields if checked
+            var raiseWOEl = document.getElementById('pmRaiseWO');
+            var raiseWO = raiseWOEl && raiseWOEl.checked;
+            if (raiseWO) {
+                var woTitle = (document.getElementById('pmWOIssueTitle').value || '').trim();
+                if (!woTitle) { showToast('Please enter an issue title for the work order.', 'error'); return; }
+            }
+
             try {
                 var nowDate = new Date();
                 var now = nowDate.toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+
+                // Upload PM photos if any (manager/admin only)
+                var pmPhotoUrls = [];
+                if (pmUploadedFiles.length > 0) {
+                    for (var fi = 0; fi < pmUploadedFiles.length; fi++) {
+                        var file = pmUploadedFiles[fi];
+                        var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                        var filePath = 'pm-completions/' + pm.id + '/' + Date.now() + '_' + safeName;
+                        try {
+                            var upResult = await supabaseClient.storage.from('work-order-photos').upload(filePath, file);
+                            if (upResult.error) { console.error('[Cradero] PM photo upload error:', upResult.error); continue; }
+                            var pubUrl = supabaseClient.storage.from('work-order-photos').getPublicUrl(filePath);
+                            if (pubUrl.data && pubUrl.data.publicUrl) pmPhotoUrls.push(pubUrl.data.publicUrl);
+                        } catch (upErr) { console.error('[Cradero] PM photo upload failed:', upErr); }
+                    }
+                }
+
                 // Create a pm_completion record
-                await CraderoAPI.pm.complete({
+                var completionData = {
                     pm_task_id: pm.id,
                     completed_by: pm.assignedTo,
                     completed_at: nowDate.toISOString(),
                     checklist_results: pm.checklist || [],
                     notes: 'Start: ' + startTime + ', Finish: ' + finishTime
-                });
+                };
+                if (pmPhotoUrls.length > 0) completionData.photo_urls = pmPhotoUrls;
+                if (pmPartsUsed.length > 0) completionData.parts_used = pmPartsUsed;
+                await CraderoAPI.pm.complete(completionData);
+
+                // Deduct parts from inventory
+                for (var pi = 0; pi < pmPartsUsed.length; pi++) {
+                    var pu = pmPartsUsed[pi];
+                    var part = partsData.find(function(p) { return p.id === pu.partId; });
+                    if (part) {
+                        var newQty = Math.max(0, part.qty - pu.qty);
+                        await CraderoAPI.parts.update(pu.partId, { quantity_in_stock: newQty });
+                        part.qty = newQty;
+                        logAudit('update', 'part', pu.partId, { action: 'pm_usage', quantityUsed: pu.qty, pmTaskId: pm.id });
+                        if (newQty <= part.minStock && newQty > 0) {
+                            showToast('Low stock warning: ' + part.name + ' (' + newQty + ' remaining)', 'warning');
+                        } else if (newQty <= 0) {
+                            showToast('Out of stock: ' + part.name + '!', 'error');
+                        }
+                    }
+                }
+
                 // Calculate next due date based on frequency
                 var nextDue = calcNextDueDate(nowDate, pm.frequency);
                 var nextDueISO = nextDue.toISOString().substring(0, 10);
@@ -7781,11 +7992,40 @@
                     pm.checklist.forEach(function(item) { item.checked = false; item.note = ''; });
                 }
 
+                // Raise work order if requested
+                if (raiseWO) {
+                    var woIssueTitle = document.getElementById('pmWOIssueTitle').value.trim();
+                    var woIssueDesc = (document.getElementById('pmWOIssueDesc').value || '').trim();
+                    var woIssuePriority = document.getElementById('pmWOIssuePriority').value || 'medium';
+                    var woDesc = 'Raised from PM: ' + pm.title + '\n\n' + woIssueDesc;
+                    try {
+                        var woDbRow = await CraderoAPI.workOrders.create(mapWoToDb({
+                            title: woIssueTitle,
+                            equipment: pm.equipment,
+                            priority: woIssuePriority,
+                            description: woDesc,
+                            status: 'open',
+                            assignedTo: '',
+                            createdBy: currentUserName || 'User',
+                            hasPhotos: false
+                        }));
+                        logAudit('create', 'work_order', woDbRow.id, { title: woIssueTitle, fromPM: pm.id });
+                        workOrdersData.unshift(mapWoFromDb(woDbRow));
+                        renderWorkOrders();
+                        showToast('Work order "' + woIssueTitle + '" created from PM.', 'success');
+                    } catch (woErr) {
+                        showToast('PM completed but failed to create work order: ' + woErr.message, 'warning');
+                    }
+                }
+
                 closeModal('completePMModal');
                 renderPM();
+                renderParts();
                 if (typeof renderEngineerDashboard === 'function') renderEngineerDashboard();
                 logAudit('complete', 'pm_task', pm.id, { title: pm.title, nextDue: nextDueISO });
                 currentCompletePMId = null;
+                pmPartsUsed = [];
+                pmUploadedFiles = [];
                 refreshDashboards();
                 showToast('"' + pm.title + '" completed! Next due: ' + nextDue.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }), 'success');
             } catch (err) {
@@ -7848,6 +8088,150 @@
 
             body.innerHTML = html;
             openModal('pmDetailModal');
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // EDIT PM (Manager/Admin)
+        // ─────────────────────────────────────────────────────────────────────
+        var currentEditPMId = null;
+        var editPMChecklist = [];
+
+        function openEditPM(pmId) {
+            if (currentUserRole !== 'admin' && currentUserRole !== 'manager') {
+                showToast('Only managers and admins can edit PM tasks.', 'error');
+                return;
+            }
+            var pm = pmData.find(function(p) { return p.id === pmId; });
+            if (!pm) return;
+            currentEditPMId = pmId;
+            editPMChecklist = (pm.checklist || []).map(function(item) { return { text: item.text }; });
+
+            var body = document.getElementById('editPMBody');
+            var html = '<div class="form-group">' +
+                '<label class="form-label">Title</label>' +
+                '<input type="text" class="form-input" id="editPMTitle" value="' + escHtml(pm.title) + '">' +
+            '</div>' +
+            '<div class="form-group">' +
+                '<label class="form-label">Description</label>' +
+                '<textarea class="form-input" id="editPMDescription" rows="3">' + escHtml(pm.description || '') + '</textarea>' +
+            '</div>' +
+            '<div class="form-row">' +
+                '<div class="form-group">' +
+                    '<label class="form-label">Frequency</label>' +
+                    '<select class="form-select" id="editPMFrequency">' +
+                        '<option value="daily"' + (pm.frequency === 'daily' ? ' selected' : '') + '>Daily</option>' +
+                        '<option value="weekly"' + (pm.frequency === 'weekly' ? ' selected' : '') + '>Weekly</option>' +
+                        '<option value="bi-weekly"' + (pm.frequency === 'bi-weekly' ? ' selected' : '') + '>Bi-Weekly</option>' +
+                        '<option value="monthly"' + (pm.frequency === 'monthly' ? ' selected' : '') + '>Monthly</option>' +
+                        '<option value="quarterly"' + (pm.frequency === 'quarterly' ? ' selected' : '') + '>Quarterly</option>' +
+                        '<option value="semi-annual"' + (pm.frequency === 'semi-annual' ? ' selected' : '') + '>Semi-Annual</option>' +
+                        '<option value="annual"' + (pm.frequency === 'annual' ? ' selected' : '') + '>Annual</option>' +
+                    '</select>' +
+                '</div>' +
+                '<div class="form-group">' +
+                    '<label class="form-label">Duration</label>' +
+                    '<input type="text" class="form-input" id="editPMDuration" value="' + escHtml(pm.duration || '') + '" placeholder="e.g., 1 hour">' +
+                '</div>' +
+            '</div>' +
+            '<div class="form-row">' +
+                '<div class="form-group">' +
+                    '<label class="form-label">Assigned To</label>' +
+                    '<select class="form-select" id="editPMAssignedTo">' + engineerOptions(pm.assignedTo) + '</select>' +
+                '</div>' +
+                '<div class="form-group">' +
+                    '<label class="form-label">Equipment</label>' +
+                    '<select class="form-select" id="editPMEquipment">' +
+                        '<option value="">Select equipment...</option>' +
+                        equipmentList.map(function(eq) {
+                            return '<option value="' + escHtml(eq.name) + '"' + (eq.name === pm.equipment ? ' selected' : '') + '>' + escHtml(eq.name) + '</option>';
+                        }).join('') +
+                    '</select>' +
+                '</div>' +
+            '</div>' +
+            '<div class="form-group" style="border-top:1px solid var(--gray-200);padding-top:1rem;">' +
+                '<label class="form-label" style="font-weight:700;">Checklist Items</label>' +
+                '<div id="editPMChecklistContainer"></div>' +
+                '<div style="display:flex;gap:0.5rem;margin-top:0.5rem;">' +
+                    '<input type="text" class="form-input" id="editPMNewCheckItem" placeholder="New checklist item..." style="flex:1;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addEditPMCheckItem();}">' +
+                    '<button type="button" class="btn btn-primary btn-small" onclick="addEditPMCheckItem()">+ Add</button>' +
+                '</div>' +
+            '</div>';
+
+            body.innerHTML = html;
+            renderEditPMChecklist();
+            openModal('editPMModal');
+        }
+
+        function renderEditPMChecklist() {
+            var container = document.getElementById('editPMChecklistContainer');
+            if (!container) return;
+            if (editPMChecklist.length === 0) {
+                container.innerHTML = '<div style="color:var(--gray-500);font-size:0.85rem;font-style:italic;padding:0.5rem 0;">No checklist items.</div>';
+                return;
+            }
+            var html = '<div style="display:flex;flex-direction:column;gap:0.5rem;">';
+            editPMChecklist.forEach(function(item, i) {
+                html += '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;">' +
+                    '<span style="flex:1;font-size:0.9rem;">' + escHtml(item.text) + '</span>' +
+                    '<button type="button" onclick="removeEditPMCheckItem(' + i + ')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;padding:0 4px;">&times;</button>' +
+                '</div>';
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function addEditPMCheckItem() {
+            var input = document.getElementById('editPMNewCheckItem');
+            var text = (input.value || '').trim();
+            if (!text) return;
+            editPMChecklist.push({ text: text });
+            input.value = '';
+            renderEditPMChecklist();
+        }
+
+        function removeEditPMCheckItem(idx) {
+            editPMChecklist.splice(idx, 1);
+            renderEditPMChecklist();
+        }
+
+        async function submitEditPM() {
+            if (!currentEditPMId) return;
+            var pm = pmData.find(function(p) { return p.id === currentEditPMId; });
+            if (!pm) return;
+
+            var title = (document.getElementById('editPMTitle').value || '').trim();
+            if (!title) { showToast('Title is required.', 'error'); return; }
+
+            var updates = {
+                title: title,
+                description: (document.getElementById('editPMDescription').value || '').trim(),
+                frequency: document.getElementById('editPMFrequency').value,
+                duration: (document.getElementById('editPMDuration').value || '').trim(),
+                assigned_to: document.getElementById('editPMAssignedTo').value,
+                equipment_name: document.getElementById('editPMEquipment').value,
+                checklist: editPMChecklist
+            };
+
+            try {
+                await CraderoAPI.pm.update(pm.id, updates);
+                pm.title = title;
+                pm.description = updates.description;
+                pm.frequency = updates.frequency;
+                pm.duration = updates.duration;
+                pm.assignedTo = updates.assigned_to;
+                pm.equipment = updates.equipment_name;
+                pm.checklist = editPMChecklist.map(function(item) { return { text: item.text, checked: false, note: '' }; });
+
+                logAudit('update', 'pm_task', pm.id, { title: title, action: 'edit' });
+                closeModal('editPMModal');
+                renderPM();
+                if (typeof renderEngineerDashboard === 'function') renderEngineerDashboard();
+                refreshDashboards();
+                currentEditPMId = null;
+                showToast('PM task updated!', 'success');
+            } catch (err) {
+                showToast('Failed to update PM: ' + err.message, 'error');
+            }
         }
 
         function schedulePM(pmId) {
@@ -8807,10 +9191,18 @@
             toggleDarkMode,
             // Parts Usage
             addPartUsage,
+            // PM Parts Usage
+            addPMPartUsage, removePMPartUsage, populatePMPartsDropdown,
+            // PM Raise WO
+            togglePMRaiseWO,
+            // PM Photo Upload
+            handlePMFiles, removePMFile,
+            // PM Edit (Manager/Admin)
+            openEditPM, submitEditPM, addEditPMCheckItem, removeEditPMCheckItem,
+            // WO Detail Photo Upload
+            handleWoDetailFiles, removeWoDetailFile, uploadWoDetailPhotos,
             // QR Codes
             showEquipQR, printQRCode,
-            // Bulk Actions
-            updateBulkSelection, bulkDelete, bulkClearSelection,
             // Audit Trail
             loadAuditTrail, filterAuditTrail
         ];
