@@ -4312,6 +4312,10 @@
                     var r = await supabaseClient.from('parts_usage').select('*').eq('work_order_id', woId).order('used_at', { ascending: false });
                     if (r.error) throw r.error;
                     return r.data || [];
+                },
+                delete: async function(id) {
+                    var r = await supabaseClient.from('parts_usage').delete().eq('id', id);
+                    if (r.error) throw r.error;
                 }
             },
             // --- Audit Log ---
@@ -6059,9 +6063,12 @@
                         var match = partsData.find(function(p) { return p.id === u.part_id; });
                         partName = match ? match.name : 'Unknown Part';
                     }
-                    html += '<div style="display:flex;justify-content:space-between;padding:4px 8px;background:var(--gray-100);border-radius:4px;font-size:0.85rem;">' +
+                    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--gray-100);border-radius:4px;font-size:0.85rem;">' +
                         '<span>' + escHtml(partName) + '</span>' +
-                        '<span style="font-weight:600;">x' + (u.quantity_used || 1) + '</span>' +
+                        '<div style="display:flex;align-items:center;gap:0.5rem;">' +
+                            '<span style="font-weight:600;">x' + (u.quantity_used || 1) + '</span>' +
+                            '<button type="button" onclick="deletePartUsage(\'' + u.id + '\',\'' + (u.part_id || '') + '\',' + (u.quantity_used || 1) + ')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1rem;padding:0 4px;" title="Return to stores">&times;</button>' +
+                        '</div>' +
                         '</div>';
                 });
                 html += '</div>';
@@ -6117,6 +6124,31 @@
                 showToast(qty + 'x ' + part.name + ' recorded.', 'success');
             } catch (err) {
                 showToast('Failed to record part usage: ' + err.message, 'error');
+            }
+        }
+
+        async function deletePartUsage(usageId, partId, qtyUsed) {
+            if (!confirm('Remove this part and return ' + qtyUsed + ' unit(s) to stores?')) return;
+            try {
+                await CraderoAPI.partsUsage.delete(usageId);
+
+                // Restore stock
+                if (partId) {
+                    var part = partsData.find(function(p) { return p.id === partId; });
+                    if (part) {
+                        var newQty = part.qty + qtyUsed;
+                        await CraderoAPI.parts.update(partId, { quantity_in_stock: newQty });
+                        part.qty = newQty;
+                        logAudit('update', 'part', partId, { action: 'return_to_stores', quantityReturned: qtyUsed, workOrderId: currentDetailWoId });
+                    }
+                }
+
+                populateWoPartsDropdown();
+                loadWoPartsUsage(currentDetailWoId);
+                renderParts();
+                showToast(qtyUsed + ' unit(s) returned to stores.', 'success');
+            } catch (err) {
+                showToast('Failed to remove part usage: ' + err.message, 'error');
             }
         }
 
@@ -9190,7 +9222,7 @@
             // Dark Mode
             toggleDarkMode,
             // Parts Usage
-            addPartUsage,
+            addPartUsage, deletePartUsage,
             // PM Parts Usage
             addPMPartUsage, removePMPartUsage, populatePMPartsDropdown,
             // PM Raise WO
