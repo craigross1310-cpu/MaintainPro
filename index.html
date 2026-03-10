@@ -2923,6 +2923,17 @@
                         </label>
                         <p style="font-size:0.8rem;color:var(--gray-600);margin-top:0.25rem;">PDF, Word, or image files</p>
                     </div>
+
+                    <div class="form-group pro-only-feature" id="editManualSection">
+                        <label class="form-label">Manufacturer Manuals</label>
+                        <div id="existingManualList" style="margin-bottom:0.75rem;"></div>
+                        <div id="pendingManualList" style="margin-bottom:0.75rem;"></div>
+                        <label style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.6rem 1.2rem;background:var(--gray-100);border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:500;">
+                            📎 Attach Manual
+                            <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple onchange="handleEquipManualFiles(this)" style="display:none;">
+                        </label>
+                        <p style="font-size:0.8rem;color:var(--gray-600);margin-top:0.25rem;">PDF, Word, or image files</p>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -4756,7 +4767,8 @@
                 warrantyExpiry: row.warranty_expiry || '',
                 warrantyProvider: row.warranty_provider || '',
                 warrantyNotes: row.warranty_notes || '',
-                sopUrls: row.sop_urls || []
+                sopUrls: row.sop_urls || [],
+                manualUrls: row.manual_urls || []
             };
         }
         function mapEquipToDb(eq) {
@@ -4773,6 +4785,7 @@
             if (eq.warrantyProvider !== undefined) obj.warranty_provider = eq.warrantyProvider;
             if (eq.warrantyNotes !== undefined) obj.warranty_notes = eq.warrantyNotes;
             if (eq.sopUrls !== undefined) obj.sop_urls = eq.sopUrls;
+            if (eq.manualUrls !== undefined) obj.manual_urls = eq.manualUrls;
             return obj;
         }
         function mapPartFromDb(row) {
@@ -6602,6 +6615,19 @@
                     }).join('') +
                     '</div></div>';
             }
+            // Add Manufacturer Manuals section (Pro only)
+            if (hasAccess('analytics') && eq.manualUrls && eq.manualUrls.length > 0) {
+                document.getElementById('equipHistoryContent').innerHTML +=
+                    '<div class="form-group pro-only-feature"><label class="form-label" style="color:var(--primary);font-weight:700;">Manufacturer Manuals</label>' +
+                    '<div style="display:flex;flex-direction:column;gap:0.5rem;">' +
+                    eq.manualUrls.map(function(m) {
+                        return '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">' +
+                            '<span style="font-weight:600;">📘 ' + escHtml(m.name) + '</span>' +
+                            '<a href="' + escHtml(m.url) + '" target="_blank" class="btn btn-primary btn-small" style="min-height:28px;">View / Download</a>' +
+                            '</div>';
+                    }).join('') +
+                    '</div></div>';
+            }
             openModal('equipmentHistoryModal');
         }
 
@@ -6661,6 +6687,62 @@
             }
         }
 
+        // ── Manufacturer Manual Management ──
+        var equipManualFiles = [];
+
+        function handleEquipManualFiles(input) {
+            var files = Array.from(input.files);
+            files.forEach(function(f) {
+                if (f.size > 20 * 1024 * 1024) { showToast('File "' + f.name + '" exceeds 20MB limit.', 'error'); return; }
+                equipManualFiles.push(f);
+            });
+            input.value = '';
+            renderPendingManuals();
+        }
+
+        function removeEquipManualFile(index) {
+            equipManualFiles.splice(index, 1);
+            renderPendingManuals();
+        }
+
+        function renderPendingManuals() {
+            var container = document.getElementById('pendingManualList');
+            if (!container) return;
+            if (equipManualFiles.length === 0) { container.innerHTML = ''; return; }
+            container.innerHTML = equipManualFiles.map(function(f, i) {
+                return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;margin-bottom:0.25rem;">' +
+                    '<span style="flex:1;font-size:0.85rem;">📘 ' + escHtml(f.name) + '</span>' +
+                    '<button type="button" class="btn btn-danger btn-small" style="min-height:28px;padding:0 0.5rem;" onclick="removeEquipManualFile(' + i + ')">&times;</button>' +
+                    '</div>';
+            }).join('');
+        }
+
+        function renderExistingManuals(manualUrls) {
+            var container = document.getElementById('existingManualList');
+            if (!container) return;
+            if (!manualUrls || manualUrls.length === 0) { container.innerHTML = ''; return; }
+            container.innerHTML = manualUrls.map(function(m, i) {
+                return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;margin-bottom:0.25rem;">' +
+                    '<span style="flex:1;font-size:0.85rem;">📘 ' + escHtml(m.name) + '</span>' +
+                    '<a href="' + escHtml(m.url) + '" target="_blank" class="btn btn-secondary btn-small" style="min-height:28px;padding:0 0.5rem;">View</a>' +
+                    '<button type="button" class="btn btn-danger btn-small" style="min-height:28px;padding:0 0.5rem;" onclick="removeExistingManual(' + i + ')">&times;</button>' +
+                    '</div>';
+            }).join('');
+        }
+
+        async function removeExistingManual(index) {
+            var eq = equipmentList.find(function(e) { return e.id === currentEditEquipId; });
+            if (!eq || !eq.manualUrls) return;
+            eq.manualUrls.splice(index, 1);
+            try {
+                await CraderoAPI.equipment.update(eq.id, { manual_urls: eq.manualUrls });
+                renderExistingManuals(eq.manualUrls);
+                showToast('Manual removed.', 'info');
+            } catch (e) {
+                showToast('Failed to remove manual.', 'error');
+            }
+        }
+
         function openEquipmentEdit(equipId) {
             const eq = equipmentList.find(e => e.id === equipId);
             if (!eq) return;
@@ -6677,8 +6759,11 @@
             document.getElementById('editWarrantyProvider').value = eq.warrantyProvider || '';
             document.getElementById('editWarrantyNotes').value    = eq.warrantyNotes || '';
             equipSopFiles = [];
+            equipManualFiles = [];
             renderPendingSops();
             renderExistingSops(eq.sopUrls || []);
+            renderPendingManuals();
+            renderExistingManuals(eq.manualUrls || []);
             openModal('equipmentEditModal');
         }
 
@@ -6711,6 +6796,21 @@
                     }
                     eq.sopUrls = existingSops;
                     equipSopFiles = [];
+                }
+                // Upload any pending manual files
+                if (equipManualFiles.length > 0) {
+                    var existingManuals = eq.manualUrls || [];
+                    for (var mi = 0; mi < equipManualFiles.length; mi++) {
+                        var manualFile = equipManualFiles[mi];
+                        var mSafeName = manualFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                        var manualPath = eq.id + '/' + Date.now() + '_' + mSafeName;
+                        var mUpResult = await supabaseClient.storage.from('equipment-manuals').upload(manualPath, manualFile);
+                        if (mUpResult.error) { console.error('[Cradero] Manual upload error:', mUpResult.error); continue; }
+                        var mPubUrl = supabaseClient.storage.from('equipment-manuals').getPublicUrl(manualPath);
+                        existingManuals.push({ name: manualFile.name, url: mPubUrl.data.publicUrl });
+                    }
+                    eq.manualUrls = existingManuals;
+                    equipManualFiles = [];
                 }
                 await CraderoAPI.equipment.update(eq.id, mapEquipToDb(eq));
                 renderEquipment();
@@ -9319,7 +9419,9 @@
             // Audit Trail
             loadAuditTrail, filterAuditTrail,
             // SOP Documents
-            handleEquipSopFiles, removeEquipSopFile, removeExistingSop
+            handleEquipSopFiles, removeEquipSopFile, removeExistingSop,
+            // Manufacturer Manuals
+            handleEquipManualFiles, removeEquipManualFile, removeExistingManual
         ];
         _expose.forEach(function(fn) { window[fn.name] = fn; });
 
