@@ -6608,30 +6608,34 @@
                     }).join('') + '</div></div>';
             }
             // Add SOPs section (Pro only)
-            if (hasAccess('analytics') && eq.sopUrls && eq.sopUrls.length > 0) {
+            if (hasAccess('analytics')) {
+                var sopList = Array.isArray(eq.sopUrls) ? eq.sopUrls : [];
+                var sopContent = sopList.length > 0
+                    ? '<div style="display:flex;flex-direction:column;gap:0.5rem;">' +
+                      sopList.map(function(sop) {
+                          return '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">' +
+                              '<span style="font-weight:600;">📄 ' + escHtml(sop.name) + '</span>' +
+                              '<a href="' + escHtml(sop.url) + '" target="_blank" class="btn btn-primary btn-small" style="min-height:28px;">View / Download</a>' +
+                              '</div>';
+                      }).join('') + '</div>'
+                    : '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;color:var(--gray-600);font-style:italic;">No SOPs attached to this equipment.</div>';
                 document.getElementById('equipHistoryContent').innerHTML +=
-                    '<div class="form-group pro-only-feature"><label class="form-label" style="color:var(--primary);font-weight:700;">Standard Operating Procedures</label>' +
-                    '<div style="display:flex;flex-direction:column;gap:0.5rem;">' +
-                    eq.sopUrls.map(function(sop) {
-                        return '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">' +
-                            '<span style="font-weight:600;">📄 ' + escHtml(sop.name) + '</span>' +
-                            '<a href="' + escHtml(sop.url) + '" target="_blank" class="btn btn-primary btn-small" style="min-height:28px;">View / Download</a>' +
-                            '</div>';
-                    }).join('') +
-                    '</div></div>';
+                    '<div class="form-group pro-only-feature"><label class="form-label" style="color:var(--primary);font-weight:700;">Standard Operating Procedures</label>' + sopContent + '</div>';
             }
             // Add Manufacturer Manuals section (Pro only)
-            if (hasAccess('analytics') && eq.manualUrls && eq.manualUrls.length > 0) {
+            if (hasAccess('analytics')) {
+                var manualList = Array.isArray(eq.manualUrls) ? eq.manualUrls : [];
+                var manualContent = manualList.length > 0
+                    ? '<div style="display:flex;flex-direction:column;gap:0.5rem;">' +
+                      manualList.map(function(m) {
+                          return '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">' +
+                              '<span style="font-weight:600;">📘 ' + escHtml(m.name) + '</span>' +
+                              '<a href="' + escHtml(m.url) + '" target="_blank" class="btn btn-primary btn-small" style="min-height:28px;">View / Download</a>' +
+                              '</div>';
+                      }).join('') + '</div>'
+                    : '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;color:var(--gray-600);font-style:italic;">No manufacturer manuals attached to this equipment.</div>';
                 document.getElementById('equipHistoryContent').innerHTML +=
-                    '<div class="form-group pro-only-feature"><label class="form-label" style="color:var(--primary);font-weight:700;">Manufacturer Manuals</label>' +
-                    '<div style="display:flex;flex-direction:column;gap:0.5rem;">' +
-                    eq.manualUrls.map(function(m) {
-                        return '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">' +
-                            '<span style="font-weight:600;">📘 ' + escHtml(m.name) + '</span>' +
-                            '<a href="' + escHtml(m.url) + '" target="_blank" class="btn btn-primary btn-small" style="min-height:28px;">View / Download</a>' +
-                            '</div>';
-                    }).join('') +
-                    '</div></div>';
+                    '<div class="form-group pro-only-feature"><label class="form-label" style="color:var(--primary);font-weight:700;">Manufacturer Manuals</label>' + manualContent + '</div>';
             }
             openModal('equipmentHistoryModal');
         }
