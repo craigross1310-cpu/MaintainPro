@@ -2213,7 +2213,6 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Audit Trail</h2>
-                    <button class="btn btn-secondary" onclick="loadAuditTrail()">Refresh</button>
                 </div>
                 <div class="filter-bar" style="margin-bottom:1rem;">
                     <div class="form-group">
@@ -3958,11 +3957,26 @@
                 var entity = document.getElementById('auditFilterEntity');
                 var from = document.getElementById('auditFilterFrom');
                 var to = document.getElementById('auditFilterTo');
-                if (action && action.value) filters.action = action.value;
+                var actionVal = action ? action.value : '';
+                if (actionVal && actionVal !== 'complete') filters.action = actionVal;
                 if (entity && entity.value) filters.entityType = entity.value;
                 if (from && from.value) filters.from = from.value;
                 if (to && to.value) filters.to = to.value;
-                auditTrailData = await CraderoAPI.auditLog.list(filters);
+                // For "complete" filter, fetch both 'complete' and 'update' actions then filter client-side
+                if (actionVal === 'complete') {
+                    filters.action = 'complete';
+                    var completeData = await CraderoAPI.auditLog.list(filters);
+                    filters.action = 'update';
+                    var updateData = await CraderoAPI.auditLog.list(filters);
+                    var completedUpdates = updateData.filter(function(r) {
+                        var d = typeof r.details === 'string' ? JSON.parse(r.details) : r.details;
+                        return d && d.status === 'completed';
+                    });
+                    auditTrailData = completeData.concat(completedUpdates);
+                    auditTrailData.sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+                } else {
+                    auditTrailData = await CraderoAPI.auditLog.list(filters);
+                }
                 renderAuditTrail();
             } catch (err) {
                 console.error('[Cradero] Failed to load audit trail:', err);
