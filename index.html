@@ -1745,7 +1745,7 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Equipment Assets</h2>
-                    <button class="btn btn-primary" onclick="openModal('equipmentModal')">+ Add Equipment</button>
+                    <button class="btn btn-primary" id="addEquipmentBtn" onclick="openModal('equipmentModal')">+ Add Equipment</button>
                 </div>
 
                 <div class="search-bar">
@@ -4402,6 +4402,11 @@
             console.log('[Cradero] showApp — tier:', currentUserTier, 'role:', role, 'name:', currentUserName);
             resetSessionTimer();
             applyTierRestrictions();
+            // Hide Add Equipment button for engineers
+            if (role !== 'admin' && role !== 'manager') {
+                var addEquipBtn = document.getElementById('addEquipmentBtn');
+                if (addEquipBtn) addEquipBtn.style.display = 'none';
+            }
             populateEngineerDropdowns();
             populateEquipmentDropdowns();
             // Set engineer dashboard dropdown to current user's name if it matches
@@ -5060,10 +5065,10 @@
                         })() : ''}
                     </div>
                     <div class="equipment-actions">
-                        <button class="btn btn-primary btn-small" onclick="openEquipmentHistory('${eq.id}')">View History</button>
-                        <button class="btn btn-secondary btn-small" onclick="openEquipmentEdit('${eq.id}')">Edit</button>
+                        <button class="btn btn-primary btn-small" onclick="openEquipmentHistory('${eq.id}')">View</button>
+                        ${(currentUserRole === 'admin' || currentUserRole === 'manager') ? '<button class="btn btn-secondary btn-small" onclick="openEquipmentEdit(\'' + eq.id + '\')">Edit</button>' : ''}
                         ${hasAccess('analytics') ? '<button class="btn btn-secondary btn-small pro-only-feature" onclick="showEquipQR(\'' + eq.id + '\')">QR Code</button>' : ''}
-                        <button class="btn btn-danger btn-small" onclick="deleteEquipment('${eq.id}')">Delete</button>
+                        ${(currentUserRole === 'admin' || currentUserRole === 'manager') ? '<button class="btn btn-danger btn-small" onclick="deleteEquipment(\'' + eq.id + '\')">Delete</button>' : ''}
                     </div>
                 </div>`;
             }).join('');
