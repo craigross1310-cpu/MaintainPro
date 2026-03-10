@@ -6036,7 +6036,7 @@
                 await CraderoAPI.workOrders.update(wo.id, mapWoToDb(wo));
                 renderWorkOrders();
                 if (typeof renderEngineerDashboard === 'function') renderEngineerDashboard();
-                logAudit('update', 'work_order', wo.id, { status: wo.status, assignedTo: wo.assignedTo });
+                logAudit(wo.status === 'completed' ? 'complete' : 'update', 'work_order', wo.id, { status: wo.status, assignedTo: wo.assignedTo });
                 closeModal('workOrderDetailModal');
                 refreshDashboards();
                 showToast('Work order updated!', 'success');
