@@ -9514,7 +9514,9 @@
                     linkedWoId = woCreated.id;
                 }
 
+                var eqMatch = equipmentList.find(function(e) { return e.name === machine; });
                 var brDbRow = {
+                    equipment_id: eqMatch ? eqMatch.id : null,
                     equipment_name: machine, title: fault,
                     description: fault, severity: 'high', status: status,
                     root_cause: root,
