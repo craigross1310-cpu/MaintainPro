@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.97.0/dist/umd/supabase.min.js" integrity="sha384-1+ItoWbWcmVSm+Y+dJaUt4SEWNA21/jxef+Z0TSHHVy/dEUxEUEnZ1bHn6GT5hj+" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" crossorigin="anonymous"></script>
     <style>
         :root {
             --primary: #0066FF;
@@ -1287,8 +1288,37 @@
             .header-actions .btn { font-size: 0.85rem; padding: 0.5rem 1rem; }
         }
 
+        /* ── Hamburger Menu ── */
+        .hamburger-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            min-width: 44px;
+            min-height: 44px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .hamburger-btn:hover { background: rgba(255,255,255,0.15); }
+        .nav-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .nav-overlay.active { display: block; opacity: 1; }
+
         /* ── Mobile ── */
         @media (max-width: 768px) {
+            .hamburger-btn { display: flex; }
             .container { padding: 0.75rem; }
             .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
             .stat-card { padding: 0.75rem; }
@@ -1307,10 +1337,40 @@
             .logo span:last-child { display: none; }
             .user-email-display { display: none; }
 
-            /* Scrollable nav tabs */
-            .nav-tabs { gap: 0; margin-bottom: 1rem; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-            .nav-tabs::-webkit-scrollbar { display: none; }
-            .nav-tab { padding: 0.7rem 1rem; font-size: 0.85rem; min-height: 44px; }
+            /* Slide-out nav drawer */
+            .nav-tabs {
+                position: fixed;
+                top: 0;
+                left: -280px;
+                width: 280px;
+                height: 100vh;
+                background: white;
+                flex-direction: column;
+                gap: 0;
+                margin-bottom: 0;
+                padding: 1rem 0;
+                z-index: 1000;
+                overflow-y: auto;
+                box-shadow: 2px 0 12px rgba(0,0,0,0.15);
+                transition: left 0.3s ease;
+                border-bottom: none;
+            }
+            [data-theme="dark"] .nav-tabs { background: #1a1a1a; }
+            .nav-tabs.nav-open { left: 0; }
+            .nav-tab {
+                padding: 0.85rem 1.25rem;
+                font-size: 0.95rem;
+                min-height: 44px;
+                text-align: left;
+                border-bottom: 1px solid var(--gray-200);
+                border-left: 3px solid transparent;
+                white-space: normal;
+            }
+            .nav-tab.active {
+                border-bottom: 1px solid var(--gray-200);
+                border-left-color: var(--primary);
+                background: rgba(25,118,210,0.06);
+            }
 
             /* Full-screen modals on mobile */
             .modal { width: 100%; max-width: 100%; max-height: 100vh; border-radius: 0; }
@@ -1608,9 +1668,13 @@
     <!-- App Content (hidden until authenticated) -->
     <div id="appContent" style="display:none;">
 
+    <!-- Mobile Nav Overlay -->
+    <div class="nav-overlay" id="navOverlay" onclick="toggleMobileNav()"></div>
+
     <!-- Header -->
     <header class="header">
         <div class="header-content">
+            <button class="hamburger-btn" onclick="toggleMobileNav()" aria-label="Open navigation menu">&#9776;</button>
             <div class="logo">
                 <div class="logo-icon"><svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M30 9 A16.5 16.5 0 1 0 30 39" stroke="white" stroke-width="5.5" stroke-linecap="round" fill="none"/><path d="M28.5 14.5 A10.5 10.5 0 1 0 28.5 33.5" stroke="white" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.35"/><path d="M22 20.5 L25.5 24 L22 27.5 L18.5 24 Z" stroke="white" stroke-width="1.5" fill="white" fill-opacity="0.15"/><circle cx="22" cy="24" r="1" fill="white"/><line x1="32" y1="8.5" x2="35.5" y2="6.5" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="32" y1="39.5" x2="35.5" y2="41.5" stroke="white" stroke-width="2" stroke-linecap="round"/></svg></div>
                 <span>Cradero</span>
@@ -1619,6 +1683,9 @@
                 <span id="offlineIndicator" style="display:none;background:#FF3D00;color:white;padding:4px 12px;border-radius:6px;font-size:0.75rem;font-weight:600;letter-spacing:0.5px;">OFFLINE</span>
                 <button class="notification-bell pro-only-feature" onclick="toggleDarkMode()" id="darkModeToggle" title="Toggle Dark Mode" style="margin-right:4px;">
                     🌙
+                </button>
+                <button class="notification-bell" onclick="openQRScanner()" title="Scan Equipment QR Code" style="margin-right:4px;">
+                    📷
                 </button>
                 <button class="notification-bell" onclick="toggleNotifications()">
                     🔔
@@ -2161,6 +2228,16 @@
                     </select>
                 </div>
 
+                <!-- Today's Summary -->
+                <div id="myTasksSummary" style="display:none;margin-bottom:1.5rem;padding:1rem;background:linear-gradient(135deg,var(--primary),#1565C0);border-radius:12px;color:white;">
+                    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center;">
+                        <div style="text-align:center;"><div style="font-size:1.5rem;font-weight:700;" id="myTasksTodayDue">0</div><div style="font-size:0.75rem;opacity:0.85;">Due Today</div></div>
+                        <div style="text-align:center;"><div style="font-size:1.5rem;font-weight:700;color:#FF8A80;" id="myTasksOverdue">0</div><div style="font-size:0.75rem;opacity:0.85;">Overdue</div></div>
+                        <div style="text-align:center;"><div style="font-size:1.5rem;font-weight:700;color:#B9F6CA;" id="myTasksCompleted">0</div><div style="font-size:0.75rem;opacity:0.85;">Completed Today</div></div>
+                        <div style="flex:1;text-align:right;font-size:0.85rem;opacity:0.9;" id="myTasksProgress"></div>
+                    </div>
+                </div>
+
                 <div style="margin-bottom:1.5rem;">
                     <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.75rem;color:var(--primary);">Work Orders</h3>
                     <div id="myTasksWOList"></div>
@@ -2269,6 +2346,33 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('qrCodeModal')">Close</button>
                 <button class="btn btn-primary" onclick="printQRCode()">Print</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Scanner Modal -->
+    <div id="qrScannerModal" class="modal-overlay">
+        <div class="modal" style="max-width:450px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Scan Equipment QR Code</h2>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <div id="qrScannerContainer" style="position:relative;width:100%;max-width:350px;margin:0 auto;">
+                    <video id="qrVideo" style="width:100%;border-radius:8px;background:#000;" playsinline></video>
+                    <canvas id="qrCanvas" style="display:none;"></canvas>
+                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;height:200px;border:2px solid rgba(0,102,255,0.6);border-radius:12px;pointer-events:none;"></div>
+                </div>
+                <p id="qrScanStatus" style="margin-top:0.75rem;color:var(--gray-600);font-size:0.85rem;">Point your camera at a QR code...</p>
+                <div style="margin-top:1rem;border-top:1px solid var(--gray-200);padding-top:1rem;">
+                    <p style="font-size:0.8rem;color:var(--gray-500);margin-bottom:0.5rem;">Or enter equipment ID manually:</p>
+                    <div style="display:flex;gap:0.5rem;">
+                        <input type="text" class="form-input" id="qrManualInput" placeholder="e.g., CRADERO:EQUIP:abc123">
+                        <button class="btn btn-primary btn-small" onclick="manualQRLookup()">Look Up</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeQRScanner()">Close</button>
             </div>
         </div>
     </div>
@@ -2760,10 +2864,13 @@
                         <label class="form-label" style="font-weight:700;">Parts Used</label>
                         <div id="woPartsUsedList" style="margin-bottom:0.5rem;"></div>
                         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end;">
-                            <select class="form-select" id="woPartSelect" style="flex:2;min-width:150px;">
-                                <option value="">Select part...</option>
-                            </select>
-                            <input type="number" class="form-input" id="woPartQty" placeholder="Qty" min="1" value="1" style="flex:0 0 80px;">
+                            <div style="flex:2;min-width:150px;position:relative;">
+                                <input type="text" class="form-input" id="woPartSearchInput" placeholder="Search parts by name or number..." autocomplete="off" oninput="filterPartsDropdown()" onfocus="filterPartsDropdown()">
+                                <input type="hidden" id="woPartSelect" value="">
+                                <div id="woPartDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid var(--gray-300);border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+                                <div id="woPartStockWarning" style="display:none;font-size:0.75rem;color:var(--warning);margin-top:2px;font-weight:600;"></div>
+                            </div>
+                            <input type="number" class="form-input" id="woPartQty" placeholder="Qty" min="1" value="1" style="flex:0 0 80px;" onchange="checkPartStockWarning()">
                             <button type="button" class="btn btn-primary btn-small" onclick="addPartUsage()">+ Add</button>
                         </div>
                     </div>
@@ -3930,6 +4037,120 @@
             win.print();
         }
 
+
+        // ─────────────────────────────────────────────────────────────────────
+        // QR SCANNER
+        // ─────────────────────────────────────────────────────────────────────
+        var qrScannerStream = null;
+        var qrScannerAnimId = null;
+
+        function openQRScanner() {
+            var statusEl = document.getElementById('qrScanStatus');
+            if (statusEl) statusEl.textContent = 'Requesting camera access...';
+            var manualInput = document.getElementById('qrManualInput');
+            if (manualInput) manualInput.value = '';
+            openModal('qrScannerModal');
+
+            var video = document.getElementById('qrVideo');
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                if (statusEl) statusEl.textContent = 'Camera not available. Use manual entry below.';
+                return;
+            }
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(function(stream) {
+                qrScannerStream = stream;
+                video.srcObject = stream;
+                video.play();
+                if (statusEl) statusEl.textContent = 'Point your camera at a QR code...';
+                scanQRFrame();
+            })
+            .catch(function(err) {
+                console.error('[Cradero] Camera access error:', err);
+                if (statusEl) statusEl.textContent = 'Camera access denied. Use manual entry below.';
+            });
+        }
+
+        function scanQRFrame() {
+            var video = document.getElementById('qrVideo');
+            var canvas = document.getElementById('qrCanvas');
+            if (!video || !canvas || video.readyState < 2) {
+                qrScannerAnimId = requestAnimationFrame(scanQRFrame);
+                return;
+            }
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            if (typeof jsQR === 'function') {
+                var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+                if (code && code.data) {
+                    handleQRResult(code.data);
+                    return;
+                }
+            }
+            qrScannerAnimId = requestAnimationFrame(scanQRFrame);
+        }
+
+        function handleQRResult(data) {
+            var statusEl = document.getElementById('qrScanStatus');
+            // Expected format: CRADERO:EQUIP:<uuid>
+            var match = data.match(/CRADERO:EQUIP:(.+)/);
+            if (match) {
+                var equipId = match[1];
+                var eq = equipmentList.find(function(e) { return e.id === equipId; });
+                if (eq) {
+                    if (statusEl) statusEl.textContent = 'Found: ' + eq.name;
+                    closeQRScanner();
+                    openEquipmentHistory(equipId);
+                    showToast('Equipment found: ' + eq.name, 'success');
+                    return;
+                }
+            }
+            // Try matching by equipment code or name
+            var eqByCode = equipmentList.find(function(e) { return e.equipId === data || e.name === data; });
+            if (eqByCode) {
+                if (statusEl) statusEl.textContent = 'Found: ' + eqByCode.name;
+                closeQRScanner();
+                openEquipmentHistory(eqByCode.id);
+                showToast('Equipment found: ' + eqByCode.name, 'success');
+                return;
+            }
+            if (statusEl) statusEl.textContent = 'QR code not recognized. Try again or use manual entry.';
+            // Continue scanning
+            qrScannerAnimId = requestAnimationFrame(scanQRFrame);
+        }
+
+        function manualQRLookup() {
+            var input = document.getElementById('qrManualInput');
+            if (!input || !input.value.trim()) { showToast('Please enter an equipment ID or code.', 'error'); return; }
+            var query = input.value.trim();
+            // Try CRADERO:EQUIP: format
+            var match = query.match(/CRADERO:EQUIP:(.+)/);
+            var searchId = match ? match[1] : query;
+            var eq = equipmentList.find(function(e) {
+                return e.id === searchId || e.equipId === searchId || e.name.toLowerCase() === searchId.toLowerCase();
+            });
+            if (eq) {
+                closeQRScanner();
+                openEquipmentHistory(eq.id);
+                showToast('Equipment found: ' + eq.name, 'success');
+            } else {
+                showToast('No equipment found matching "' + query + '".', 'error');
+            }
+        }
+
+        function closeQRScanner() {
+            if (qrScannerAnimId) { cancelAnimationFrame(qrScannerAnimId); qrScannerAnimId = null; }
+            if (qrScannerStream) {
+                qrScannerStream.getTracks().forEach(function(track) { track.stop(); });
+                qrScannerStream = null;
+            }
+            var video = document.getElementById('qrVideo');
+            if (video) video.srcObject = null;
+            closeModal('qrScannerModal');
+        }
 
         function canDelete() {
             if (currentUserRole === 'admin' || currentUserRole === 'manager') return true;
@@ -5334,29 +5555,78 @@
             var select = document.getElementById('myTasksEngineerSelect');
             if (!select) return;
             var engineer = select.value;
+            var today = new Date().toISOString().slice(0, 10);
 
-            // Work Orders assigned to this engineer
+            // Summary stats
+            var summaryEl = document.getElementById('myTasksSummary');
+            if (summaryEl) {
+                if (engineer) {
+                    summaryEl.style.display = 'block';
+                    var completedToday = workOrdersData.filter(function(wo) { return wo.assignedTo === engineer && wo.status === 'completed' && wo.created && wo.created.indexOf(new Date().toLocaleDateString('en-GB', { month:'short', day:'numeric', year:'numeric' }).split(',')[0]) !== -1; }).length;
+                    var allMyWOs = workOrdersData.filter(function(wo) { return wo.assignedTo === engineer && wo.status !== 'completed'; });
+                    var overduePMs = pmData.filter(function(pm) { return pm.assignedTo === engineer && pm.dueStatus === 'overdue'; }).length;
+                    var dueSoonPMs = pmData.filter(function(pm) { return pm.assignedTo === engineer && (pm.dueStatus === 'overdue' || pm.dueStatus === 'due-soon'); }).length;
+                    var totalOpen = allMyWOs.length + pmData.filter(function(pm) { return pm.assignedTo === engineer; }).length;
+
+                    document.getElementById('myTasksTodayDue').textContent = dueSoonPMs;
+                    document.getElementById('myTasksOverdue').textContent = overduePMs + allMyWOs.filter(function(wo) { return wo.priority === 'high'; }).length;
+                    document.getElementById('myTasksCompleted').textContent = completedToday;
+                    var progressEl = document.getElementById('myTasksProgress');
+                    if (progressEl) progressEl.textContent = totalOpen > 0 ? totalOpen + ' task' + (totalOpen !== 1 ? 's' : '') + ' remaining' : 'All caught up!';
+                } else {
+                    summaryEl.style.display = 'none';
+                }
+            }
+
+            // Work Orders assigned to this engineer — sorted by priority
             var woContainer = document.getElementById('myTasksWOList');
             var myWOs = workOrdersData.filter(function(wo) { return wo.assignedTo === engineer && wo.status !== 'completed'; });
+            // Sort: high priority first, then medium, then low; within same priority, in-progress before open
+            var priorityOrder = { high: 0, medium: 1, low: 2 };
+            var statusOrder = { 'in-progress': 0, 'open': 1, 'on-hold': 2 };
+            myWOs.sort(function(a, b) {
+                var pa = priorityOrder[a.priority] !== undefined ? priorityOrder[a.priority] : 1;
+                var pb = priorityOrder[b.priority] !== undefined ? priorityOrder[b.priority] : 1;
+                if (pa !== pb) return pa - pb;
+                var sa = statusOrder[a.status] !== undefined ? statusOrder[a.status] : 1;
+                var sb = statusOrder[b.status] !== undefined ? statusOrder[b.status] : 1;
+                return sa - sb;
+            });
+
             if (myWOs.length === 0) {
                 woContainer.innerHTML = '<div style="padding:1rem;background:var(--gray-100);border-radius:8px;color:var(--gray-500);">No open work orders assigned.</div>';
             } else {
                 woContainer.innerHTML = myWOs.map(function(wo) {
                     var statusLabel = wo.status === 'in-progress' ? 'In Progress' : wo.status === 'on-hold' ? 'On Hold' : 'Open';
                     var priorityColor = wo.priority === 'high' ? 'var(--danger)' : wo.priority === 'medium' ? 'var(--warning)' : 'var(--success)';
-                    return '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;margin-bottom:0.5rem;border-left:4px solid ' + priorityColor + ';display:flex;justify-content:space-between;align-items:center;">' +
+                    // Look up equipment location
+                    var eqMatch = equipmentList.find(function(e) { return e.name === wo.equipment; });
+                    var locationStr = eqMatch && eqMatch.location ? ' · ' + escHtml(eqMatch.location) : '';
+                    // Show "Start Work" button only for open WOs
+                    var startBtn = wo.status === 'open' ? '<button class="btn btn-primary btn-small" style="font-size:0.75rem;margin-left:0.5rem;white-space:nowrap;" onclick="event.stopPropagation();quickStartWork(\'' + wo.id + '\')">Start Work</button>' : '';
+                    return '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;margin-bottom:0.5rem;border-left:4px solid ' + priorityColor + ';display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="openWorkOrderDetail(\'' + wo.id + '\')">' +
                         '<div>' +
                             '<div style="font-weight:600;">' + escHtml(wo.title) + '</div>' +
-                            '<div style="font-size:0.85rem;color:var(--gray-500);">' + escHtml(wo.woId) + ' · ' + escHtml(wo.equipment) + ' · ' + statusLabel + '</div>' +
+                            '<div style="font-size:0.85rem;color:var(--gray-500);">' + escHtml(wo.woId) + ' · ' + escHtml(wo.equipment) + locationStr + ' · ' + statusLabel + '</div>' +
                         '</div>' +
-                        '<span class="status-badge ' + wo.status + '" style="font-size:0.75rem;">' + wo.priority.toUpperCase() + '</span>' +
+                        '<div style="display:flex;align-items:center;">' +
+                            '<span class="status-badge ' + wo.status + '" style="font-size:0.75rem;">' + wo.priority.toUpperCase() + '</span>' +
+                            startBtn +
+                        '</div>' +
                     '</div>';
                 }).join('');
             }
 
-            // PMs assigned to this engineer
+            // PMs assigned to this engineer — sorted: overdue first, then due-soon, then on-time
             var pmContainer = document.getElementById('myTasksPMList');
             var myPMs = pmData.filter(function(pm) { return pm.assignedTo === engineer; });
+            var dueOrder = { overdue: 0, 'due-soon': 1, 'on-time': 2 };
+            myPMs.sort(function(a, b) {
+                var da = dueOrder[a.dueStatus] !== undefined ? dueOrder[a.dueStatus] : 2;
+                var db = dueOrder[b.dueStatus] !== undefined ? dueOrder[b.dueStatus] : 2;
+                return da - db;
+            });
+
             if (myPMs.length === 0) {
                 pmContainer.innerHTML = '<div style="padding:1rem;background:var(--gray-100);border-radius:8px;color:var(--gray-500);">No PM tasks assigned.</div>';
             } else {
@@ -5364,10 +5634,11 @@
                     var dueBg = pm.dueStatus === 'overdue' ? 'var(--danger)' : pm.dueStatus === 'due-soon' ? 'var(--warning)' : 'var(--primary)';
                     var checkCount = pm.checklist ? pm.checklist.length : 0;
                     var checkBadge = checkCount > 0 ? ' · ' + checkCount + ' checks' : '';
+                    var durationBadge = pm.duration ? ' · ~' + escHtml(String(pm.duration)) + ' min' : '';
                     return '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;margin-bottom:0.5rem;border-left:4px solid ' + dueBg + ';display:flex;justify-content:space-between;align-items:center;">' +
                         '<div>' +
                             '<div style="font-weight:600;">' + escHtml(pm.title) + '</div>' +
-                            '<div style="font-size:0.85rem;color:var(--gray-500);">' + escHtml(pm.equipment) + ' · ' + escHtml(pm.frequency) + checkBadge + '</div>' +
+                            '<div style="font-size:0.85rem;color:var(--gray-500);">' + escHtml(pm.equipment) + ' · ' + escHtml(pm.frequency) + checkBadge + durationBadge + '</div>' +
                         '</div>' +
                         '<div style="text-align:right;">' +
                             '<div style="font-size:0.8rem;font-weight:600;color:' + dueBg + ';">' + escHtml(pm.dueText) + '</div>' +
@@ -5375,6 +5646,26 @@
                         '</div>' +
                     '</div>';
                 }).join('');
+            }
+        }
+
+        async function quickStartWork(woId) {
+            var wo = workOrdersData.find(function(w) { return w.id === woId; });
+            if (!wo || wo.status !== 'open') return;
+            wo.status = 'in-progress';
+            wo.startTime = new Date().toISOString().slice(0, 16);
+            try {
+                await CraderoAPI.workOrders.update(wo.id, mapWoToDb(wo));
+                logAudit('update', 'work_order', wo.id, { status: 'in-progress', action: 'quick_start' });
+                renderWorkOrders();
+                renderEngineerDashboard();
+                refreshDashboards();
+                showToast('Work started on ' + wo.woId + '!', 'success');
+            } catch (e) {
+                console.error('[Cradero] Failed to start work:', e);
+                wo.status = 'open';
+                wo.startTime = '';
+                showToast('Failed to start work. ' + (e.message || ''), 'error');
             }
         }
 
@@ -5797,6 +6088,22 @@
             });
             // Auto-load data for certain tabs
             if (tabName === 'auditTrail') loadAuditTrail();
+            // Close mobile nav if open
+            closeMobileNav();
+        }
+
+        function toggleMobileNav() {
+            var navTabs = document.querySelector('.nav-tabs');
+            var overlay = document.getElementById('navOverlay');
+            if (navTabs) navTabs.classList.toggle('nav-open');
+            if (overlay) overlay.classList.toggle('active');
+        }
+
+        function closeMobileNav() {
+            var navTabs = document.querySelector('.nav-tabs');
+            var overlay = document.getElementById('navOverlay');
+            if (navTabs) navTabs.classList.remove('nav-open');
+            if (overlay) overlay.classList.remove('active');
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -5815,6 +6122,12 @@
             bells.forEach(function(b) { if (b.contains(e.target)) clickedBell = true; });
             if (!clickedBell && !dropdown.contains(e.target)) {
                 dropdown.classList.remove('active');
+            }
+            // Close parts search dropdown if clicking outside
+            var partSearch = document.getElementById('woPartSearchInput');
+            var partDropdown = document.getElementById('woPartDropdown');
+            if (partDropdown && partSearch && !partSearch.contains(e.target) && !partDropdown.contains(e.target)) {
+                partDropdown.style.display = 'none';
             }
         });
 
@@ -5970,7 +6283,20 @@
 
             document.getElementById('woDetailTitle').textContent = wo.title;
             document.getElementById('woDetailId').textContent = wo.woId;
-            document.getElementById('woDetailEquipment').textContent = wo.equipment;
+            // Equipment with location, criticality, and "View Equipment" link
+            var eqMatch = equipmentList.find(function(e) { return e.name === wo.equipment; });
+            var equipHtml = '<span style="font-weight:600;">' + escHtml(wo.equipment) + '</span>';
+            if (eqMatch) {
+                var eqDetails = [];
+                if (eqMatch.location) eqDetails.push(escHtml(eqMatch.location));
+                if (eqMatch.criticality) eqDetails.push('Criticality: ' + escHtml(eqMatch.criticality));
+                if (eqMatch.status) eqDetails.push(escHtml(eqMatch.status));
+                if (eqDetails.length > 0) {
+                    equipHtml += '<div style="font-size:0.8rem;color:var(--gray-500);margin-top:2px;">' + eqDetails.join(' · ') + '</div>';
+                }
+                equipHtml += '<a href="#" onclick="event.preventDefault();openEquipmentHistory(\'' + eqMatch.id + '\')" style="font-size:0.8rem;color:var(--primary);text-decoration:none;font-weight:600;">View Equipment Details →</a>';
+            }
+            document.getElementById('woDetailEquipment').innerHTML = equipHtml;
 
             const priorityColors = { high: ['rgba(255,61,0,0.1)','var(--danger)'], medium: ['rgba(255,179,0,0.1)','var(--warning)'], low: ['rgba(0,200,83,0.1)','var(--success)'] };
             const [bg, col] = priorityColors[wo.priority] || ['var(--gray-200)','var(--dark)'];
@@ -6082,13 +6408,77 @@
         // PARTS USAGE TRACKER
         // ─────────────────────────────────────────────────────────────────────
         function populateWoPartsDropdown() {
-            var sel = document.getElementById('woPartSelect');
-            if (!sel) return;
-            var html = '<option value="">Select part...</option>';
-            partsData.forEach(function(p) {
-                html += '<option value="' + p.id + '">' + escHtml(p.name) + ' (' + p.qty + ' in stock)</option>';
+            // Reset search input and hidden select
+            var searchInput = document.getElementById('woPartSearchInput');
+            var hiddenSelect = document.getElementById('woPartSelect');
+            if (searchInput) searchInput.value = '';
+            if (hiddenSelect) hiddenSelect.value = '';
+            var warning = document.getElementById('woPartStockWarning');
+            if (warning) warning.style.display = 'none';
+        }
+
+        function filterPartsDropdown() {
+            var input = document.getElementById('woPartSearchInput');
+            var dropdown = document.getElementById('woPartDropdown');
+            if (!input || !dropdown) return;
+            var query = input.value.toLowerCase().trim();
+            var filtered = partsData.filter(function(p) {
+                if (!query) return true;
+                return (p.name && p.name.toLowerCase().indexOf(query) !== -1) ||
+                       (p.partNumber && p.partNumber.toLowerCase().indexOf(query) !== -1);
             });
-            sel.innerHTML = html;
+            if (filtered.length === 0) {
+                dropdown.innerHTML = '<div style="padding:0.5rem 0.75rem;color:var(--gray-500);font-size:0.85rem;">No parts found</div>';
+                dropdown.style.display = 'block';
+                return;
+            }
+            dropdown.innerHTML = filtered.map(function(p) {
+                var stockColor = p.qty <= 0 ? 'var(--danger)' : p.qty <= (p.minStock || 0) ? 'var(--warning)' : 'var(--success)';
+                var stockLabel = p.qty <= 0 ? 'OUT OF STOCK' : p.qty + ' in stock';
+                var opacity = p.qty <= 0 ? 'opacity:0.5;' : '';
+                return '<div onclick="selectWoPart(\'' + p.id + '\')" style="padding:0.5rem 0.75rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-100);' + opacity + '" onmouseover="this.style.background=\'var(--gray-100)\'" onmouseout="this.style.background=\'white\'">' +
+                    '<div>' +
+                        '<div style="font-weight:600;font-size:0.85rem;">' + escHtml(p.name) + '</div>' +
+                        '<div style="font-size:0.75rem;color:var(--gray-500);">' + (p.partNumber ? escHtml(p.partNumber) : '') + (p.location ? ' · ' + escHtml(p.location) : '') + '</div>' +
+                    '</div>' +
+                    '<span style="font-size:0.75rem;font-weight:600;color:' + stockColor + ';">' + stockLabel + '</span>' +
+                '</div>';
+            }).join('');
+            dropdown.style.display = 'block';
+        }
+
+        function selectWoPart(partId) {
+            var part = partsData.find(function(p) { return p.id === partId; });
+            if (!part) return;
+            document.getElementById('woPartSelect').value = partId;
+            document.getElementById('woPartSearchInput').value = part.name + (part.partNumber ? ' (' + part.partNumber + ')' : '');
+            document.getElementById('woPartDropdown').style.display = 'none';
+            checkPartStockWarning();
+        }
+
+        function checkPartStockWarning() {
+            var partId = document.getElementById('woPartSelect').value;
+            var qty = parseInt(document.getElementById('woPartQty').value) || 1;
+            var warning = document.getElementById('woPartStockWarning');
+            if (!warning) return;
+            if (!partId) { warning.style.display = 'none'; return; }
+            var part = partsData.find(function(p) { return p.id === partId; });
+            if (!part) { warning.style.display = 'none'; return; }
+            if (part.qty <= 0) {
+                warning.textContent = 'This part is out of stock!';
+                warning.style.color = 'var(--danger)';
+                warning.style.display = 'block';
+            } else if (part.qty < qty) {
+                warning.textContent = 'Only ' + part.qty + ' available — not enough for requested quantity!';
+                warning.style.color = 'var(--danger)';
+                warning.style.display = 'block';
+            } else if ((part.qty - qty) <= (part.minStock || 0)) {
+                warning.textContent = 'Stock will drop below minimum threshold after this usage.';
+                warning.style.color = 'var(--warning)';
+                warning.style.display = 'block';
+            } else {
+                warning.style.display = 'none';
+            }
         }
 
         async function loadWoPartsUsage(woId) {
@@ -6162,7 +6552,10 @@
 
                 // Refresh UI
                 document.getElementById('woPartSelect').value = '';
+                document.getElementById('woPartSearchInput').value = '';
                 document.getElementById('woPartQty').value = '1';
+                var stockWarn = document.getElementById('woPartStockWarning');
+                if (stockWarn) stockWarn.style.display = 'none';
                 populateWoPartsDropdown();
                 loadWoPartsUsage(currentDetailWoId);
                 showToast(qty + 'x ' + part.name + ' recorded.', 'success');
@@ -9407,7 +9800,7 @@
             // Auth
             showAuthSection, handleLogin, handleSignUp, handleLogout,
             // Navigation & Modals
-            switchTab, toggleNotifications, handleNotificationClick, openModal, closeModal,
+            switchTab, toggleNotifications, handleNotificationClick, openModal, closeModal, toggleMobileNav, closeMobileNav,
             // Work Orders
             submitWorkOrder, updateWorkOrder, deleteWorkOrder, openWorkOrderDetail, addWoComment,
             toggleWoFilter, searchWorkOrders, applyWoFilter, clearWoFilter,
@@ -9436,7 +9829,7 @@
             // Work Requests
             submitWorkRequest, filterWorkRequests, clearRequestFilter, approveRequest, declineRequest,
             // Engineer Dashboard
-            renderEngineerDashboard,
+            renderEngineerDashboard, quickStartWork,
             // Daily Activity
             renderActivityLog, renderDailySummary,
             // Files
@@ -9444,7 +9837,7 @@
             // Dark Mode
             toggleDarkMode,
             // Parts Usage
-            addPartUsage, deletePartUsage,
+            addPartUsage, deletePartUsage, filterPartsDropdown, selectWoPart, checkPartStockWarning,
             // PM Parts Usage
             addPMPartUsage, removePMPartUsage, populatePMPartsDropdown,
             // PM Raise WO
@@ -9456,7 +9849,7 @@
             // WO Detail Photo Upload
             handleWoDetailFiles, removeWoDetailFile, uploadWoDetailPhotos,
             // QR Codes
-            showEquipQR, printQRCode,
+            showEquipQR, printQRCode, openQRScanner, closeQRScanner, manualQRLookup,
             // Audit Trail
             loadAuditTrail, filterAuditTrail,
             // SOP Documents
