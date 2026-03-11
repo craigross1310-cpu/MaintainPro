@@ -3939,10 +3939,23 @@
 
         function logAudit(action, entityType, entityId, details) {
             // Fire-and-forget — don't block the UI
-            supabaseClient.from('audit_log').insert({
-                action: action, entity_type: entityType,
-                entity_id: String(entityId), details: details || {}
-            }).then(function() {}).catch(function() {});
+            supabaseClient.auth.getSession().then(function(sessionResult) {
+                var userId = sessionResult.data && sessionResult.data.session ? sessionResult.data.session.user.id : null;
+                var userEmail = sessionResult.data && sessionResult.data.session ? sessionResult.data.session.user.email : null;
+                // Include user info in details so it's always available for display
+                var enrichedDetails = Object.assign({}, details || {});
+                enrichedDetails.user_name = currentUserName || userEmail || 'Unknown';
+                var row = {
+                    action: action, entity_type: entityType,
+                    entity_id: String(entityId), details: enrichedDetails
+                };
+                if (userId) row.user_id = userId;
+                return supabaseClient.from('audit_log').insert(row).select();
+            }).then(function(r) {
+                if (r && r.error) console.error('[Cradero] Audit log insert failed:', r.error.message, r.error);
+            }).catch(function(err) {
+                console.error('[Cradero] Audit log insert error:', err);
+            });
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -3996,6 +4009,7 @@
             var actionIcons = { create: '➕', update: '✏️', delete: '🗑️', complete: '✅' };
             var html = '<table style="width:100%;border-collapse:collapse;"><thead><tr>' +
                 '<th style="text-align:left;padding:8px 12px;border-bottom:2px solid var(--gray-200);font-size:0.85rem;">Date</th>' +
+                '<th style="text-align:left;padding:8px 12px;border-bottom:2px solid var(--gray-200);font-size:0.85rem;">User</th>' +
                 '<th style="text-align:left;padding:8px 12px;border-bottom:2px solid var(--gray-200);font-size:0.85rem;">Action</th>' +
                 '<th style="text-align:left;padding:8px 12px;border-bottom:2px solid var(--gray-200);font-size:0.85rem;">Entity Type</th>' +
                 '<th style="text-align:left;padding:8px 12px;border-bottom:2px solid var(--gray-200);font-size:0.85rem;">Entity ID</th>' +
@@ -4006,12 +4020,15 @@
                 var icon = actionIcons[entry.action] || '📋';
                 var actionLabel = (entry.action || '').charAt(0).toUpperCase() + (entry.action || '').slice(1);
                 var entityLabel = (entry.entity_type || '').replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
-                var detailsStr = '';
-                if (entry.details && typeof entry.details === 'object' && Object.keys(entry.details).length > 0) {
-                    detailsStr = JSON.stringify(entry.details).substring(0, 100);
-                }
+                var details = entry.details && typeof entry.details === 'object' ? entry.details : {};
+                var userName = details.user_name || '—';
+                // Build details string excluding user_name
+                var detailsCopy = Object.assign({}, details);
+                delete detailsCopy.user_name;
+                var detailsStr = Object.keys(detailsCopy).length > 0 ? JSON.stringify(detailsCopy).substring(0, 100) : '';
                 html += '<tr style="border-bottom:1px solid var(--gray-200);">' +
                     '<td style="padding:8px 12px;font-size:0.85rem;white-space:nowrap;">' + escHtml(date) + '</td>' +
+                    '<td style="padding:8px 12px;font-size:0.85rem;">' + escHtml(userName) + '</td>' +
                     '<td style="padding:8px 12px;font-size:0.85rem;">' + icon + ' ' + escHtml(actionLabel) + '</td>' +
                     '<td style="padding:8px 12px;font-size:0.85rem;">' + escHtml(entityLabel) + '</td>' +
                     '<td style="padding:8px 12px;font-size:0.85rem;font-family:monospace;font-size:0.75rem;">' + escHtml(String(entry.entity_id || '').substring(0, 8)) + '</td>' +
@@ -4317,6 +4334,7 @@
                     if (filters && filters.from) q = q.gte('created_at', filters.from);
                     if (filters && filters.to) q = q.lte('created_at', filters.to + 'T23:59:59');
                     var r = await q;
+                    console.log('[Cradero] Audit log query result:', { filters: filters, count: r.data ? r.data.length : 0, error: r.error });
                     if (r.error) throw r.error;
                     return r.data || [];
                 }
