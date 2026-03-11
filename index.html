@@ -9517,11 +9517,15 @@
                 var brDbRow = {
                     equipment_name: machine, title: fault,
                     description: fault, severity: 'high', status: status,
-                    reported_by: engineer || '', root_cause: root,
+                    root_cause: root,
                     resolution: action,
                     downtime_started: dateISO ? dateISO + (time ? 'T' + time : 'T00:00:00') : null,
                     work_order_id: linkedWoId
                 };
+                try {
+                    var sess = await supabaseClient.auth.getSession();
+                    if (sess.data && sess.data.session) brDbRow.reported_by = sess.data.session.user.id;
+                } catch(e) {}
                 var brCreated = await CraderoAPI.breakdowns.create(brDbRow);
                 var mapped = mapBreakdownFromDb(brCreated);
                 mapped.dateISO = dateISO; mapped.time = time;
