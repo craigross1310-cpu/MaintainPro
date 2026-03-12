@@ -1099,6 +1099,54 @@
             justify-content: flex-end;
         }
 
+        /* CSV Import Wizard */
+        .csv-step {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            background: var(--gray-200);
+            color: var(--gray-600);
+        }
+        .csv-step.active {
+            background: var(--primary);
+            color: white;
+        }
+        .csv-step.completed {
+            background: var(--success);
+            color: white;
+        }
+        .csv-mapping-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        .csv-mapping-row .csv-field-label {
+            flex: 1;
+            font-weight: 600;
+        }
+        .csv-mapping-row .csv-field-label .csv-required {
+            color: var(--danger);
+        }
+        .csv-mapping-row select {
+            flex: 1;
+        }
+        .csv-mapping-row .csv-preview-val {
+            flex: 1;
+            color: var(--gray-500);
+            font-size: 0.85rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        #csvPreviewTable { border-collapse: collapse; }
+        #csvPreviewTable th { background: var(--gray-100); padding: 0.5rem; text-align: left; font-size: 0.8rem; }
+        #csvPreviewTable td { padding: 0.5rem; border-bottom: 1px solid var(--gray-200); }
+        #csvPreviewTable td.csv-error { background: rgba(255, 61, 0, 0.08); color: var(--danger); }
+        #csvPreviewTable td.csv-warn { background: rgba(255, 179, 0, 0.08); color: var(--warning); }
+        #csvPreviewTable tr.csv-duplicate { opacity: 0.5; }
+
         /* Search Bar */
         .search-bar {
             position: relative;
@@ -1298,7 +1346,7 @@
             display: none;
             background: none;
             border: none;
-            color: white;
+            color: var(--dark);
             font-size: 1.5rem;
             cursor: pointer;
             padding: 0.5rem;
@@ -1309,7 +1357,7 @@
             border-radius: 8px;
             transition: background 0.2s;
         }
-        .hamburger-btn:hover { background: rgba(255,255,255,0.15); }
+        .hamburger-btn:hover { background: var(--gray-200); }
         .nav-overlay {
             display: none;
             position: fixed;
@@ -1817,7 +1865,10 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Equipment Assets</h2>
-                    <button class="btn btn-primary" id="addEquipmentBtn" onclick="openModal('equipmentModal')">+ Add Equipment</button>
+                    <div style="display:flex;gap:0.5rem;">
+                        <button class="btn btn-secondary" id="importEquipBtn" onclick="openCsvImport('equipment')" style="display:none;">Import CSV</button>
+                        <button class="btn btn-primary" id="addEquipmentBtn" onclick="openModal('equipmentModal')">+ Add Equipment</button>
+                    </div>
                 </div>
 
                 <div class="search-bar">
@@ -1834,7 +1885,10 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Parts Inventory</h2>
-                    <button class="btn btn-primary" onclick="openAddPartModal()">+ Add Part</button>
+                    <div style="display:flex;gap:0.5rem;">
+                        <button class="btn btn-secondary" id="importPartsBtn" onclick="openCsvImport('parts')" style="display:none;">Import CSV</button>
+                        <button class="btn btn-primary" onclick="openAddPartModal()">+ Add Part</button>
+                    </div>
                 </div>
 
                 <div class="search-bar">
@@ -1971,7 +2025,10 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Preventive Maintenance Schedule</h2>
-                    <button class="btn btn-primary" onclick="openModal('addPMModal')">+ Schedule PM</button>
+                    <div style="display:flex;gap:0.5rem;">
+                        <button class="btn btn-secondary" id="importPMBtn" onclick="openCsvImport('pm')" style="display:none;">Import CSV</button>
+                        <button class="btn btn-primary" onclick="openModal('addPMModal')">+ Schedule PM</button>
+                    </div>
                 </div>
 
                 <div class="search-bar">
@@ -3911,6 +3968,78 @@
         </div>
     </div>
 
+    <!-- CSV Import Modal -->
+    <div id="csvImportModal" class="modal-overlay">
+        <div class="modal" style="max-width:900px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Import CSV Data</h2>
+                <div id="csvImportSteps" style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+                    <span class="csv-step active" data-step="1">1. Upload</span>
+                    <span class="csv-step" data-step="2">2. Map Columns</span>
+                    <span class="csv-step" data-step="3">3. Preview</span>
+                    <span class="csv-step" data-step="4">4. Import</span>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div id="csvStep1" class="csv-step-panel">
+                    <div class="form-group">
+                        <label class="form-label">Data Type</label>
+                        <select class="form-select" id="csvImportType" onchange="csvResetAfterTypeChange()">
+                            <option value="equipment">Equipment / Assets</option>
+                            <option value="parts">Parts / Inventory</option>
+                            <option value="pm">PM Schedules</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Select CSV File</label>
+                        <input type="file" class="form-input" id="csvFileInput" accept=".csv,.txt" onchange="csvFileSelected(this)">
+                    </div>
+                    <div id="csvFileInfo" style="display:none;padding:1rem;background:var(--gray-100);border-radius:8px;margin-top:0.5rem;">
+                        <p style="margin:0;"><strong id="csvFileName"></strong></p>
+                        <p style="margin:0.25rem 0 0;color:var(--gray-600);" id="csvFileStats"></p>
+                    </div>
+                    <div style="margin-top:1rem;padding:1rem;background:var(--gray-100);border-radius:8px;">
+                        <p style="margin:0 0 0.5rem;font-weight:600;">CSV Format Tips</p>
+                        <ul style="margin:0;padding-left:1.2rem;color:var(--gray-600);font-size:0.9rem;">
+                            <li>First row must contain column headers</li>
+                            <li>Column names don't need to match exactly — you'll map them in the next step</li>
+                            <li>Most CMMS systems can export data as CSV from their reports or settings</li>
+                        </ul>
+                    </div>
+                </div>
+                <div id="csvStep2" class="csv-step-panel" style="display:none;">
+                    <p style="margin-bottom:1rem;color:var(--gray-600);">Match your CSV columns to Cradero fields. Fields marked <span style="color:var(--danger);">*</span> are required.</p>
+                    <div id="csvColumnMapping" style="display:flex;flex-direction:column;gap:0;"></div>
+                </div>
+                <div id="csvStep3" class="csv-step-panel" style="display:none;">
+                    <div id="csvValidationSummary" style="margin-bottom:1rem;"></div>
+                    <div style="overflow-x:auto;">
+                        <table id="csvPreviewTable" style="width:100%;font-size:0.85rem;">
+                            <thead id="csvPreviewHead"></thead>
+                            <tbody id="csvPreviewBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="csvStep4" class="csv-step-panel" style="display:none;">
+                    <div id="csvImportProgress" style="text-align:center;padding:2rem;">
+                        <p id="csvProgressText" style="font-size:1.1rem;font-weight:600;">Importing...</p>
+                        <div style="background:var(--gray-200);border-radius:8px;height:12px;margin:1rem 0;overflow:hidden;">
+                            <div id="csvProgressBar" style="height:100%;background:var(--primary);width:0%;transition:width 0.3s;border-radius:8px;"></div>
+                        </div>
+                        <p id="csvProgressDetail" style="color:var(--gray-600);font-size:0.9rem;"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="csvBtnCancel" onclick="closeCsvImport()">Cancel</button>
+                <button class="btn btn-secondary" id="csvBtnBack" onclick="csvPrevStep()" style="display:none;">Back</button>
+                <button class="btn btn-primary" id="csvBtnNext" onclick="csvNextStep()" style="display:none;">Next</button>
+                <button class="btn btn-primary" id="csvBtnImport" onclick="csvExecuteImport()" style="display:none;">Import Data</button>
+                <button class="btn btn-primary" id="csvBtnDone" onclick="closeCsvImport()" style="display:none;">Done</button>
+            </div>
+        </div>
+    </div>
+
     </div><!-- end #appContent -->
 
     <script>
@@ -4810,6 +4939,13 @@
             if (role !== 'admin' && role !== 'manager') {
                 var addEquipBtn = document.getElementById('addEquipmentBtn');
                 if (addEquipBtn) addEquipBtn.style.display = 'none';
+            }
+            // Show CSV Import buttons for managers/admins
+            if (role === 'admin' || role === 'manager') {
+                ['importEquipBtn', 'importPartsBtn', 'importPMBtn'].forEach(function(id) {
+                    var btn = document.getElementById(id);
+                    if (btn) btn.style.display = '';
+                });
             }
             populateEngineerDropdowns();
             populateEquipmentDropdowns();
@@ -8680,6 +8816,52 @@
             }).join('');
         }
 
+        // Sync a calendar event for a PM task — creates, updates, or removes as needed
+        async function syncPMCalendarEvent(pmId, title, dueDate, frequency, assignedTo) {
+            var pmTag = 'pm_id:' + pmId;
+            // Find existing calendar event linked to this PM
+            var existingIdx = calendarEvents.findIndex(function(e) { return e.description && e.description.indexOf(pmTag) !== -1; });
+
+            if (!dueDate) {
+                // No due date — remove calendar event if one exists
+                if (existingIdx !== -1) {
+                    try {
+                        await CraderoAPI.calendar.delete(calendarEvents[existingIdx].id);
+                        calendarEvents.splice(existingIdx, 1);
+                    } catch (err) { console.warn('Failed to remove PM calendar event:', err); }
+                }
+                renderCalendar();
+                return;
+            }
+
+            var calType = frequency.toLowerCase().indexOf('week') !== -1 ? 'weekly-pm' : 'monthly-pm';
+            if (existingIdx !== -1) {
+                // Update existing calendar event
+                var existing = calendarEvents[existingIdx];
+                try {
+                    var updated = await CraderoAPI.calendar.update(existing.id, {
+                        title: title, event_type: calType,
+                        start_time: dueDate + 'T09:00:00', end_time: dueDate + 'T10:00:00',
+                        assigned_to: assignedTo, description: 'Auto-scheduled PM | ' + pmTag
+                    });
+                    calendarEvents[existingIdx] = mapCalendarFromDb(updated);
+                } catch (err) { console.warn('Failed to update PM calendar event:', err); }
+            } else {
+                // Create new calendar event
+                try {
+                    var calDbRow = {
+                        title: title, event_type: calType,
+                        start_time: dueDate + 'T09:00:00', end_time: dueDate + 'T10:00:00',
+                        all_day: false, assigned_to: assignedTo,
+                        description: 'Auto-scheduled PM | ' + pmTag, created_by: currentUserName || 'User'
+                    };
+                    var calCreated = await CraderoAPI.calendar.create(calDbRow);
+                    calendarEvents.push(mapCalendarFromDb(calCreated));
+                } catch (err) { console.warn('Failed to create PM calendar event:', err); }
+            }
+            renderCalendar();
+        }
+
         async function submitAddPM() {
             const taskName    = document.getElementById('pmTaskName').value.trim();
             const equipment   = document.getElementById('pmEquipment').value;
@@ -8727,15 +8909,7 @@
 
                 // Auto-create calendar event for the scheduled PM
                 if (dueDate) {
-                    var calType = frequency.toLowerCase().indexOf('week') !== -1 ? 'weekly-pm' : 'monthly-pm';
-                    var calDbRow = {
-                        title: taskName, event_type: calType,
-                        start_time: dueDate + 'T09:00:00', end_time: dueDate + 'T10:00:00',
-                        all_day: false, assigned_to: assignTo,
-                        description: 'Auto-scheduled PM', created_by: currentUserName || 'User'
-                    };
-                    var calCreated = await CraderoAPI.calendar.create(calDbRow);
-                    calendarEvents.push(mapCalendarFromDb(calCreated));
+                    await syncPMCalendarEvent(mapped.id || created.id, taskName, dueDate, frequency, assignTo);
                 }
 
                 renderPM();
@@ -8995,6 +9169,9 @@
                     pm.checklist.forEach(function(item) { item.checked = false; item.note = ''; });
                 }
 
+                // Auto-schedule next PM calendar event
+                await syncPMCalendarEvent(pm.id, pm.title, nextDueISO, pm.frequency, pm.assignedTo);
+
                 // Raise work order if requested
                 if (raiseWO) {
                     var woIssueTitle = document.getElementById('pmWOIssueTitle').value.trim();
@@ -9151,6 +9328,10 @@
                     '</select>' +
                 '</div>' +
             '</div>' +
+            '<div class="form-group">' +
+                '<label class="form-label">Next Due Date</label>' +
+                '<input type="date" class="form-input" id="editPMDueDate" value="' + (pm.scheduledDate || '') + '">' +
+            '</div>' +
             '<div class="form-group" style="border-top:1px solid var(--gray-200);padding-top:1rem;">' +
                 '<label class="form-label" style="font-weight:700;">Checklist Items</label>' +
                 '<div id="editPMChecklistContainer"></div>' +
@@ -9205,6 +9386,7 @@
             var title = (document.getElementById('editPMTitle').value || '').trim();
             if (!title) { showToast('Title is required.', 'error'); return; }
 
+            var newDueDate = document.getElementById('editPMDueDate').value || '';
             var updates = {
                 title: title,
                 description: (document.getElementById('editPMDescription').value || '').trim(),
@@ -9212,7 +9394,8 @@
                 duration: (document.getElementById('editPMDuration').value || '').trim(),
                 assigned_to: document.getElementById('editPMAssignedTo').value,
                 equipment_name: document.getElementById('editPMEquipment').value,
-                checklist: editPMChecklist
+                checklist: editPMChecklist,
+                next_due_date: newDueDate || null
             };
 
             try {
@@ -9224,6 +9407,21 @@
                 pm.assignedTo = updates.assigned_to;
                 pm.equipment = updates.equipment_name;
                 pm.checklist = editPMChecklist.map(function(item) { return { text: item.text, checked: false, note: '' }; });
+                pm.scheduledDate = newDueDate;
+
+                // Recalculate due status for the new date
+                if (newDueDate) {
+                    var dueD = new Date(newDueDate + 'T00:00:00');
+                    var todayD = new Date(); todayD.setHours(0,0,0,0);
+                    var diffD = Math.ceil((dueD - todayD) / 86400000);
+                    if (diffD < 0) { pm.dueStatus = 'overdue'; pm.dueText = 'Overdue by ' + Math.abs(diffD) + ' day(s)'; }
+                    else if (diffD <= 3) { pm.dueStatus = 'due-soon'; pm.dueText = 'Due in ' + diffD + ' day(s)'; }
+                    else { pm.dueStatus = 'upcoming'; pm.dueText = 'Due: ' + dueD.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }); }
+                    pm.status = pm.dueStatus;
+                }
+
+                // Sync calendar event with updated PM details
+                await syncPMCalendarEvent(pm.id, title, newDueDate, updates.frequency, updates.assigned_to);
 
                 logAudit('update', 'pm_task', pm.id, { title: title, action: 'edit' });
                 closeModal('editPMModal');
@@ -9238,7 +9436,8 @@
         }
 
         function schedulePM(pmId) {
-            showToast('In a live system, this would open a calendar to schedule the task.', 'info');
+            // Now handled by syncPMCalendarEvent — open edit modal instead
+            openEditPM(pmId);
         }
 
         async function reassignPM(pmId, newEngineer) {
@@ -9294,6 +9493,409 @@
         function buildCSV(headers, rows) {
             return headers.join(',') + '\n' + rows.map(function(r) { return r.map(csvEscape).join(','); }).join('\n');
         }
+
+        // ─── CSV Import ───────────────────────────────────────────
+        function parseCSV(text) {
+            text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            var rows = [];
+            var row = [];
+            var field = '';
+            var inQuotes = false;
+            for (var i = 0; i < text.length; i++) {
+                var ch = text[i];
+                if (inQuotes) {
+                    if (ch === '"') {
+                        if (i + 1 < text.length && text[i + 1] === '"') { field += '"'; i++; }
+                        else { inQuotes = false; }
+                    } else { field += ch; }
+                } else {
+                    if (ch === '"') { inQuotes = true; }
+                    else if (ch === ',') { row.push(field.trim()); field = ''; }
+                    else if (ch === '\n') {
+                        row.push(field.trim());
+                        if (row.length > 1 || row[0] !== '') rows.push(row);
+                        row = []; field = '';
+                    } else { field += ch; }
+                }
+            }
+            row.push(field.trim());
+            if (row.length > 1 || row[0] !== '') rows.push(row);
+            if (rows.length === 0) return { headers: [], rows: [] };
+            return { headers: rows[0], rows: rows.slice(1) };
+        }
+
+        var CSV_IMPORT_FIELDS = {
+            equipment: [
+                { key: 'name',         label: 'Equipment Name',  required: true,  aliases: ['equipment name', 'name', 'asset name', 'equipment', 'asset'] },
+                { key: 'equipId',      label: 'Equipment ID',    required: false, aliases: ['equipment id', 'equip id', 'serial number', 'serial', 'asset id', 'code', 'tag'] },
+                { key: 'manufacturer', label: 'Manufacturer',    required: false, aliases: ['manufacturer', 'mfr', 'make', 'brand', 'oem'] },
+                { key: 'model',        label: 'Model',           required: false, aliases: ['model', 'model number', 'model no'] },
+                { key: 'location',     label: 'Location',        required: true,  aliases: ['location', 'area', 'zone', 'site', 'department'] },
+                { key: 'installDate',  label: 'Install Date',    required: false, aliases: ['install date', 'installation date', 'date installed', 'commissioned'] },
+                { key: 'status',       label: 'Status',          required: false, aliases: ['status', 'condition', 'state'] },
+                { key: 'criticality',  label: 'Criticality',     required: false, aliases: ['criticality', 'priority', 'crit', 'class'] }
+            ],
+            parts: [
+                { key: 'name',         label: 'Part Name',       required: true,  aliases: ['part name', 'name', 'description', 'item', 'part description'] },
+                { key: 'partNumber',   label: 'Part Number',     required: true,  aliases: ['part number', 'part no', 'part #', 'pn', 'sku', 'item number'] },
+                { key: 'qty',          label: 'Quantity',         required: true,  aliases: ['quantity', 'qty', 'stock', 'quantity in stock', 'on hand', 'count'] },
+                { key: 'minStock',     label: 'Min Stock Level',  required: false, aliases: ['minimum stock', 'min stock', 'reorder level', 'min', 'reorder point'] },
+                { key: 'shelf',        label: 'Shelf Location',   required: false, aliases: ['shelf', 'rack', 'warehouse'] },
+                { key: 'bin',          label: 'Bin Location',     required: false, aliases: ['bin', 'slot', 'bin location'] },
+                { key: 'monthlyUsage', label: 'Monthly Usage',    required: false, aliases: ['monthly usage', 'usage', 'consumption'] }
+            ],
+            pm: [
+                { key: 'title',        label: 'PM Task Name',     required: true,  aliases: ['title', 'task name', 'pm name', 'task', 'name', 'pm title'] },
+                { key: 'equipment',    label: 'Equipment',        required: true,  aliases: ['equipment', 'asset', 'machine', 'equipment name'] },
+                { key: 'description',  label: 'Description',      required: false, aliases: ['description', 'desc', 'details', 'instructions'] },
+                { key: 'frequency',    label: 'Frequency',        required: true,  aliases: ['frequency', 'interval', 'schedule', 'cycle'] },
+                { key: 'duration',     label: 'Est. Duration',    required: false, aliases: ['duration', 'estimated hours', 'time', 'est duration', 'hours'] },
+                { key: 'assignedTo',   label: 'Assigned To',      required: false, aliases: ['assigned to', 'assignee', 'technician', 'engineer', 'assigned'] },
+                { key: 'scheduledDate',label: 'Next Due Date',    required: false, aliases: ['next due date', 'due date', 'scheduled date', 'date', 'next due'] }
+            ]
+        };
+
+        var csvImportState = {
+            step: 1, type: 'equipment', rawText: '', parsed: null,
+            mapping: {}, validatedRows: [],
+            importResults: { success: 0, failed: 0, skipped: 0, errors: [] }
+        };
+
+        function openCsvImport(type) {
+            csvImportState = {
+                step: 1, type: type || 'equipment', rawText: '', parsed: null,
+                mapping: {}, validatedRows: [],
+                importResults: { success: 0, failed: 0, skipped: 0, errors: [] }
+            };
+            document.getElementById('csvImportType').value = type;
+            document.getElementById('csvFileInput').value = '';
+            document.getElementById('csvFileInfo').style.display = 'none';
+            csvShowStep(1);
+            openModal('csvImportModal');
+        }
+
+        function closeCsvImport() { closeModal('csvImportModal'); }
+
+        function csvShowStep(stepNum) {
+            csvImportState.step = stepNum;
+            for (var i = 1; i <= 4; i++) {
+                document.getElementById('csvStep' + i).style.display = i === stepNum ? 'block' : 'none';
+            }
+            document.querySelectorAll('#csvImportSteps .csv-step').forEach(function(el) {
+                var s = parseInt(el.getAttribute('data-step'));
+                el.className = 'csv-step' + (s === stepNum ? ' active' : s < stepNum ? ' completed' : '');
+            });
+            document.getElementById('csvBtnBack').style.display = stepNum > 1 && stepNum < 4 ? '' : 'none';
+            document.getElementById('csvBtnNext').style.display = stepNum < 3 ? '' : 'none';
+            document.getElementById('csvBtnImport').style.display = stepNum === 3 ? '' : 'none';
+            document.getElementById('csvBtnCancel').style.display = stepNum < 4 ? '' : 'none';
+            document.getElementById('csvBtnDone').style.display = stepNum === 4 ? '' : 'none';
+        }
+
+        function csvNextStep() {
+            if (csvImportState.step === 1) {
+                if (!csvImportState.parsed || csvImportState.parsed.rows.length === 0) {
+                    showToast('Please select a valid CSV file first.', 'error'); return;
+                }
+                csvBuildMappingUI();
+                csvShowStep(2);
+            } else if (csvImportState.step === 2) {
+                if (!csvValidateMapping()) return;
+                csvBuildPreview();
+                csvShowStep(3);
+            }
+        }
+
+        function csvPrevStep() {
+            if (csvImportState.step > 1) csvShowStep(csvImportState.step - 1);
+        }
+
+        function csvFileSelected(input) {
+            var file = input.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                csvImportState.rawText = e.target.result;
+                csvImportState.parsed = parseCSV(e.target.result);
+                document.getElementById('csvFileName').textContent = file.name;
+                document.getElementById('csvFileStats').textContent =
+                    csvImportState.parsed.headers.length + ' columns detected, ' +
+                    csvImportState.parsed.rows.length + ' data rows';
+                document.getElementById('csvFileInfo').style.display = 'block';
+            };
+            reader.readAsText(file);
+        }
+
+        function csvResetAfterTypeChange() {
+            csvImportState.type = document.getElementById('csvImportType').value;
+            csvImportState.mapping = {};
+        }
+
+        function csvBuildMappingUI() {
+            var fields = CSV_IMPORT_FIELDS[csvImportState.type];
+            var headers = csvImportState.parsed.headers;
+            var firstRow = csvImportState.parsed.rows[0] || [];
+            var container = document.getElementById('csvColumnMapping');
+            container.innerHTML = '';
+            csvImportState.mapping = {};
+
+            fields.forEach(function(field) {
+                var bestMatch = -1;
+                for (var h = 0; h < headers.length; h++) {
+                    var hLower = headers[h].toLowerCase().trim();
+                    if (field.aliases.indexOf(hLower) !== -1) { bestMatch = h; break; }
+                }
+                if (bestMatch !== -1) csvImportState.mapping[field.key] = bestMatch;
+
+                var row = document.createElement('div');
+                row.className = 'csv-mapping-row';
+
+                var label = document.createElement('div');
+                label.className = 'csv-field-label';
+                label.innerHTML = field.label + (field.required ? ' <span class="csv-required">*</span>' : '');
+
+                var select = document.createElement('select');
+                select.className = 'form-select';
+                select.setAttribute('data-field', field.key);
+                var opts = '<option value="-1">-- Skip --</option>';
+                for (var i = 0; i < headers.length; i++) {
+                    opts += '<option value="' + i + '"' + (bestMatch === i ? ' selected' : '') + '>' + escHtml(headers[i]) + '</option>';
+                }
+                select.innerHTML = opts;
+                select.onchange = function() {
+                    var val = parseInt(this.value);
+                    var fKey = this.getAttribute('data-field');
+                    if (val === -1) delete csvImportState.mapping[fKey];
+                    else csvImportState.mapping[fKey] = val;
+                    var pv = this.parentNode.querySelector('.csv-preview-val');
+                    pv.textContent = val >= 0 && firstRow[val] ? firstRow[val] : '--';
+                };
+
+                var preview = document.createElement('div');
+                preview.className = 'csv-preview-val';
+                preview.textContent = bestMatch >= 0 && firstRow[bestMatch] ? firstRow[bestMatch] : '--';
+
+                row.appendChild(label);
+                row.appendChild(select);
+                row.appendChild(preview);
+                container.appendChild(row);
+            });
+        }
+
+        function csvValidateMapping() {
+            var fields = CSV_IMPORT_FIELDS[csvImportState.type];
+            var missing = fields.filter(function(f) {
+                return f.required && csvImportState.mapping[f.key] === undefined;
+            });
+            if (missing.length > 0) {
+                showToast('Please map required fields: ' + missing.map(function(f) { return f.label; }).join(', '), 'error');
+                return false;
+            }
+            return true;
+        }
+
+        function csvDetectDuplicates() {
+            var type = csvImportState.type;
+            csvImportState.validatedRows.forEach(function(r) {
+                if (r.errors.length > 0) return;
+                var isDup = false;
+                if (type === 'equipment') {
+                    isDup = equipmentList.some(function(eq) {
+                        return eq.name.toLowerCase() === (r.data.name || '').toLowerCase();
+                    });
+                } else if (type === 'parts') {
+                    isDup = partsData.some(function(p) {
+                        return p.partNumber.toLowerCase() === (r.data.partNumber || '').toLowerCase();
+                    });
+                } else if (type === 'pm') {
+                    isDup = pmData.some(function(pm) {
+                        return pm.title.toLowerCase() === (r.data.title || '').toLowerCase() &&
+                               pm.equipment.toLowerCase() === (r.data.equipment || '').toLowerCase();
+                    });
+                }
+                r.isDuplicate = isDup;
+            });
+        }
+
+        function csvBuildPreview() {
+            var fields = CSV_IMPORT_FIELDS[csvImportState.type];
+            var mapping = csvImportState.mapping;
+            var rows = csvImportState.parsed.rows;
+            var mappedFields = fields.filter(function(f) { return mapping[f.key] !== undefined; });
+
+            csvImportState.validatedRows = rows.map(function(csvRow, idx) {
+                var data = {};
+                var errors = [];
+                var warnings = [];
+
+                mappedFields.forEach(function(f) {
+                    var val = (csvRow[mapping[f.key]] || '').trim();
+                    data[f.key] = val;
+                    if (f.required && !val) errors.push(f.label + ' is required');
+                });
+
+                if (csvImportState.type === 'equipment') {
+                    if (data.status) {
+                        var sl = data.status.toLowerCase();
+                        if (['operational', 'maintenance', 'down', 'decommissioned'].indexOf(sl) === -1) {
+                            warnings.push('Status defaulted to operational');
+                            data.status = 'operational';
+                        } else { data.status = sl; }
+                    }
+                    if (data.criticality) {
+                        var cu = data.criticality.toUpperCase();
+                        if (['A', 'B', 'C'].indexOf(cu) === -1) {
+                            warnings.push('Criticality defaulted to B');
+                            data.criticality = 'B';
+                        } else { data.criticality = cu; }
+                    }
+                }
+                if (csvImportState.type === 'parts') {
+                    if (data.qty && isNaN(parseInt(data.qty))) errors.push('Quantity must be a number');
+                    if (data.minStock && isNaN(parseInt(data.minStock))) errors.push('Min Stock must be a number');
+                }
+                if (csvImportState.type === 'pm') {
+                    if (data.frequency) {
+                        var fl = data.frequency.toLowerCase();
+                        var freqMap = { 'daily': 'Daily', 'weekly': 'Weekly', 'bi-weekly': 'Bi-weekly', 'biweekly': 'Bi-weekly',
+                            'monthly': 'Monthly', 'quarterly': 'Quarterly', 'semi-annual': 'Semi-annual', 'semiannual': 'Semi-annual',
+                            'annual': 'Annual', 'yearly': 'Annual' };
+                        data.frequency = freqMap[fl] || data.frequency;
+                    }
+                }
+
+                return { rowIndex: idx, data: data, errors: errors, warnings: warnings, isDuplicate: false, skip: errors.length > 0 };
+            });
+
+            csvDetectDuplicates();
+
+            var totalRows = csvImportState.validatedRows.length;
+            var errorRows = csvImportState.validatedRows.filter(function(r) { return r.errors.length > 0; }).length;
+            var dupRows = csvImportState.validatedRows.filter(function(r) { return r.isDuplicate; }).length;
+            var validRows = totalRows - errorRows;
+
+            var summaryHtml = '<div style="display:flex;gap:1rem;flex-wrap:wrap;">' +
+                '<div style="padding:0.75rem 1rem;background:var(--gray-100);border-radius:8px;flex:1;min-width:120px;">' +
+                    '<div style="font-size:1.5rem;font-weight:700;">' + totalRows + '</div><div style="color:var(--gray-600);">Total Rows</div></div>' +
+                '<div style="padding:0.75rem 1rem;background:rgba(0,200,83,0.1);border-radius:8px;flex:1;min-width:120px;">' +
+                    '<div style="font-size:1.5rem;font-weight:700;color:var(--success);">' + validRows + '</div><div style="color:var(--gray-600);">Valid</div></div>';
+            if (errorRows > 0) summaryHtml += '<div style="padding:0.75rem 1rem;background:rgba(255,61,0,0.1);border-radius:8px;flex:1;min-width:120px;">' +
+                '<div style="font-size:1.5rem;font-weight:700;color:var(--danger);">' + errorRows + '</div><div style="color:var(--gray-600);">Errors (skipped)</div></div>';
+            if (dupRows > 0) summaryHtml += '<div style="padding:0.75rem 1rem;background:rgba(255,179,0,0.1);border-radius:8px;flex:1;min-width:120px;">' +
+                '<div style="font-size:1.5rem;font-weight:700;color:var(--warning);">' + dupRows + '</div><div style="color:var(--gray-600);">Duplicates (will import)</div></div>';
+            summaryHtml += '</div>';
+            document.getElementById('csvValidationSummary').innerHTML = summaryHtml;
+
+            var thead = document.getElementById('csvPreviewHead');
+            var tbody = document.getElementById('csvPreviewBody');
+            thead.innerHTML = '<tr>' + mappedFields.map(function(f) { return '<th>' + escHtml(f.label) + '</th>'; }).join('') + '<th>Status</th></tr>';
+
+            var previewRows = csvImportState.validatedRows.slice(0, 10);
+            tbody.innerHTML = previewRows.map(function(r) {
+                var trClass = r.isDuplicate ? ' class="csv-duplicate"' : '';
+                var cells = mappedFields.map(function(f) {
+                    var hasError = r.errors.some(function(e) { return e.indexOf(f.label) !== -1; });
+                    var cls = hasError ? ' class="csv-error"' : '';
+                    return '<td' + cls + '>' + escHtml(r.data[f.key] || '') + '</td>';
+                }).join('');
+                var statusCell = r.errors.length > 0
+                    ? '<td class="csv-error">' + escHtml(r.errors[0]) + '</td>'
+                    : r.isDuplicate
+                        ? '<td class="csv-warn">Duplicate</td>'
+                        : '<td style="color:var(--success);">OK</td>';
+                return '<tr' + trClass + '>' + cells + statusCell + '</tr>';
+            }).join('');
+
+            if (totalRows > 10) {
+                tbody.innerHTML += '<tr><td colspan="' + (mappedFields.length + 1) + '" style="text-align:center;color:var(--gray-500);font-style:italic;">... and ' + (totalRows - 10) + ' more rows</td></tr>';
+            }
+        }
+
+        async function csvExecuteImport() {
+            csvShowStep(4);
+            var results = { success: 0, failed: 0, skipped: 0, errors: [] };
+            var rowsToImport = csvImportState.validatedRows.filter(function(r) { return r.errors.length === 0; });
+            results.skipped = csvImportState.validatedRows.length - rowsToImport.length;
+            var total = rowsToImport.length;
+
+            var progressBar = document.getElementById('csvProgressBar');
+            var progressText = document.getElementById('csvProgressText');
+            var progressDetail = document.getElementById('csvProgressDetail');
+            progressText.textContent = 'Importing ' + total + ' records...';
+
+            for (var i = 0; i < rowsToImport.length; i++) {
+                var r = rowsToImport[i];
+                progressBar.style.width = Math.round(((i + 1) / total) * 100) + '%';
+                progressDetail.textContent = 'Processing row ' + (i + 1) + ' of ' + total;
+
+                try {
+                    if (csvImportState.type === 'equipment') {
+                        var dbRow = mapEquipToDb({
+                            name: r.data.name, equipId: r.data.equipId || '',
+                            manufacturer: r.data.manufacturer || '', model: r.data.model || '',
+                            location: r.data.location || '', installDate: r.data.installDate || '',
+                            status: (r.data.status || 'operational').toLowerCase(),
+                            criticality: (r.data.criticality || 'B').toUpperCase()
+                        });
+                        var created = await CraderoAPI.equipment.create(dbRow);
+                        equipmentList.push(mapEquipFromDb(created));
+                        logAudit('create', 'equipment', created.id, { name: r.data.name, source: 'csv_import' });
+
+                    } else if (csvImportState.type === 'parts') {
+                        var dbRow = mapPartToDb({
+                            name: r.data.name, partNumber: r.data.partNumber,
+                            qty: parseInt(r.data.qty) || 0, minStock: parseInt(r.data.minStock) || 0,
+                            shelf: r.data.shelf || '', bin: r.data.bin || '',
+                            monthlyUsage: parseInt(r.data.monthlyUsage) || 0,
+                            compatibleEquipment: [], suppliers: []
+                        });
+                        var created = await CraderoAPI.parts.create(dbRow);
+                        partsData.push(mapPartFromDb(created));
+                        logAudit('create', 'part', created.id, { name: r.data.name, source: 'csv_import' });
+
+                    } else if (csvImportState.type === 'pm') {
+                        var eqMatch = equipmentList.find(function(e) { return e.name.toLowerCase() === (r.data.equipment || '').toLowerCase(); });
+                        var dbRow = {
+                            title: r.data.title, description: r.data.description || '',
+                            equipment_name: r.data.equipment,
+                            frequency: r.data.frequency || 'Monthly',
+                            duration: r.data.duration || '',
+                            assigned_to: r.data.assignedTo || '',
+                            next_due_date: r.data.scheduledDate || null,
+                            due_status: 'upcoming', is_active: true,
+                            checklist: [], created_by: currentUserName || 'CSV Import'
+                        };
+                        if (eqMatch) dbRow.equipment_id = eqMatch.id;
+                        var created = await CraderoAPI.pm.create(dbRow);
+                        pmData.push(mapPmFromDb(created));
+                        logAudit('create', 'pm', created.id, { title: r.data.title, source: 'csv_import' });
+                    }
+                    results.success++;
+                } catch (err) {
+                    results.failed++;
+                    results.errors.push('Row ' + (r.rowIndex + 2) + ': ' + (err.message || 'Unknown error'));
+                }
+            }
+
+            if (csvImportState.type === 'equipment') { renderEquipment(); }
+            else if (csvImportState.type === 'parts') { renderParts(); }
+            else if (csvImportState.type === 'pm') { renderPM(); }
+            refreshDashboards();
+
+            csvImportState.importResults = results;
+            progressBar.style.width = '100%';
+            progressText.innerHTML = 'Import Complete!';
+            var detail = results.success + ' imported successfully';
+            if (results.failed > 0) detail += ', ' + results.failed + ' failed';
+            if (results.skipped > 0) detail += ', ' + results.skipped + ' skipped (validation errors)';
+            if (results.errors.length > 0) {
+                detail += '<br><br><strong>Errors:</strong><br>' + results.errors.slice(0, 5).map(escHtml).join('<br>');
+                if (results.errors.length > 5) detail += '<br>... and ' + (results.errors.length - 5) + ' more';
+            }
+            progressDetail.innerHTML = detail;
+            showToast(results.success + ' records imported!', results.failed > 0 ? 'warning' : 'success');
+        }
+        // ─── End CSV Import ───────────────────────────────────────
 
         function exportCSV(type) {
             var today = new Date().toISOString().slice(0, 10);
@@ -10229,6 +10831,9 @@
             reassignPM, togglePMCheck, updatePMCheckNote,
             // Export
             toggleExportMenu, exportCSV, exportFullReport,
+            // CSV Import
+            openCsvImport, closeCsvImport, csvFileSelected, csvNextStep, csvPrevStep,
+            csvExecuteImport, csvResetAfterTypeChange,
             // Breakdowns
             submitBreakdown, filterBreakdowns, clearBreakdownFilter,
             openBreakdownDetail, saveBreakdownEdit, deleteBreakdown, toggleBrResolutionField,
