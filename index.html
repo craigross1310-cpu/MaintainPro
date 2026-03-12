@@ -1084,6 +1084,8 @@
 
         .modal-body {
             padding: 2rem;
+            overflow-y: auto;
+            flex: 1;
         }
 
         .modal-footer {
@@ -3607,7 +3609,7 @@
 
     <!-- Log Breakdown Modal -->
     <div id="logBreakdownModal" class="modal-overlay">
-        <div class="modal" style="max-width:640px;">
+        <div class="modal" style="max-width:640px;max-height:90vh;display:flex;flex-direction:column;">
             <div class="modal-header">
                 <h2 class="modal-title">&#9889; Log Breakdown</h2>
             </div>
@@ -3714,7 +3716,7 @@
 
     <!-- Breakdown Detail / Edit Modal -->
     <div id="breakdownDetailModal" class="modal-overlay">
-        <div class="modal" style="max-width:640px;">
+        <div class="modal" style="max-width:640px;max-height:90vh;display:flex;flex-direction:column;">
             <div class="modal-header">
                 <h2 class="modal-title" id="brDetailTitle">Breakdown Detail</h2>
             </div>
@@ -3759,14 +3761,11 @@
                         <input type="text" class="form-input" id="brEditRootCause">
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Resolved By</label>
-                        <select class="form-select" id="brEditEngineer">
-                            <option value="">Select engineer...</option>
-                        </select>
-                    </div>
-                    </div>
+                <div class="form-group">
+                    <label class="form-label">Resolved By</label>
+                    <select class="form-select" id="brEditEngineer">
+                        <option value="">Select engineer...</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Status</label>
@@ -5261,7 +5260,8 @@
                 if (diffMs > 0) totalDowntimeHours = diffMs / 3600000;
             }
             return {
-                id: row.id, machine: row.equipment_name || '',
+                id: row.id, brId: 'BR-' + String(row.id).padStart(6, '0'),
+                machine: row.equipment_name || '',
                 faultDescription: row.title || row.description || '',
                 description: row.description || '',
                 faultCause: row.fault_cause || '',
