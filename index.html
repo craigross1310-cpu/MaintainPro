@@ -2170,8 +2170,8 @@
 
                     <div class="chart-card">
                         <div class="chart-header">
-                            <div class="chart-title">Production Loss by Equipment</div>
-                            <div class="chart-subtitle">Total production loss &amp; downtime hours</div>
+                            <div class="chart-title">Downtime by Equipment</div>
+                            <div class="chart-subtitle">Total machine downtime hours</div>
                         </div>
                         <div class="metric-list" id="productionLossByEquipList">
                         </div>
@@ -2179,7 +2179,16 @@
 
                     <div class="chart-card">
                         <div class="chart-header">
-                            <div class="chart-title">Downtime &amp; Production Loss Trends</div>
+                            <div class="chart-title">Engineer Hours</div>
+                            <div class="chart-subtitle">Total job time per engineer</div>
+                        </div>
+                        <div class="metric-list" id="engineerHoursList">
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Downtime &amp; Engineer Hours Trends</div>
                             <div class="chart-subtitle">Monthly totals (last 6 months)</div>
                         </div>
                         <canvas id="downtimeTrendChart" style="max-height: 250px;"></canvas>
@@ -3681,22 +3690,33 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Downtime Start</label>
-                                <input type="datetime-local" class="form-input" id="brDowntimeStart" onchange="calcBrDowntime()">
+                                <input type="datetime-local" class="form-input" id="brDowntimeStart" onchange="calcBrTimes()">
                             </div>
                             <div class="form-group">
                                 <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Downtime End</label>
-                                <input type="datetime-local" class="form-input" id="brDowntimeEnd" onchange="calcBrDowntime()">
+                                <input type="datetime-local" class="form-input" id="brDowntimeEnd" onchange="calcBrTimes()">
                             </div>
                         </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Total Downtime</label>
+                            <div id="brTotalDowntime" style="padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;font-weight:600;">---</div>
+                        </div>
+                    </div>
+                    <div style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:0.5rem;">
+                        <label class="form-label" style="font-weight:700;">Engineer Time</label>
                         <div class="form-row">
                             <div class="form-group">
-                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Total Downtime</label>
-                                <div id="brTotalDowntime" style="padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;font-weight:600;">---</div>
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Job Start</label>
+                                <input type="datetime-local" class="form-input" id="brJobStart" onchange="calcBrTimes()">
                             </div>
                             <div class="form-group">
-                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Production Loss (hours)</label>
-                                <input type="number" class="form-input" id="brProductionLossHours" step="0.25" min="0" placeholder="e.g., 2.5">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Job Finish</label>
+                                <input type="datetime-local" class="form-input" id="brJobFinish" onchange="calcBrTimes()">
                             </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Total Engineer Time</label>
+                            <div id="brTotalJobTime" style="padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;font-weight:600;">---</div>
                         </div>
                     </div>
                     <div class="form-group" id="brRaiseWoWrap">
@@ -3784,22 +3804,33 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Downtime Start</label>
-                            <input type="datetime-local" class="form-input" id="brEditDowntimeStart" onchange="calcBrEditDowntime()">
+                            <input type="datetime-local" class="form-input" id="brEditDowntimeStart" onchange="calcBrEditTimes()">
                         </div>
                         <div class="form-group">
                             <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Downtime End</label>
-                            <input type="datetime-local" class="form-input" id="brEditDowntimeEnd" onchange="calcBrEditDowntime()">
+                            <input type="datetime-local" class="form-input" id="brEditDowntimeEnd" onchange="calcBrEditTimes()">
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Total Downtime</label>
+                        <div id="brEditTotalDowntime" style="padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;font-weight:600;">---</div>
+                    </div>
+                </div>
+                <div style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:0.5rem;">
+                    <label class="form-label" style="font-weight:700;">Engineer Time</label>
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Total Downtime</label>
-                            <div id="brEditTotalDowntime" style="padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;font-weight:600;">---</div>
+                            <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Job Start</label>
+                            <input type="datetime-local" class="form-input" id="brEditJobStart" onchange="calcBrEditTimes()">
                         </div>
                         <div class="form-group">
-                            <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Production Loss (hours)</label>
-                            <input type="number" class="form-input" id="brEditProductionLossHours" step="0.25" min="0" placeholder="e.g., 2.5">
+                            <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Job Finish</label>
+                            <input type="datetime-local" class="form-input" id="brEditJobFinish" onchange="calcBrEditTimes()">
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Total Engineer Time</label>
+                        <div id="brEditTotalJobTime" style="padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;font-weight:600;">---</div>
                     </div>
                 </div>
                 <div id="brDetailLinkedWo" style="margin-top:0.5rem;"></div>
@@ -5259,6 +5290,11 @@
                 var diffMs = new Date(row.downtime_ended) - new Date(row.downtime_started);
                 if (diffMs > 0) totalDowntimeHours = diffMs / 3600000;
             }
+            var totalJobHours = 0;
+            if (row.job_started && row.job_finished) {
+                var jDiff = new Date(row.job_finished) - new Date(row.job_started);
+                if (jDiff > 0) totalJobHours = jDiff / 3600000;
+            }
             return {
                 id: row.id, brId: 'BR-' + String(row.id).padStart(6, '0'),
                 machine: row.equipment_name || '',
@@ -5271,7 +5307,9 @@
                 downtimeStart: row.downtime_started || '',
                 downtimeEnd: row.downtime_ended || '',
                 totalDowntimeHours: totalDowntimeHours,
-                productionLossHours: parseFloat(row.production_loss_hours) || 0,
+                jobStart: row.job_started || '',
+                jobFinish: row.job_finished || '',
+                totalJobHours: totalJobHours,
                 dateISO: row.downtime_started ? row.downtime_started.substring(0, 10) : (createdDate ? createdDate.toISOString().substring(0, 10) : ''),
                 time: row.downtime_started ? row.downtime_started.substring(11, 16) : '',
                 created: row.created_at || '',
@@ -5992,19 +6030,15 @@
                 laborEl.innerHTML = lHtml || '<div class="metric-item"><span class="metric-label" style="color:var(--gray-600);">No time tracked on work orders yet</span></div>';
             }
 
-            // P7: Production Loss by Equipment
+            // P7: Downtime by Equipment
             var plEl = document.getElementById('productionLossByEquipList');
             if (plEl) {
-                var plMap = {};
                 var dtMapByEquip = {};
                 breakdownsData.forEach(function(b) {
                     var name = b.machine || 'Unknown';
-                    if (!plMap[name]) plMap[name] = 0;
                     if (!dtMapByEquip[name]) dtMapByEquip[name] = 0;
-                    plMap[name] += (b.productionLossHours || 0);
                     dtMapByEquip[name] += (b.totalDowntimeHours || 0);
                 });
-                // Also include work order machine downtime
                 workOrdersData.forEach(function(wo) {
                     if (wo.machineDowntime && wo.equipment) {
                         var dt = parseFloat(wo.machineDowntime) || 0;
@@ -6014,59 +6048,96 @@
                         }
                     }
                 });
-                var plEntries = Object.keys(plMap).concat(Object.keys(dtMapByEquip))
-                    .filter(function(v, i, a) { return a.indexOf(v) === i; })
-                    .map(function(k) { return { machine: k, loss: plMap[k] || 0, downtime: dtMapByEquip[k] || 0 }; })
-                    .filter(function(e) { return e.loss > 0 || e.downtime > 0; })
-                    .sort(function(a, b) { return (b.loss + b.downtime) - (a.loss + a.downtime); });
-                var totalLoss = plEntries.reduce(function(s, e) { return s + e.loss; }, 0);
-                var totalDt = plEntries.reduce(function(s, e) { return s + e.downtime; }, 0);
-                var plHtml = plEntries.map(function(e) {
-                    var color = e.loss > 10 ? 'var(--danger)' : e.loss > 5 ? 'var(--warning)' : 'var(--success)';
+                var dtEntries = Object.keys(dtMapByEquip)
+                    .map(function(k) { return { machine: k, downtime: dtMapByEquip[k] }; })
+                    .filter(function(e) { return e.downtime > 0; })
+                    .sort(function(a, b) { return b.downtime - a.downtime; });
+                var totalDt = dtEntries.reduce(function(s, e) { return s + e.downtime; }, 0);
+                var dtHtml = dtEntries.map(function(e) {
+                    var color = e.downtime > 10 ? 'var(--danger)' : e.downtime > 5 ? 'var(--warning)' : 'var(--success)';
                     return '<div class="metric-item"><span class="metric-label">' + escHtml(e.machine)
                         + '</span><span class="metric-value" style="color:' + color + ';">'
-                        + e.loss.toFixed(1) + 'h loss / ' + e.downtime.toFixed(1) + 'h down</span></div>';
+                        + e.downtime.toFixed(1) + 'h</span></div>';
                 }).join('');
-                if (plEntries.length > 0) {
-                    plHtml += '<div class="metric-item" style="background:var(--primary);border-radius:6px;padding:0.5rem 0.75rem;"><span class="metric-label" style="color:white;font-weight:700;">Totals</span><span class="metric-value" style="color:white;">'
-                        + totalLoss.toFixed(1) + 'h loss / ' + totalDt.toFixed(1) + 'h down</span></div>';
+                if (dtEntries.length > 0) {
+                    dtHtml += '<div class="metric-item" style="background:var(--primary);border-radius:6px;padding:0.5rem 0.75rem;"><span class="metric-label" style="color:white;font-weight:700;">Total Downtime</span><span class="metric-value" style="color:white;">'
+                        + totalDt.toFixed(1) + 'h</span></div>';
                 }
-                plEl.innerHTML = plHtml || '<div class="metric-item"><span class="metric-label" style="color:var(--gray-600);">No production loss data recorded</span></div>';
+                plEl.innerHTML = dtHtml || '<div class="metric-item"><span class="metric-label" style="color:var(--gray-600);">No downtime data recorded</span></div>';
             }
 
-            // P8: Downtime & Production Loss Trend (last 6 months)
+            // P8: Engineer Hours
+            var engHrsEl = document.getElementById('engineerHoursList');
+            if (engHrsEl) {
+                var engMap = {};
+                breakdownsData.forEach(function(b) {
+                    if (b.totalJobHours > 0 && b.resolvedBy) {
+                        if (!engMap[b.resolvedBy]) engMap[b.resolvedBy] = { breakdowns: 0, hours: 0 };
+                        engMap[b.resolvedBy].breakdowns++;
+                        engMap[b.resolvedBy].hours += b.totalJobHours;
+                    }
+                });
+                workOrdersData.forEach(function(wo) {
+                    if (wo.totalJobTime && wo.assignedTo) {
+                        var match = wo.totalJobTime.match(/([\d]+)h\s*([\d]*)m?/);
+                        var hours = 0;
+                        if (match) { hours = parseFloat(match[1]) + (match[2] ? parseFloat(match[2]) / 60 : 0); }
+                        else { var mMatch = wo.totalJobTime.match(/([\d]+)m/); if (mMatch) hours = parseFloat(mMatch[1]) / 60; }
+                        if (hours > 0) {
+                            if (!engMap[wo.assignedTo]) engMap[wo.assignedTo] = { breakdowns: 0, hours: 0 };
+                            engMap[wo.assignedTo].hours += hours;
+                        }
+                    }
+                });
+                var engEntries = Object.keys(engMap)
+                    .map(function(k) { return { name: k, hours: engMap[k].hours, jobs: engMap[k].breakdowns }; })
+                    .sort(function(a, b) { return b.hours - a.hours; });
+                var totalEngHrs = engEntries.reduce(function(s, e) { return s + e.hours; }, 0);
+                var engHtml = engEntries.map(function(e) {
+                    return '<div class="metric-item"><span class="metric-label">' + escHtml(e.name)
+                        + '</span><span class="metric-value">' + e.hours.toFixed(1) + 'h'
+                        + (e.jobs > 0 ? ' (' + e.jobs + ' reactive)' : '') + '</span></div>';
+                }).join('');
+                if (engEntries.length > 0) {
+                    engHtml += '<div class="metric-item" style="background:var(--primary);border-radius:6px;padding:0.5rem 0.75rem;"><span class="metric-label" style="color:white;font-weight:700;">Total Engineer Hours</span><span class="metric-value" style="color:white;">'
+                        + totalEngHrs.toFixed(1) + 'h</span></div>';
+                }
+                engHrsEl.innerHTML = engHtml || '<div class="metric-item"><span class="metric-label" style="color:var(--gray-600);">No engineer time data recorded</span></div>';
+            }
+
+            // P9: Downtime & Engineer Hours Trend (last 6 months)
             var trendCtx = document.getElementById('downtimeTrendChart');
             if (trendCtx) {
                 var monthLabels = [];
                 var dtByMonth = {};
-                var plByMonth = {};
+                var engByMonth = {};
                 for (var mi = 5; mi >= 0; mi--) {
                     var md = new Date();
                     md.setMonth(md.getMonth() - mi);
                     var mKey = md.getFullYear() + '-' + String(md.getMonth() + 1).padStart(2, '0');
                     monthLabels.push(md.toLocaleString('default', { month: 'short', year: '2-digit' }));
                     dtByMonth[mKey] = 0;
-                    plByMonth[mKey] = 0;
+                    engByMonth[mKey] = 0;
                 }
                 breakdownsData.forEach(function(b) {
                     if (b.dateISO) {
                         var bKey = b.dateISO.substring(0, 7);
                         if (dtByMonth[bKey] !== undefined) {
                             dtByMonth[bKey] += (b.totalDowntimeHours || 0);
-                            plByMonth[bKey] += (b.productionLossHours || 0);
+                            engByMonth[bKey] += (b.totalJobHours || 0);
                         }
                     }
                 });
                 var dtVals = Object.values(dtByMonth);
-                var plVals = Object.values(plByMonth);
+                var engVals = Object.values(engByMonth);
                 if (window._downtimeTrendChartInstance) window._downtimeTrendChartInstance.destroy();
                 window._downtimeTrendChartInstance = new Chart(trendCtx, {
                     type: 'line',
                     data: {
                         labels: monthLabels,
                         datasets: [
-                            { label: 'Downtime Hours', data: dtVals, borderColor: 'rgba(255,61,0,1)', backgroundColor: 'rgba(255,61,0,0.1)', fill: true, tension: 0.3 },
-                            { label: 'Production Loss Hours', data: plVals, borderColor: 'rgba(0,102,255,1)', backgroundColor: 'rgba(0,102,255,0.1)', fill: true, tension: 0.3 }
+                            { label: 'Machine Downtime', data: dtVals, borderColor: 'rgba(255,61,0,1)', backgroundColor: 'rgba(255,61,0,0.1)', fill: true, tension: 0.3 },
+                            { label: 'Engineer Hours', data: engVals, borderColor: 'rgba(0,102,255,1)', backgroundColor: 'rgba(0,102,255,0.1)', fill: true, tension: 0.3 }
                         ]
                     },
                     options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: true } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Hours' } } } }
@@ -7063,38 +7134,30 @@
             el.textContent = '—';
         }
 
-        function calcBrDowntime() {
-            var start = document.getElementById('brDowntimeStart').value;
-            var finish = document.getElementById('brDowntimeEnd').value;
-            var el = document.getElementById('brTotalDowntime');
+        function _calcTimeDiff(startId, endId, displayId) {
+            var start = document.getElementById(startId).value;
+            var finish = document.getElementById(endId).value;
+            var el = document.getElementById(displayId);
             if (start && finish) {
                 var diffMs = new Date(finish) - new Date(start);
                 if (diffMs > 0) {
                     var hrs = Math.floor(diffMs / 3600000);
                     var mins = Math.floor((diffMs % 3600000) / 60000);
                     el.textContent = hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
-                    var plInput = document.getElementById('brProductionLossHours');
-                    if (!plInput.value) plInput.value = (diffMs / 3600000).toFixed(2);
                     return;
                 }
             }
             el.textContent = '---';
         }
 
-        function calcBrEditDowntime() {
-            var start = document.getElementById('brEditDowntimeStart').value;
-            var finish = document.getElementById('brEditDowntimeEnd').value;
-            var el = document.getElementById('brEditTotalDowntime');
-            if (start && finish) {
-                var diffMs = new Date(finish) - new Date(start);
-                if (diffMs > 0) {
-                    var hrs = Math.floor(diffMs / 3600000);
-                    var mins = Math.floor((diffMs % 3600000) / 60000);
-                    el.textContent = hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
-                    return;
-                }
-            }
-            el.textContent = '---';
+        function calcBrTimes() {
+            _calcTimeDiff('brDowntimeStart', 'brDowntimeEnd', 'brTotalDowntime');
+            _calcTimeDiff('brJobStart', 'brJobFinish', 'brTotalJobTime');
+        }
+
+        function calcBrEditTimes() {
+            _calcTimeDiff('brEditDowntimeStart', 'brEditDowntimeEnd', 'brEditTotalDowntime');
+            _calcTimeDiff('brEditJobStart', 'brEditJobFinish', 'brEditTotalJobTime');
         }
 
         function syncBrDowntimeStart() {
@@ -9701,7 +9764,7 @@
                     +     '<span>\uD83D\uDCC5 ' + formatDateISO(br.dateISO) + (br.time ? ' at ' + br.time : '') + '</span>'
                     +     (br.resolvedBy ? '<span>\uD83D\uDC64 ' + escHtml(br.resolvedBy) + '</span>' : '')
                     +     (br.totalDowntimeHours > 0 ? '<span>\u23F1 Downtime: ' + br.totalDowntimeHours.toFixed(1) + 'h</span>' : '')
-                    +     (br.productionLossHours > 0 ? '<span>\u23F3 Loss: ' + br.productionLossHours.toFixed(1) + 'h</span>' : '')
+                    +     (br.totalJobHours > 0 ? '<span>\uD83D\uDC77 Engineer: ' + br.totalJobHours.toFixed(1) + 'h</span>' : '')
                     +     woLink
                     +   '</div>'
                     +   resHtml
@@ -9783,7 +9846,8 @@
             var engineer          = document.getElementById('brEngineer').value;
             var downtimeStart     = document.getElementById('brDowntimeStart').value;
             var downtimeEnd       = document.getElementById('brDowntimeEnd').value;
-            var productionLossHrs = parseFloat(document.getElementById('brProductionLossHours').value) || 0;
+            var jobStart          = document.getElementById('brJobStart').value;
+            var jobFinish         = document.getElementById('brJobFinish').value;
             var status            = document.getElementById('brStatus').value;
             var action            = document.getElementById('brActionTaken').value.trim();
             var raiseWo           = document.getElementById('brRaiseWo').checked;
@@ -9821,7 +9885,8 @@
                     resolution: action,
                     downtime_started: downtimeStart || (dateISO ? dateISO + (time ? 'T' + time : 'T00:00:00') : null),
                     downtime_ended: downtimeEnd || null,
-                    production_loss_hours: productionLossHrs,
+                    job_started: jobStart || null,
+                    job_finished: jobFinish || null,
                     work_order_id: linkedWoId
                 };
                 try {
@@ -9836,11 +9901,16 @@
                 mapped.actionTaken = action; mapped.resolvedBy = engineer;
                 mapped.downtimeStart = downtimeStart;
                 mapped.downtimeEnd = downtimeEnd;
-                mapped.productionLossHours = productionLossHrs;
                 if (downtimeStart && downtimeEnd) {
                     var dtDiff = new Date(downtimeEnd) - new Date(downtimeStart);
                     mapped.totalDowntimeHours = dtDiff > 0 ? dtDiff / 3600000 : 0;
                 } else { mapped.totalDowntimeHours = 0; }
+                mapped.jobStart = jobStart;
+                mapped.jobFinish = jobFinish;
+                if (jobStart && jobFinish) {
+                    var jDiff = new Date(jobFinish) - new Date(jobStart);
+                    mapped.totalJobHours = jDiff > 0 ? jDiff / 3600000 : 0;
+                } else { mapped.totalJobHours = 0; }
                 mapped.linkedWoId = linkedWoId;
                 mapped.brId = 'BR-' + String(brCreated.id).padStart(6, '0');
                 breakdownsData.unshift(mapped);
@@ -9871,10 +9941,11 @@
             document.getElementById('brEditEngineer').value          = br.resolvedBy || '';
             document.getElementById('brEditDowntimeStart').value    = br.downtimeStart ? br.downtimeStart.slice(0, 16) : '';
             document.getElementById('brEditDowntimeEnd').value      = br.downtimeEnd ? br.downtimeEnd.slice(0, 16) : '';
-            document.getElementById('brEditProductionLossHours').value = br.productionLossHours || '';
+            document.getElementById('brEditJobStart').value         = br.jobStart ? br.jobStart.slice(0, 16) : '';
+            document.getElementById('brEditJobFinish').value        = br.jobFinish ? br.jobFinish.slice(0, 16) : '';
             document.getElementById('brEditStatus').value           = br.status;
             document.getElementById('brEditActionTaken').value      = br.actionTaken || '';
-            calcBrEditDowntime();
+            calcBrEditTimes();
             var linkedDiv = document.getElementById('brDetailLinkedWo');
             linkedDiv.innerHTML = br.linkedWoId
                 ? '<div style="background:var(--gray-100);padding:0.6rem 0.75rem;border-radius:8px;font-size:0.85rem;">\u26A1 Linked Work Order: <strong>WO-2026-' + String(br.linkedWoId).padStart(3,'0') + '</strong></div>'
@@ -9895,13 +9966,18 @@
             br.resolvedBy          = document.getElementById('brEditEngineer').value;
             br.downtimeStart       = document.getElementById('brEditDowntimeStart').value;
             br.downtimeEnd         = document.getElementById('brEditDowntimeEnd').value;
-            br.productionLossHours = parseFloat(document.getElementById('brEditProductionLossHours').value) || 0;
+            br.jobStart            = document.getElementById('brEditJobStart').value;
+            br.jobFinish           = document.getElementById('brEditJobFinish').value;
             br.actionTaken         = document.getElementById('brEditActionTaken').value.trim();
             var newStatus          = document.getElementById('brEditStatus').value;
             if (br.downtimeStart && br.downtimeEnd) {
                 var dtDiff = new Date(br.downtimeEnd) - new Date(br.downtimeStart);
                 br.totalDowntimeHours = dtDiff > 0 ? dtDiff / 3600000 : 0;
             } else { br.totalDowntimeHours = 0; }
+            if (br.jobStart && br.jobFinish) {
+                var jDiff = new Date(br.jobFinish) - new Date(br.jobStart);
+                br.totalJobHours = jDiff > 0 ? jDiff / 3600000 : 0;
+            } else { br.totalJobHours = 0; }
 
             try {
                 var editEqMatch = equipmentList.find(function(e) { return e.name === br.machine; });
@@ -9914,7 +9990,8 @@
                     status: newStatus,
                     downtime_started: br.downtimeStart || null,
                     downtime_ended: br.downtimeEnd || null,
-                    production_loss_hours: br.productionLossHours
+                    job_started: br.jobStart || null,
+                    job_finished: br.jobFinish || null
                 });
 
                 // If newly resolved and linked WO exists, mark WO completed
@@ -10175,8 +10252,8 @@
             openEditPM, submitEditPM, addEditPMCheckItem, removeEditPMCheckItem,
             // WO Detail Photo Upload
             handleWoDetailFiles, removeWoDetailFile, uploadWoDetailPhotos,
-            // Downtime Tracking
-            calcBrDowntime, calcBrEditDowntime, syncBrDowntimeStart,
+            // Downtime & Engineer Time Tracking
+            calcBrTimes, calcBrEditTimes, syncBrDowntimeStart,
             // QR Codes
             showEquipQR, printQRCode, openQRScanner, closeQRScanner, manualQRLookup,
             // Audit Trail
