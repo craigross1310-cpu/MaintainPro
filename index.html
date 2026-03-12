@@ -2165,6 +2165,23 @@
                         <div class="metric-list" id="laborCostList">
                         </div>
                     </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Production Loss by Equipment</div>
+                            <div class="chart-subtitle">Total production loss &amp; downtime hours</div>
+                        </div>
+                        <div class="metric-list" id="productionLossByEquipList">
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Downtime &amp; Production Loss Trends</div>
+                            <div class="chart-subtitle">Monthly totals (last 6 months)</div>
+                        </div>
+                        <canvas id="downtimeTrendChart" style="max-height: 250px;"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2878,7 +2895,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Machine Downtime</label>
-                                <input type="text" class="form-input" id="woDetailMachineDowntime" placeholder="e.g., 2.5 hours">
+                                <input type="number" class="form-input" id="woDetailMachineDowntime" step="0.25" min="0" placeholder="Hours (e.g., 2.5)">
                             </div>
                         </div>
                     </div>
@@ -3603,11 +3620,11 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Date *</label>
-                            <input type="date" class="form-input" id="brDate" required>
+                            <input type="date" class="form-input" id="brDate" required onchange="syncBrDowntimeStart()">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Time *</label>
-                            <input type="time" class="form-input" id="brTime" required>
+                            <input type="time" class="form-input" id="brTime" required onchange="syncBrDowntimeStart()">
                         </div>
                     </div>
                     <div class="form-group">
@@ -3643,9 +3660,6 @@
                                 <option value="">Select engineer...</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Production Loss</label>
-                            <input type="text" class="form-input" id="brProductionLoss" placeholder="e.g., 2.5 hours">
                         </div>
                     </div>
                     <div class="form-group">
@@ -3660,9 +3674,28 @@
                         <label class="form-label">Resolution / Fix Applied</label>
                         <textarea class="form-textarea" id="brActionTaken" rows="3" placeholder="Describe exactly what was done to fix the fault..."></textarea>
                     </div>
-                    <div id="brTimeResolveWrap" class="form-group">
-                        <label class="form-label">Time to Resolve</label>
-                        <input type="text" class="form-input" id="brTimeToResolve" placeholder="e.g., 1.5 hours">
+                    <div style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:0.5rem;">
+                        <label class="form-label" style="font-weight:700;">Downtime Tracking</label>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Downtime Start</label>
+                                <input type="datetime-local" class="form-input" id="brDowntimeStart" onchange="calcBrDowntime()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Downtime End</label>
+                                <input type="datetime-local" class="form-input" id="brDowntimeEnd" onchange="calcBrDowntime()">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Total Downtime</label>
+                                <div id="brTotalDowntime" style="padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;font-weight:600;">---</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Production Loss (hours)</label>
+                                <input type="number" class="form-input" id="brProductionLossHours" step="0.25" min="0" placeholder="e.g., 2.5">
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group" id="brRaiseWoWrap">
                         <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-weight:600;">
@@ -3733,9 +3766,6 @@
                             <option value="">Select engineer...</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Production Loss</label>
-                        <input type="text" class="form-input" id="brEditProductionLoss">
                     </div>
                 </div>
                 <div class="form-group">
@@ -3750,9 +3780,28 @@
                     <label class="form-label">Resolution / Fix Applied</label>
                     <textarea class="form-textarea" id="brEditActionTaken" rows="3" placeholder="Describe exactly what was done to fix the fault..."></textarea>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Time to Resolve</label>
-                    <input type="text" class="form-input" id="brEditTimeToResolve">
+                <div style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:0.5rem;">
+                    <label class="form-label" style="font-weight:700;">Downtime Tracking</label>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Downtime Start</label>
+                            <input type="datetime-local" class="form-input" id="brEditDowntimeStart" onchange="calcBrEditDowntime()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Downtime End</label>
+                            <input type="datetime-local" class="form-input" id="brEditDowntimeEnd" onchange="calcBrEditDowntime()">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Total Downtime</label>
+                            <div id="brEditTotalDowntime" style="padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;font-weight:600;">---</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Production Loss (hours)</label>
+                            <input type="number" class="form-input" id="brEditProductionLossHours" step="0.25" min="0" placeholder="e.g., 2.5">
+                        </div>
+                    </div>
                 </div>
                 <div id="brDetailLinkedWo" style="margin-top:0.5rem;"></div>
             </div>
@@ -5206,6 +5255,11 @@
         }
         function mapBreakdownFromDb(row) {
             var createdDate = row.created_at ? new Date(row.created_at) : null;
+            var totalDowntimeHours = 0;
+            if (row.downtime_started && row.downtime_ended) {
+                var diffMs = new Date(row.downtime_ended) - new Date(row.downtime_started);
+                if (diffMs > 0) totalDowntimeHours = diffMs / 3600000;
+            }
             return {
                 id: row.id, machine: row.equipment_name || '',
                 faultDescription: row.title || row.description || '',
@@ -5216,6 +5270,8 @@
                 rootCause: row.root_cause || '', resolution: row.resolution || '',
                 downtimeStart: row.downtime_started || '',
                 downtimeEnd: row.downtime_ended || '',
+                totalDowntimeHours: totalDowntimeHours,
+                productionLossHours: parseFloat(row.production_loss_hours) || 0,
                 dateISO: row.downtime_started ? row.downtime_started.substring(0, 10) : (createdDate ? createdDate.toISOString().substring(0, 10) : ''),
                 time: row.downtime_started ? row.downtime_started.substring(11, 16) : '',
                 created: row.created_at || '',
@@ -5756,6 +5812,7 @@
             renderPMCompletionStats();
             renderCostBreakdown();
             initializeCharts();
+            if (typeof renderProAnalytics === 'function') renderProAnalytics();
         }
 
         function renderProAnalytics() {
@@ -5789,11 +5846,10 @@
                 var html = '';
                 Object.keys(machineBreakdowns).forEach(function(machine) {
                     var bds = machineBreakdowns[machine];
-                    // MTTR: average time to resolve
-                    var resolvedTimes = bds.filter(function(b) { return b.status === 'resolved' && b.timeToResolve; }).map(function(b) {
-                        var match = b.timeToResolve.match(/([\d.]+)/);
-                        return match ? parseFloat(match[1]) : 0;
-                    }).filter(function(t) { return t > 0; });
+                    // MTTR: average time to resolve (from actual downtime data)
+                    var resolvedTimes = bds.filter(function(b) {
+                        return b.status === 'resolved' && b.totalDowntimeHours > 0;
+                    }).map(function(b) { return b.totalDowntimeHours; });
                     var mttr = resolvedTimes.length > 0 ? (resolvedTimes.reduce(function(a, b) { return a + b; }, 0) / resolvedTimes.length).toFixed(1) : 'N/A';
 
                     // MTBF: average time between failures
@@ -5934,6 +5990,87 @@
                     lHtml += '<div class="metric-item" style="background:var(--primary);color:white;"><span class="metric-label" style="color:white;">Total Labor Cost</span><span class="metric-value" style="color:white;">£' + totalLaborCost.toFixed(2) + '</span></div>';
                 }
                 laborEl.innerHTML = lHtml || '<div class="metric-item"><span class="metric-label" style="color:var(--gray-600);">No time tracked on work orders yet</span></div>';
+            }
+
+            // P7: Production Loss by Equipment
+            var plEl = document.getElementById('productionLossByEquipList');
+            if (plEl) {
+                var plMap = {};
+                var dtMapByEquip = {};
+                breakdownsData.forEach(function(b) {
+                    var name = b.machine || 'Unknown';
+                    if (!plMap[name]) plMap[name] = 0;
+                    if (!dtMapByEquip[name]) dtMapByEquip[name] = 0;
+                    plMap[name] += (b.productionLossHours || 0);
+                    dtMapByEquip[name] += (b.totalDowntimeHours || 0);
+                });
+                // Also include work order machine downtime
+                workOrdersData.forEach(function(wo) {
+                    if (wo.machineDowntime && wo.equipment) {
+                        var dt = parseFloat(wo.machineDowntime) || 0;
+                        if (dt > 0) {
+                            if (!dtMapByEquip[wo.equipment]) dtMapByEquip[wo.equipment] = 0;
+                            dtMapByEquip[wo.equipment] += dt;
+                        }
+                    }
+                });
+                var plEntries = Object.keys(plMap).concat(Object.keys(dtMapByEquip))
+                    .filter(function(v, i, a) { return a.indexOf(v) === i; })
+                    .map(function(k) { return { machine: k, loss: plMap[k] || 0, downtime: dtMapByEquip[k] || 0 }; })
+                    .filter(function(e) { return e.loss > 0 || e.downtime > 0; })
+                    .sort(function(a, b) { return (b.loss + b.downtime) - (a.loss + a.downtime); });
+                var totalLoss = plEntries.reduce(function(s, e) { return s + e.loss; }, 0);
+                var totalDt = plEntries.reduce(function(s, e) { return s + e.downtime; }, 0);
+                var plHtml = plEntries.map(function(e) {
+                    var color = e.loss > 10 ? 'var(--danger)' : e.loss > 5 ? 'var(--warning)' : 'var(--success)';
+                    return '<div class="metric-item"><span class="metric-label">' + escHtml(e.machine)
+                        + '</span><span class="metric-value" style="color:' + color + ';">'
+                        + e.loss.toFixed(1) + 'h loss / ' + e.downtime.toFixed(1) + 'h down</span></div>';
+                }).join('');
+                if (plEntries.length > 0) {
+                    plHtml += '<div class="metric-item" style="background:var(--primary);border-radius:6px;padding:0.5rem 0.75rem;"><span class="metric-label" style="color:white;font-weight:700;">Totals</span><span class="metric-value" style="color:white;">'
+                        + totalLoss.toFixed(1) + 'h loss / ' + totalDt.toFixed(1) + 'h down</span></div>';
+                }
+                plEl.innerHTML = plHtml || '<div class="metric-item"><span class="metric-label" style="color:var(--gray-600);">No production loss data recorded</span></div>';
+            }
+
+            // P8: Downtime & Production Loss Trend (last 6 months)
+            var trendCtx = document.getElementById('downtimeTrendChart');
+            if (trendCtx) {
+                var monthLabels = [];
+                var dtByMonth = {};
+                var plByMonth = {};
+                for (var mi = 5; mi >= 0; mi--) {
+                    var md = new Date();
+                    md.setMonth(md.getMonth() - mi);
+                    var mKey = md.getFullYear() + '-' + String(md.getMonth() + 1).padStart(2, '0');
+                    monthLabels.push(md.toLocaleString('default', { month: 'short', year: '2-digit' }));
+                    dtByMonth[mKey] = 0;
+                    plByMonth[mKey] = 0;
+                }
+                breakdownsData.forEach(function(b) {
+                    if (b.dateISO) {
+                        var bKey = b.dateISO.substring(0, 7);
+                        if (dtByMonth[bKey] !== undefined) {
+                            dtByMonth[bKey] += (b.totalDowntimeHours || 0);
+                            plByMonth[bKey] += (b.productionLossHours || 0);
+                        }
+                    }
+                });
+                var dtVals = Object.values(dtByMonth);
+                var plVals = Object.values(plByMonth);
+                if (window._downtimeTrendChartInstance) window._downtimeTrendChartInstance.destroy();
+                window._downtimeTrendChartInstance = new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: monthLabels,
+                        datasets: [
+                            { label: 'Downtime Hours', data: dtVals, borderColor: 'rgba(255,61,0,1)', backgroundColor: 'rgba(255,61,0,0.1)', fill: true, tension: 0.3 },
+                            { label: 'Production Loss Hours', data: plVals, borderColor: 'rgba(0,102,255,1)', backgroundColor: 'rgba(0,102,255,0.1)', fill: true, tension: 0.3 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: true } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Hours' } } } }
+                });
             }
         }
 
@@ -6924,6 +7061,48 @@
                 }
             }
             el.textContent = '—';
+        }
+
+        function calcBrDowntime() {
+            var start = document.getElementById('brDowntimeStart').value;
+            var finish = document.getElementById('brDowntimeEnd').value;
+            var el = document.getElementById('brTotalDowntime');
+            if (start && finish) {
+                var diffMs = new Date(finish) - new Date(start);
+                if (diffMs > 0) {
+                    var hrs = Math.floor(diffMs / 3600000);
+                    var mins = Math.floor((diffMs % 3600000) / 60000);
+                    el.textContent = hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
+                    var plInput = document.getElementById('brProductionLossHours');
+                    if (!plInput.value) plInput.value = (diffMs / 3600000).toFixed(2);
+                    return;
+                }
+            }
+            el.textContent = '---';
+        }
+
+        function calcBrEditDowntime() {
+            var start = document.getElementById('brEditDowntimeStart').value;
+            var finish = document.getElementById('brEditDowntimeEnd').value;
+            var el = document.getElementById('brEditTotalDowntime');
+            if (start && finish) {
+                var diffMs = new Date(finish) - new Date(start);
+                if (diffMs > 0) {
+                    var hrs = Math.floor(diffMs / 3600000);
+                    var mins = Math.floor((diffMs % 3600000) / 60000);
+                    el.textContent = hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
+                    return;
+                }
+            }
+            el.textContent = '---';
+        }
+
+        function syncBrDowntimeStart() {
+            var d = document.getElementById('brDate').value;
+            var t = document.getElementById('brTime').value;
+            if (d && t) {
+                document.getElementById('brDowntimeStart').value = d + 'T' + t;
+            }
         }
 
         async function deleteWorkOrder(woId) {
@@ -9521,8 +9700,8 @@
                     +   '<div class="breakdown-meta">'
                     +     '<span>\uD83D\uDCC5 ' + formatDateISO(br.dateISO) + (br.time ? ' at ' + br.time : '') + '</span>'
                     +     (br.resolvedBy ? '<span>\uD83D\uDC64 ' + escHtml(br.resolvedBy) + '</span>' : '')
-                    +     (br.timeToResolve ? '<span>\u23F1 ' + escHtml(br.timeToResolve) + '</span>' : '')
-                    +     (br.productionLoss ? '<span>\u23F3 Loss: ' + escHtml(br.productionLoss) + '</span>' : '')
+                    +     (br.totalDowntimeHours > 0 ? '<span>\u23F1 Downtime: ' + br.totalDowntimeHours.toFixed(1) + 'h</span>' : '')
+                    +     (br.productionLossHours > 0 ? '<span>\u23F3 Loss: ' + br.productionLossHours.toFixed(1) + 'h</span>' : '')
                     +     woLink
                     +   '</div>'
                     +   resHtml
@@ -9589,10 +9768,8 @@
         function toggleBrResolutionField() {
             var status  = document.getElementById('brStatus').value;
             var wrap1   = document.getElementById('brResolutionWrap');
-            var wrap2   = document.getElementById('brTimeResolveWrap');
             var raiseWo = document.getElementById('brRaiseWo');
             wrap1.style.display = (status === 'pending') ? 'none' : '';
-            wrap2.style.display = (status === 'pending') ? 'none' : '';
             raiseWo.checked = (status === 'in-progress' || status === 'pending');
         }
 
@@ -9603,12 +9780,13 @@
             var fault      = document.getElementById('brFaultDesc').value.trim();
             var faultCause = document.getElementById('brFaultCause').value;
             var root       = document.getElementById('brRootCause').value.trim();
-            var engineer   = document.getElementById('brEngineer').value;
-            var prodLoss   = document.getElementById('brProductionLoss').value.trim();
-            var status     = document.getElementById('brStatus').value;
-            var action     = document.getElementById('brActionTaken').value.trim();
-            var ttr        = document.getElementById('brTimeToResolve').value.trim();
-            var raiseWo    = document.getElementById('brRaiseWo').checked;
+            var engineer          = document.getElementById('brEngineer').value;
+            var downtimeStart     = document.getElementById('brDowntimeStart').value;
+            var downtimeEnd       = document.getElementById('brDowntimeEnd').value;
+            var productionLossHrs = parseFloat(document.getElementById('brProductionLossHours').value) || 0;
+            var status            = document.getElementById('brStatus').value;
+            var action            = document.getElementById('brActionTaken').value.trim();
+            var raiseWo           = document.getElementById('brRaiseWo').checked;
 
             if (!machine || !dateISO || !fault || !faultCause) {
                 showToast('Please fill in: machine, date, fault description, and fault cause.', 'error');
@@ -9641,7 +9819,9 @@
                     fault_cause: faultCause,
                     root_cause: root,
                     resolution: action,
-                    downtime_started: dateISO ? dateISO + (time ? 'T' + time : 'T00:00:00') : null,
+                    downtime_started: downtimeStart || (dateISO ? dateISO + (time ? 'T' + time : 'T00:00:00') : null),
+                    downtime_ended: downtimeEnd || null,
+                    production_loss_hours: productionLossHrs,
                     work_order_id: linkedWoId
                 };
                 try {
@@ -9654,7 +9834,13 @@
                 mapped.faultDescription = fault; mapped.faultCause = faultCause;
                 mapped.rootCause = root;
                 mapped.actionTaken = action; mapped.resolvedBy = engineer;
-                mapped.timeToResolve = ttr; mapped.productionLoss = prodLoss;
+                mapped.downtimeStart = downtimeStart;
+                mapped.downtimeEnd = downtimeEnd;
+                mapped.productionLossHours = productionLossHrs;
+                if (downtimeStart && downtimeEnd) {
+                    var dtDiff = new Date(downtimeEnd) - new Date(downtimeStart);
+                    mapped.totalDowntimeHours = dtDiff > 0 ? dtDiff / 3600000 : 0;
+                } else { mapped.totalDowntimeHours = 0; }
                 mapped.linkedWoId = linkedWoId;
                 mapped.brId = 'BR-' + String(brCreated.id).padStart(6, '0');
                 breakdownsData.unshift(mapped);
@@ -9682,11 +9868,13 @@
             document.getElementById('brEditFaultDesc').value      = br.faultDescription;
             document.getElementById('brEditFaultCause').value     = br.faultCause || '';
             document.getElementById('brEditRootCause').value      = br.rootCause || '';
-            document.getElementById('brEditEngineer').value       = br.resolvedBy || '';
-            document.getElementById('brEditProductionLoss').value = br.productionLoss || '';
-            document.getElementById('brEditStatus').value         = br.status;
-            document.getElementById('brEditActionTaken').value    = br.actionTaken || '';
-            document.getElementById('brEditTimeToResolve').value  = br.timeToResolve || '';
+            document.getElementById('brEditEngineer').value          = br.resolvedBy || '';
+            document.getElementById('brEditDowntimeStart').value    = br.downtimeStart ? br.downtimeStart.slice(0, 16) : '';
+            document.getElementById('brEditDowntimeEnd').value      = br.downtimeEnd ? br.downtimeEnd.slice(0, 16) : '';
+            document.getElementById('brEditProductionLossHours').value = br.productionLossHours || '';
+            document.getElementById('brEditStatus').value           = br.status;
+            document.getElementById('brEditActionTaken').value      = br.actionTaken || '';
+            calcBrEditDowntime();
             var linkedDiv = document.getElementById('brDetailLinkedWo');
             linkedDiv.innerHTML = br.linkedWoId
                 ? '<div style="background:var(--gray-100);padding:0.6rem 0.75rem;border-radius:8px;font-size:0.85rem;">\u26A1 Linked Work Order: <strong>WO-2026-' + String(br.linkedWoId).padStart(3,'0') + '</strong></div>'
@@ -9704,11 +9892,16 @@
             br.faultDescription  = document.getElementById('brEditFaultDesc').value.trim();
             br.faultCause        = document.getElementById('brEditFaultCause').value;
             br.rootCause         = document.getElementById('brEditRootCause').value.trim();
-            br.resolvedBy        = document.getElementById('brEditEngineer').value;
-            br.productionLoss    = document.getElementById('brEditProductionLoss').value.trim();
-            br.actionTaken       = document.getElementById('brEditActionTaken').value.trim();
-            br.timeToResolve     = document.getElementById('brEditTimeToResolve').value.trim();
-            var newStatus        = document.getElementById('brEditStatus').value;
+            br.resolvedBy          = document.getElementById('brEditEngineer').value;
+            br.downtimeStart       = document.getElementById('brEditDowntimeStart').value;
+            br.downtimeEnd         = document.getElementById('brEditDowntimeEnd').value;
+            br.productionLossHours = parseFloat(document.getElementById('brEditProductionLossHours').value) || 0;
+            br.actionTaken         = document.getElementById('brEditActionTaken').value.trim();
+            var newStatus          = document.getElementById('brEditStatus').value;
+            if (br.downtimeStart && br.downtimeEnd) {
+                var dtDiff = new Date(br.downtimeEnd) - new Date(br.downtimeStart);
+                br.totalDowntimeHours = dtDiff > 0 ? dtDiff / 3600000 : 0;
+            } else { br.totalDowntimeHours = 0; }
 
             try {
                 var editEqMatch = equipmentList.find(function(e) { return e.name === br.machine; });
@@ -9719,7 +9912,9 @@
                     root_cause: br.rootCause,
                     resolution: br.actionTaken,
                     status: newStatus,
-                    downtime_started: br.dateISO ? br.dateISO + (br.time ? 'T' + br.time : 'T00:00:00') : null
+                    downtime_started: br.downtimeStart || null,
+                    downtime_ended: br.downtimeEnd || null,
+                    production_loss_hours: br.productionLossHours
                 });
 
                 // If newly resolved and linked WO exists, mark WO completed
@@ -9980,6 +10175,8 @@
             openEditPM, submitEditPM, addEditPMCheckItem, removeEditPMCheckItem,
             // WO Detail Photo Upload
             handleWoDetailFiles, removeWoDetailFile, uploadWoDetailPhotos,
+            // Downtime Tracking
+            calcBrDowntime, calcBrEditDowntime, syncBrDowntimeStart,
             // QR Codes
             showEquipQR, printQRCode, openQRScanner, closeQRScanner, manualQRLookup,
             // Audit Trail
