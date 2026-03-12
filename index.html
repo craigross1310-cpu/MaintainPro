@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Cradero - Complete Maintenance Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://ckjdwiipogxdkehxqrzh.supabase.co; connect-src 'self' blob: data: https://ckjdwiipogxdkehxqrzh.supabase.co https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com; worker-src 'self' blob:; frame-ancestors 'none';">
@@ -3670,7 +3673,6 @@
                             <select class="form-select" id="brEngineer">
                                 <option value="">Select engineer...</option>
                             </select>
-                        </div>
                         </div>
                     </div>
                     <div class="form-group">
@@ -9981,13 +9983,15 @@
 
             try {
                 var editEqMatch = equipmentList.find(function(e) { return e.name === br.machine; });
+                var dbStatus = ({ 'pending': 'reported', 'in-progress': 'repair_in_progress', 'resolved': 'resolved' }[newStatus] || 'reported');
+                console.log('[DEBUG] saveBreakdownEdit - newStatus:', newStatus, '-> dbStatus:', dbStatus);
                 await CraderoAPI.breakdowns.update(br.id, {
                     equipment_id: editEqMatch ? editEqMatch.id : undefined,
                     equipment_name: br.machine, title: br.faultDescription,
                     description: br.faultDescription, fault_cause: br.faultCause,
                     root_cause: br.rootCause,
                     resolution: br.actionTaken,
-                    status: ({ 'pending': 'reported', 'in-progress': 'repair_in_progress', 'resolved': 'resolved' }[newStatus] || 'reported'),
+                    status: dbStatus,
                     downtime_started: br.downtimeStart || null,
                     downtime_ended: br.downtimeEnd || null,
                     job_started: br.jobStart || null,
