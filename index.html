@@ -14,6 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" crossorigin="anonymous"></script>
     <style>
         :root {
             --primary: #0066FF;
@@ -4221,76 +4222,31 @@
         }
 
         function generateSimpleQR(container, text, size) {
-            // Create a canvas-based QR code using a data matrix pattern
-            // Since we can't use external APIs due to CSP, we generate a visual QR-like code
-            // using the text's character codes to create a deterministic pattern
+            // Generate a real, scannable QR code using qrcode-generator
+            var qr = qrcode(0, 'M');
+            qr.addData(text);
+            qr.make();
+
             var canvas = document.createElement('canvas');
             canvas.width = size;
             canvas.height = size;
-            canvas.id = 'qrCanvas';
+            canvas.id = 'qrDisplayCanvas';
             var ctx = canvas.getContext('2d');
+
+            var modules = qr.getModuleCount();
+            var cellSize = size / modules;
 
             // White background
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(0, 0, size, size);
 
-            // Generate a deterministic bit matrix from the data
-            var modules = 21; // QR Version 1
-            var cellSize = Math.floor(size / (modules + 2));
-            var offset = Math.floor((size - cellSize * modules) / 2);
-
-            // Create bit pattern from text
-            var bits = [];
-            for (var i = 0; i < text.length; i++) {
-                var code = text.charCodeAt(i);
-                for (var b = 7; b >= 0; b--) {
-                    bits.push((code >> b) & 1);
-                }
-            }
-
+            // Draw QR modules
             ctx.fillStyle = '#000000';
-
-            // Draw finder patterns (top-left, top-right, bottom-left)
-            function drawFinder(x, y) {
-                for (var r = 0; r < 7; r++) {
-                    for (var c = 0; c < 7; c++) {
-                        var fill = (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4));
-                        if (fill) {
-                            ctx.fillRect(offset + (x + c) * cellSize, offset + (y + r) * cellSize, cellSize, cellSize);
-                        }
-                    }
-                }
-            }
-            drawFinder(0, 0);
-            drawFinder(modules - 7, 0);
-            drawFinder(0, modules - 7);
-
-            // Draw timing patterns
-            for (var t = 8; t < modules - 8; t++) {
-                if (t % 2 === 0) {
-                    ctx.fillRect(offset + t * cellSize, offset + 6 * cellSize, cellSize, cellSize);
-                    ctx.fillRect(offset + 6 * cellSize, offset + t * cellSize, cellSize, cellSize);
-                }
-            }
-
-            // Fill data area with bit pattern
-            var bitIdx = 0;
             for (var row = 0; row < modules; row++) {
                 for (var col = 0; col < modules; col++) {
-                    // Skip finder pattern areas and timing patterns
-                    if ((row < 8 && col < 8) || (row < 8 && col >= modules - 8) || (row >= modules - 8 && col < 8)) continue;
-                    if (row === 6 || col === 6) continue;
-
-                    if (bitIdx < bits.length && bits[bitIdx]) {
-                        ctx.fillRect(offset + col * cellSize, offset + row * cellSize, cellSize, cellSize);
-                    } else if (bitIdx >= bits.length) {
-                        // Pseudorandom fill for error correction appearance
-                        var hash = ((row * 31 + col * 17 + text.length * 7) % 97);
-                        if (hash < 30) {
-                            ctx.fillRect(offset + col * cellSize, offset + row * cellSize, cellSize, cellSize);
-                        }
+                    if (qr.isDark(row, col)) {
+                        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
                     }
-                    bitIdx++;
                 }
             }
 
@@ -4303,7 +4259,7 @@
         }
 
         function printQRCode() {
-            var canvas = document.getElementById('qrCanvas');
+            var canvas = document.getElementById('qrDisplayCanvas');
             if (!canvas) return;
             var win = window.open('', '_blank');
             var title = document.getElementById('qrModalTitle').textContent;
