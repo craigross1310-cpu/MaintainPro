@@ -1684,7 +1684,7 @@
                 <button class="notification-bell pro-only-feature" onclick="toggleDarkMode()" id="darkModeToggle" title="Toggle Dark Mode" style="margin-right:4px;">
                     🌙
                 </button>
-                <button class="notification-bell" onclick="openQRScanner()" title="Scan Equipment QR Code" style="margin-right:4px;">
+                <button class="notification-bell pro-only-feature" onclick="openQRScanner()" title="Scan Equipment QR Code" style="margin-right:4px;">
                     📷
                 </button>
                 <button class="notification-bell" onclick="toggleNotifications()">
@@ -2123,6 +2123,24 @@
 
                     <div class="chart-card">
                         <div class="chart-header">
+                            <div class="chart-title">Fault Cause Analysis</div>
+                            <div class="chart-subtitle">Breakdown frequency by cause category</div>
+                        </div>
+                        <div class="metric-list" id="faultCauseAnalysisList">
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Recurring Faults by Equipment</div>
+                            <div class="chart-subtitle">Repeated cause patterns per machine</div>
+                        </div>
+                        <div class="metric-list" id="recurringFaultsList">
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
                             <div class="chart-title">Technician Workload</div>
                             <div class="chart-subtitle">Active assignments per engineer</div>
                         </div>
@@ -2170,6 +2188,22 @@
                             <option value="resolved">Resolved</option>
                             <option value="in-progress">In Progress</option>
                             <option value="pending">Pending</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fault Cause</label>
+                        <select class="form-select" id="brFilterCause" style="min-width:140px;">
+                            <option value="">All Causes</option>
+                            <option value="Electrical">Electrical</option>
+                            <option value="Mechanical">Mechanical</option>
+                            <option value="Hydraulic">Hydraulic</option>
+                            <option value="Pneumatic">Pneumatic</option>
+                            <option value="Software/PLC">Software / PLC</option>
+                            <option value="Operator Error">Operator Error</option>
+                            <option value="Wear & Tear">Wear & Tear</option>
+                            <option value="Contamination">Contamination</option>
+                            <option value="Calibration">Calibration</option>
+                            <option value="Other">Other</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -3580,9 +3614,27 @@
                         <label class="form-label">Fault Description *</label>
                         <textarea class="form-textarea" id="brFaultDesc" rows="3" placeholder="Describe the fault / breakdown in detail..." required></textarea>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Root Cause</label>
-                        <input type="text" class="form-input" id="brRootCause" placeholder="What caused the fault?">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Fault Cause *</label>
+                            <select class="form-select" id="brFaultCause" required>
+                                <option value="">Select cause...</option>
+                                <option value="Electrical">Electrical</option>
+                                <option value="Mechanical">Mechanical</option>
+                                <option value="Hydraulic">Hydraulic</option>
+                                <option value="Pneumatic">Pneumatic</option>
+                                <option value="Software/PLC">Software / PLC</option>
+                                <option value="Operator Error">Operator Error</option>
+                                <option value="Wear & Tear">Wear & Tear</option>
+                                <option value="Contamination">Contamination</option>
+                                <option value="Calibration">Calibration</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Root Cause Detail</label>
+                            <input type="text" class="form-input" id="brRootCause" placeholder="Additional detail...">
+                        </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -3652,9 +3704,27 @@
                     <label class="form-label">Fault Description</label>
                     <textarea class="form-textarea" id="brEditFaultDesc" rows="3"></textarea>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Root Cause</label>
-                    <input type="text" class="form-input" id="brEditRootCause">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Fault Cause</label>
+                        <select class="form-select" id="brEditFaultCause">
+                            <option value="">Select cause...</option>
+                            <option value="Electrical">Electrical</option>
+                            <option value="Mechanical">Mechanical</option>
+                            <option value="Hydraulic">Hydraulic</option>
+                            <option value="Pneumatic">Pneumatic</option>
+                            <option value="Software/PLC">Software / PLC</option>
+                            <option value="Operator Error">Operator Error</option>
+                            <option value="Wear & Tear">Wear & Tear</option>
+                            <option value="Contamination">Contamination</option>
+                            <option value="Calibration">Calibration</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Root Cause Detail</label>
+                        <input type="text" class="form-input" id="brEditRootCause">
+                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -5140,6 +5210,7 @@
                 id: row.id, machine: row.equipment_name || '',
                 faultDescription: row.title || row.description || '',
                 description: row.description || '',
+                faultCause: row.fault_cause || '',
                 severity: row.severity || 'medium', status: row.status || 'open',
                 reportedBy: row.reported_by || '',
                 rootCause: row.root_cause || '', resolution: row.resolution || '',
@@ -5737,6 +5808,47 @@
                     html += '<div class="metric-item"><span class="metric-label">' + escHtml(machine) + '</span><span class="metric-value" style="font-size:0.9rem;">MTTR: ' + mttr + 'h · MTBF: ' + (mtbf === 'N/A' ? mtbf : mtbf + 'd') + '</span></div>';
                 });
                 mttrEl.innerHTML = html || '<div class="metric-item"><span class="metric-label" style="color:var(--gray-600);">No breakdown data available</span></div>';
+            }
+
+            // P3b: Fault Cause Analysis
+            var faultCauseEl = document.getElementById('faultCauseAnalysisList');
+            if (faultCauseEl) {
+                var causeCounts = {};
+                breakdownsData.forEach(function(b) {
+                    var cause = b.faultCause || 'Unclassified';
+                    if (!causeCounts[cause]) causeCounts[cause] = 0;
+                    causeCounts[cause]++;
+                });
+                var causeArr = Object.keys(causeCounts).map(function(k) { return { cause: k, count: causeCounts[k] }; })
+                    .sort(function(a, b) { return b.count - a.count; });
+                var totalBr = breakdownsData.length || 1;
+                var fcHtml = causeArr.map(function(c) {
+                    var pct = Math.round(c.count / totalBr * 100);
+                    var barColor = pct >= 30 ? 'var(--danger)' : pct >= 15 ? 'var(--warning)' : 'var(--success)';
+                    return '<div class="metric-item" style="flex-direction:column;align-items:stretch;">'
+                        + '<div style="display:flex;justify-content:space-between;"><span class="metric-label">' + escHtml(c.cause) + '</span><span class="metric-value">' + c.count + ' (' + pct + '%)</span></div>'
+                        + '<div style="background:var(--gray-200);border-radius:4px;height:6px;margin-top:4px;"><div style="background:' + barColor + ';height:100%;border-radius:4px;width:' + pct + '%;"></div></div>'
+                        + '</div>';
+                }).join('');
+                faultCauseEl.innerHTML = fcHtml || '<div class="metric-item"><span class="metric-label" style="color:var(--gray-600);">No breakdown data available</span></div>';
+            }
+
+            // P3c: Recurring Faults by Equipment
+            var recurringEl = document.getElementById('recurringFaultsList');
+            if (recurringEl) {
+                var machCause = {};
+                breakdownsData.forEach(function(b) {
+                    var key = (b.machine || 'Unknown') + '||' + (b.faultCause || 'Unclassified');
+                    if (!machCause[key]) machCause[key] = { machine: b.machine || 'Unknown', cause: b.faultCause || 'Unclassified', count: 0 };
+                    machCause[key].count++;
+                });
+                var recurring = Object.values(machCause).filter(function(r) { return r.count >= 2; })
+                    .sort(function(a, b) { return b.count - a.count; });
+                var rHtml = recurring.slice(0, 10).map(function(r) {
+                    var color = r.count >= 5 ? 'var(--danger)' : r.count >= 3 ? 'var(--warning)' : 'var(--gray-700)';
+                    return '<div class="metric-item"><span class="metric-label">' + escHtml(r.machine) + ' — ' + escHtml(r.cause) + '</span><span class="metric-value" style="color:' + color + ';">' + r.count + 'x</span></div>';
+                }).join('');
+                recurringEl.innerHTML = rHtml || '<div class="metric-item"><span class="metric-label" style="color:var(--success);">No recurring fault patterns detected</span></div>';
             }
 
             // P4: Technician Workload
@@ -9405,6 +9517,7 @@
                     + '<div class="breakdown-body">'
                     +   '<div class="breakdown-machine">' + escHtml(br.machine) + '</div>'
                     +   '<div class="breakdown-fault">' + escHtml(br.faultDescription) + '</div>'
+                    +   (br.faultCause ? '<div style="margin-top:0.25rem;"><span style="font-size:0.78rem;background:var(--gray-200);padding:2px 8px;border-radius:4px;font-weight:600;">' + escHtml(br.faultCause) + '</span></div>' : '')
                     +   '<div class="breakdown-meta">'
                     +     '<span>\uD83D\uDCC5 ' + formatDateISO(br.dateISO) + (br.time ? ' at ' + br.time : '') + '</span>'
                     +     (br.resolvedBy ? '<span>\uD83D\uDC64 ' + escHtml(br.resolvedBy) + '</span>' : '')
@@ -9425,11 +9538,13 @@
         function filterBreakdowns() {
             var machine = document.getElementById('brFilterMachine').value;
             var status  = document.getElementById('brFilterStatus').value;
+            var cause   = document.getElementById('brFilterCause').value;
             var from    = document.getElementById('brFilterFrom').value;
             var to      = document.getElementById('brFilterTo').value;
             var filtered = breakdownsData.slice();
             if (machine) filtered = filtered.filter(function(b) { return b.machine === machine; });
             if (status)  filtered = filtered.filter(function(b) { return b.status  === status;  });
+            if (cause)   filtered = filtered.filter(function(b) { return b.faultCause === cause; });
             if (from)    filtered = filtered.filter(function(b) { return b.dateISO >= from; });
             if (to)      filtered = filtered.filter(function(b) { return b.dateISO <= to;   });
             renderBreakdowns(filtered);
@@ -9438,6 +9553,7 @@
         function clearBreakdownFilter() {
             document.getElementById('brFilterMachine').value = '';
             document.getElementById('brFilterStatus').value  = '';
+            document.getElementById('brFilterCause').value   = '';
             document.getElementById('brFilterFrom').value    = '';
             document.getElementById('brFilterTo').value      = '';
             renderBreakdowns();
@@ -9481,20 +9597,21 @@
         }
 
         async function submitBreakdown() {
-            var machine  = document.getElementById('brMachine').value;
-            var dateISO  = document.getElementById('brDate').value;
-            var time     = document.getElementById('brTime').value;
-            var fault    = document.getElementById('brFaultDesc').value.trim();
-            var root     = document.getElementById('brRootCause').value.trim();
-            var engineer = document.getElementById('brEngineer').value;
-            var prodLoss = document.getElementById('brProductionLoss').value.trim();
-            var status   = document.getElementById('brStatus').value;
-            var action   = document.getElementById('brActionTaken').value.trim();
-            var ttr      = document.getElementById('brTimeToResolve').value.trim();
-            var raiseWo  = document.getElementById('brRaiseWo').checked;
+            var machine    = document.getElementById('brMachine').value;
+            var dateISO    = document.getElementById('brDate').value;
+            var time       = document.getElementById('brTime').value;
+            var fault      = document.getElementById('brFaultDesc').value.trim();
+            var faultCause = document.getElementById('brFaultCause').value;
+            var root       = document.getElementById('brRootCause').value.trim();
+            var engineer   = document.getElementById('brEngineer').value;
+            var prodLoss   = document.getElementById('brProductionLoss').value.trim();
+            var status     = document.getElementById('brStatus').value;
+            var action     = document.getElementById('brActionTaken').value.trim();
+            var ttr        = document.getElementById('brTimeToResolve').value.trim();
+            var raiseWo    = document.getElementById('brRaiseWo').checked;
 
-            if (!machine || !dateISO || !fault) {
-                showToast('Please fill in: machine, date, and fault description.', 'error');
+            if (!machine || !dateISO || !fault || !faultCause) {
+                showToast('Please fill in: machine, date, fault description, and fault cause.', 'error');
                 return;
             }
 
@@ -9508,6 +9625,8 @@
                         assignedTo: engineer || '', createdBy: engineer || 'System',
                         description: 'Auto-raised from Reactive Maintenance. Root cause: ' + (root || 'Under investigation.')
                     });
+                    var woEqMatch = equipmentList.find(function(e) { return e.name === machine; });
+                    if (woEqMatch) woDbRow.equipment_id = woEqMatch.id;
                     var woCreated = await CraderoAPI.workOrders.create(woDbRow);
                     workOrdersData.unshift(mapWoFromDb(woCreated));
                     renderWorkOrders();
@@ -9519,6 +9638,7 @@
                     equipment_id: eqMatch ? eqMatch.id : null,
                     equipment_name: machine, title: fault,
                     description: fault, severity: 'high', status: status,
+                    fault_cause: faultCause,
                     root_cause: root,
                     resolution: action,
                     downtime_started: dateISO ? dateISO + (time ? 'T' + time : 'T00:00:00') : null,
@@ -9531,7 +9651,8 @@
                 var brCreated = await CraderoAPI.breakdowns.create(brDbRow);
                 var mapped = mapBreakdownFromDb(brCreated);
                 mapped.dateISO = dateISO; mapped.time = time;
-                mapped.faultDescription = fault; mapped.rootCause = root;
+                mapped.faultDescription = fault; mapped.faultCause = faultCause;
+                mapped.rootCause = root;
                 mapped.actionTaken = action; mapped.resolvedBy = engineer;
                 mapped.timeToResolve = ttr; mapped.productionLoss = prodLoss;
                 mapped.linkedWoId = linkedWoId;
@@ -9559,6 +9680,7 @@
             document.getElementById('brEditDate').value           = br.dateISO;
             document.getElementById('brEditTime').value           = br.time || '';
             document.getElementById('brEditFaultDesc').value      = br.faultDescription;
+            document.getElementById('brEditFaultCause').value     = br.faultCause || '';
             document.getElementById('brEditRootCause').value      = br.rootCause || '';
             document.getElementById('brEditEngineer').value       = br.resolvedBy || '';
             document.getElementById('brEditProductionLoss').value = br.productionLoss || '';
@@ -9580,6 +9702,7 @@
             br.dateISO           = document.getElementById('brEditDate').value;
             br.time              = document.getElementById('brEditTime').value;
             br.faultDescription  = document.getElementById('brEditFaultDesc').value.trim();
+            br.faultCause        = document.getElementById('brEditFaultCause').value;
             br.rootCause         = document.getElementById('brEditRootCause').value.trim();
             br.resolvedBy        = document.getElementById('brEditEngineer').value;
             br.productionLoss    = document.getElementById('brEditProductionLoss').value.trim();
@@ -9588,10 +9711,13 @@
             var newStatus        = document.getElementById('brEditStatus').value;
 
             try {
+                var editEqMatch = equipmentList.find(function(e) { return e.name === br.machine; });
                 await CraderoAPI.breakdowns.update(br.id, {
+                    equipment_id: editEqMatch ? editEqMatch.id : undefined,
                     equipment_name: br.machine, title: br.faultDescription,
-                    description: br.faultDescription, root_cause: br.rootCause,
-                    resolution: br.actionTaken, reported_by: br.resolvedBy,
+                    description: br.faultDescription, fault_cause: br.faultCause,
+                    root_cause: br.rootCause,
+                    resolution: br.actionTaken,
                     status: newStatus,
                     downtime_started: br.dateISO ? br.dateISO + (br.time ? 'T' + br.time : 'T00:00:00') : null
                 });
