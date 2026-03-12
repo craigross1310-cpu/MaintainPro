@@ -8,6 +8,9 @@
     <meta http-equiv="Expires" content="0">
     <title>Cradero - Complete Maintenance Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- SECURITY NOTE: 'unsafe-inline' is required because all JS/CSS is inline in this single-file SPA.
+         To strengthen CSP, extract JS to an external .js file and use nonce-based or hash-based CSP.
+         See: https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://ckjdwiipogxdkehxqrzh.supabase.co; connect-src 'self' blob: data: https://ckjdwiipogxdkehxqrzh.supabase.co https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com; worker-src 'self' blob:; frame-ancestors 'none';">
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.97.0/dist/umd/supabase.min.js" integrity="sha384-1+ItoWbWcmVSm+Y+dJaUt4SEWNA21/jxef+Z0TSHHVy/dEUxEUEnZ1bHn6GT5hj+" crossorigin="anonymous"></script>
@@ -4045,6 +4048,8 @@
 
     <script>
     (function() {
+        var CRADERO_DEBUG = false; // Set to true for development logging
+
         // ─────────────────────────────────────────────────────────────────────
         // SERVICE WORKER REGISTRATION
         // ─────────────────────────────────────────────────────────────────────
@@ -4063,7 +4068,7 @@
         }
 
         function applyTierRestrictions() {
-            console.log('[Cradero] applyTierRestrictions — tier:', currentUserTier);
+            if (CRADERO_DEBUG) console.log('[Cradero] applyTierRestrictions — tier:', currentUserTier);
             // Show or hide nav tabs based on access
             var hiddenCount = 0;
             var allTabs = document.querySelectorAll('.nav-tab');
@@ -4086,7 +4091,7 @@
                     panel.style.display = hasAccess(tabName) ? '' : 'none';
                 }
             });
-            console.log('[Cradero] Tabs hidden:', hiddenCount, '/ Total:', allTabs.length);
+            if (CRADERO_DEBUG) console.log('[Cradero] Tabs hidden:', hiddenCount, '/ Total:', allTabs.length);
             // If active tab is locked, switch to Work Orders
             var activeTab = document.querySelector('.tab-content.active');
             if (activeTab && !hasAccess(activeTab.id)) {
@@ -4108,7 +4113,7 @@
             // Register Service Worker only for Pro tier (offline mode)
             if (currentUserTier === 'pro' && 'serviceWorker' in navigator) {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(function(reg) { console.log('SW registered:', reg.scope); })
+                    .then(function(reg) { if (CRADERO_DEBUG) console.log('SW registered:', reg.scope); })
                     .catch(function(err) { console.warn('SW registration failed:', err); });
             }
         }
@@ -4395,7 +4400,7 @@
         }
 
         function logAudit(action, entityType, entityId, details) {
-            // Fire-and-forget — don't block the UI
+            // Fire-and-forget with single retry — don't block the UI
             supabaseClient.auth.getSession().then(function(sessionResult) {
                 var userId = sessionResult.data && sessionResult.data.session ? sessionResult.data.session.user.id : null;
                 var userEmail = sessionResult.data && sessionResult.data.session ? sessionResult.data.session.user.email : null;
@@ -4407,11 +4412,19 @@
                     entity_id: String(entityId), details: enrichedDetails
                 };
                 if (userId) row.user_id = userId;
-                return supabaseClient.from('audit_log').insert(row).select();
-            }).then(function(r) {
-                if (r && r.error) console.error('[Cradero] Audit log insert failed:', r.error.message, r.error);
+                return supabaseClient.from('audit_log').insert(row).select().then(function(r) {
+                    if (r && r.error) {
+                        console.error('[Cradero] Audit log insert failed:', r.error.message);
+                        // Single retry after 2 seconds
+                        setTimeout(function() {
+                            supabaseClient.from('audit_log').insert(row).select().then(function(r2) {
+                                if (r2 && r2.error) console.error('[Cradero] Audit log retry failed:', r2.error.message);
+                            }).catch(function() {});
+                        }, 2000);
+                    }
+                });
             }).catch(function(err) {
-                console.error('[Cradero] Audit log insert error:', err);
+                console.error('[Cradero] Audit log error:', err);
             });
         }
 
@@ -4498,7 +4511,32 @@
 
         function sanitizeInput(str, maxLen) {
             if (typeof str !== 'string') return '';
-            return str.trim().substring(0, maxLen || INPUT_LIMITS.general);
+            var truncated = str.trim().substring(0, maxLen || INPUT_LIMITS.general);
+            return truncated.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+        }
+
+        // ── File upload validation ──────────────────────────────────────────
+        var ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        var ALLOWED_DOC_TYPES = ['application/pdf', 'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        var MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+        function validateUploadFile(file, allowedTypes) {
+            if (!file) return 'No file selected.';
+            if (file.size > MAX_FILE_SIZE) return 'File "' + file.name + '" exceeds the 10 MB limit.';
+            if (allowedTypes && allowedTypes.indexOf(file.type) === -1) {
+                return 'File "' + file.name + '" has an unsupported type (' + (file.type || 'unknown') + ').';
+            }
+            var parts = file.name.split('.');
+            if (parts.length > 2) {
+                var suspicious = ['php', 'js', 'html', 'htm', 'exe', 'sh', 'bat', 'cmd', 'ps1'];
+                for (var i = 0; i < parts.length - 1; i++) {
+                    if (suspicious.indexOf(parts[i].toLowerCase()) !== -1) {
+                        return 'File "' + file.name + '" has a suspicious double extension.';
+                    }
+                }
+            }
+            return null;
         }
 
         function validateDateRange(startDate, endDate) {
@@ -4791,7 +4829,7 @@
                     if (filters && filters.from) q = q.gte('created_at', filters.from);
                     if (filters && filters.to) q = q.lte('created_at', filters.to + 'T23:59:59');
                     var r = await q;
-                    console.log('[Cradero] Audit log query result:', { filters: filters, count: r.data ? r.data.length : 0, error: r.error });
+                    if (CRADERO_DEBUG) console.log('[Cradero] Audit log query result:', { filters: filters, count: r.data ? r.data.length : 0, error: r.error });
                     if (r.error) throw r.error;
                     return r.data || [];
                 }
@@ -4888,7 +4926,7 @@
                     initFormConstraints();
                 }
             }
-            console.log('[Cradero] showApp — tier:', currentUserTier, 'role:', role, 'name:', currentUserName);
+            if (CRADERO_DEBUG) console.log('[Cradero] showApp — tier:', currentUserTier, 'role:', role, 'name:', currentUserName);
             resetSessionTimer();
             applyTierRestrictions();
             // Hide Add Equipment button for engineers
@@ -4989,28 +5027,48 @@
 
         // ─────────────────────────────────────────────────────────────────────
         // RATE LIMITING — lock login after 5 failures for 30s
+        // NOTE: This is client-side only. For robust protection against brute-force
+        // attacks, configure server-side rate limiting via Supabase Auth settings
+        // or Edge Functions.
         // ─────────────────────────────────────────────────────────────────────
-        var loginAttempts = 0;
-        var loginLockUntil = 0;
+        var LOGIN_MAX_ATTEMPTS = 5;
+        var LOGIN_LOCKOUT_MS = 30000;
         var loginLockTimer = null;
 
+        function getLoginState() {
+            try {
+                var stored = JSON.parse(sessionStorage.getItem('_crl') || '{}');
+                return { attempts: stored.a || 0, lockUntil: stored.l || 0 };
+            } catch(e) { return { attempts: 0, lockUntil: 0 }; }
+        }
+
+        function setLoginState(attempts, lockUntil) {
+            try { sessionStorage.setItem('_crl', JSON.stringify({ a: attempts, l: lockUntil })); } catch(e) {}
+        }
+
         function isLoginLocked() {
-            return Date.now() < loginLockUntil;
+            var state = getLoginState();
+            if (Date.now() < state.lockUntil) return true;
+            if (state.lockUntil > 0 && Date.now() >= state.lockUntil) {
+                setLoginState(0, 0);
+            }
+            return false;
         }
 
         function startLoginLockout() {
-            loginLockUntil = Date.now() + 30000;
+            var lockUntil = Date.now() + LOGIN_LOCKOUT_MS;
+            setLoginState(LOGIN_MAX_ATTEMPTS, lockUntil);
             var btn = document.getElementById('loginBtn');
             btn.disabled = true;
-            var remaining = 30;
+            var remaining = Math.ceil(LOGIN_LOCKOUT_MS / 1000);
             btn.textContent = 'Locked (' + remaining + 's)';
+            if (loginLockTimer) clearInterval(loginLockTimer);
             loginLockTimer = setInterval(function() {
                 remaining--;
                 if (remaining <= 0) {
                     clearInterval(loginLockTimer);
                     loginLockTimer = null;
-                    loginAttempts = 0;
-                    loginLockUntil = 0;
+                    setLoginState(0, 0);
                     btn.disabled = false;
                     btn.textContent = 'Log In';
                 } else {
@@ -5037,21 +5095,23 @@
             });
 
             if (result.error) {
-                loginAttempts++;
+                var state = getLoginState();
+                state.attempts++;
+                setLoginState(state.attempts, state.lockUntil);
                 btn.disabled = false;
                 btn.textContent = 'Log In';
-                if (loginAttempts >= 5) {
+                if (state.attempts >= LOGIN_MAX_ATTEMPTS) {
                     showAuthMessage('Too many failed attempts. Please wait 30 seconds.', 'error');
                     startLoginLockout();
-                } else if (loginAttempts >= 3) {
-                    showAuthMessage(result.error.message + ' (' + (5 - loginAttempts) + ' attempts remaining)', 'error');
+                } else if (state.attempts >= 3) {
+                    showAuthMessage(result.error.message + ' (' + (LOGIN_MAX_ATTEMPTS - state.attempts) + ' attempts remaining)', 'error');
                 } else {
                     showAuthMessage(result.error.message, 'error');
                 }
                 return;
             }
 
-            loginAttempts = 0;
+            setLoginState(0, 0);
             btn.disabled = false;
             btn.textContent = 'Log In';
 
@@ -5064,30 +5124,45 @@
         // SESSION TIMEOUT — auto-logout after 30 minutes of inactivity
         // ─────────────────────────────────────────────────────────────────────
         var SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+        var SESSION_WARNING_MS = 25 * 60 * 1000;
         var sessionTimer = null;
+        var sessionWarningTimer = null;
         var lastActivityReset = 0;
 
         function resetSessionTimer() {
             if (!appInitialized) return;
-            // Throttle: only reset the timer once per 60 seconds to avoid
+            // Throttle: only reset the timer once per 15 seconds to avoid
             // phantom mouse movements / scroll events keeping the session alive
             var now = Date.now();
-            if (now - lastActivityReset < 60000) return;
+            if (now - lastActivityReset < 15000) return;
             lastActivityReset = now;
             if (sessionTimer) clearTimeout(sessionTimer);
+            if (sessionWarningTimer) clearTimeout(sessionWarningTimer);
+            sessionWarningTimer = setTimeout(function() {
+                showToast('Your session will expire in 5 minutes due to inactivity.', 'error');
+            }, SESSION_WARNING_MS);
             sessionTimer = setTimeout(function() {
                 showToast('Session expired due to inactivity. Please log in again.', 'error');
                 handleLogout();
             }, SESSION_TIMEOUT_MS);
         }
 
-        // Use click/mousedown/keydown/touchstart — NOT mousemove (sensor drift resets timer)
-        ['mousedown', 'keydown', 'touchstart', 'click'].forEach(function(evt) {
+        // Re-check timer when tab becomes visible (setTimeout may drift while hidden)
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible' && appInitialized) {
+                lastActivityReset = 0;
+                resetSessionTimer();
+            }
+        });
+
+        // Use click/mousedown/keydown/touchstart/scroll — NOT mousemove (sensor drift resets timer)
+        ['mousedown', 'keydown', 'touchstart', 'click', 'scroll'].forEach(function(evt) {
             document.addEventListener(evt, resetSessionTimer, { passive: true });
         });
 
         async function handleLogout() {
             if (sessionTimer) { clearTimeout(sessionTimer); sessionTimer = null; }
+            if (sessionWarningTimer) { clearTimeout(sessionWarningTimer); sessionWarningTimer = null; }
             try { await supabaseClient.auth.signOut(); } catch(e) {}
             // Clear caches via service worker
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
@@ -5468,7 +5543,7 @@
                         return wo.equipment === eq.name && wo.created && new Date(wo.created) >= thirtyDaysAgo;
                     }).length;
                 });
-                console.log('[Cradero] All data loaded from Supabase (' + staffProfiles.length + ' staff profiles)');
+                if (CRADERO_DEBUG) console.log('[Cradero] All data loaded from Supabase (' + staffProfiles.length + ' staff profiles)');
             } catch (e) {
                 console.error('[Cradero] Failed to load data from Supabase:', e);
                 showToast('Failed to load data. Please check your connection.', 'error');
@@ -5518,7 +5593,7 @@
                     <div class="status-badge ${statusClass}">${statusLabel}</div>
                     <div style="display:flex;gap:0.5rem;">
                         <button class="btn btn-primary btn-small" onclick="openWorkOrderDetail('${wo.id}')">View</button>
-                        <button class="btn btn-danger btn-small" onclick="deleteWorkOrder('${wo.id}')">Delete</button>
+                        ${(currentUserRole === 'admin' || currentUserRole === 'manager') ? '<button class="btn btn-danger btn-small" onclick="deleteWorkOrder(\'' + wo.id + '\')">Delete</button>' : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -5625,7 +5700,7 @@
                     <div style="display:flex;gap:0.5rem;margin-top:1rem;">
                         ${hasAccess('purchaseOrders') ? `<button class="btn ${orderBtnClass}" style="flex:1;" onclick="orderPart('${escHtml(p.partNumber)}','${escHtml(p.name)}',${stock.cls !== 'in-stock'})">${orderBtnLabel}</button>` : ''}
                         <button class="btn btn-secondary btn-small" onclick="openEditPart('${p.id}')" style="flex:1;">Edit</button>
-                        <button class="btn btn-danger btn-small" onclick="deletePart('${p.id}')" style="flex:1;">Delete</button>
+                        ${(currentUserRole === 'admin' || currentUserRole === 'manager') ? '<button class="btn btn-danger btn-small" onclick="deletePart(\'' + p.id + '\')" style="flex:1;">Delete</button>' : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -5674,7 +5749,7 @@
                     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
                         ${approveBtn}
                         <button class="btn btn-primary btn-small" onclick="openPODetail('${po.poNumber}')">View</button>
-                        <button class="btn btn-danger btn-small" onclick="deletePO('${po.id}')">Delete</button>
+                        ${(currentUserRole === 'admin' || currentUserRole === 'manager') ? '<button class="btn btn-danger btn-small" onclick="deletePO(\'' + po.id + '\')">Delete</button>' : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -6660,6 +6735,8 @@
                 if (uploadedFiles.length > 0) {
                     for (var fi = 0; fi < uploadedFiles.length; fi++) {
                         var file = uploadedFiles[fi];
+                        var fileErr = validateUploadFile(file, ALLOWED_IMAGE_TYPES);
+                        if (fileErr) { showToast(fileErr, 'error'); continue; }
                         var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
                         var filePath = dbRow.id + '/' + Date.now() + '_' + safeName;
                         try {
@@ -6915,7 +6992,7 @@
                         '<span>' + escHtml(partName) + '</span>' +
                         '<div style="display:flex;align-items:center;gap:0.5rem;">' +
                             '<span style="font-weight:600;">x' + (u.quantity_used || 1) + '</span>' +
-                            '<button type="button" onclick="deletePartUsage(\'' + u.id + '\',\'' + (u.part_id || '') + '\',' + (u.quantity_used || 1) + ')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1rem;padding:0 4px;" title="Return to stores">&times;</button>' +
+                            '<button type="button" onclick="deletePartUsage(\'' + escHtml(u.id) + '\',\'' + escHtml(u.part_id || '') + '\',' + parseInt(u.quantity_used || 1, 10) + ')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1rem;padding:0 4px;" title="Return to stores">&times;</button>' +
                         '</div>' +
                         '</div>';
                 });
@@ -7140,6 +7217,8 @@
             var photoUrls = wo.photoUrls ? wo.photoUrls.slice() : [];
             for (var fi = 0; fi < woDetailUploadedFiles.length; fi++) {
                 var file = woDetailUploadedFiles[fi];
+                var fileErr = validateUploadFile(file, ALLOWED_IMAGE_TYPES);
+                if (fileErr) { showToast(fileErr, 'error'); continue; }
                 var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
                 var filePath = currentDetailWoId + '/' + Date.now() + '_' + safeName;
                 try {
@@ -7669,6 +7748,8 @@
                     var existingSops = eq.sopUrls || [];
                     for (var si = 0; si < equipSopFiles.length; si++) {
                         var sopFile = equipSopFiles[si];
+                        var fileErr = validateUploadFile(sopFile, ALLOWED_DOC_TYPES.concat(ALLOWED_IMAGE_TYPES));
+                        if (fileErr) { showToast(fileErr, 'error'); continue; }
                         var safeName = sopFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
                         var sopPath = eq.id + '/' + Date.now() + '_' + safeName;
                         var upResult = await supabaseClient.storage.from('equipment-sops').upload(sopPath, sopFile);
@@ -7684,6 +7765,8 @@
                     var existingManuals = eq.manualUrls || [];
                     for (var mi = 0; mi < equipManualFiles.length; mi++) {
                         var manualFile = equipManualFiles[mi];
+                        var fileErr = validateUploadFile(manualFile, ALLOWED_DOC_TYPES.concat(ALLOWED_IMAGE_TYPES));
+                        if (fileErr) { showToast(fileErr, 'error'); continue; }
                         var mSafeName = manualFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
                         var manualPath = eq.id + '/' + Date.now() + '_' + mSafeName;
                         var mUpResult = await supabaseClient.storage.from('equipment-manuals').upload(manualPath, manualFile);
@@ -9054,6 +9137,8 @@
                 if (pmUploadedFiles.length > 0) {
                     for (var fi = 0; fi < pmUploadedFiles.length; fi++) {
                         var file = pmUploadedFiles[fi];
+                        var fileErr = validateUploadFile(file, ALLOWED_IMAGE_TYPES);
+                        if (fileErr) { showToast(fileErr, 'error'); continue; }
                         var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
                         var filePath = 'pm-completions/' + pm.id + '/' + Date.now() + '_' + safeName;
                         try {
@@ -10542,7 +10627,7 @@
             try {
                 var editEqMatch = equipmentList.find(function(e) { return e.name === br.machine; });
                 var dbStatus = ({ 'pending': 'reported', 'in-progress': 'repair_in_progress', 'resolved': 'resolved' }[newStatus] || 'reported');
-                console.log('[DEBUG] saveBreakdownEdit - newStatus:', newStatus, '-> dbStatus:', dbStatus);
+                if (CRADERO_DEBUG) console.log('[DEBUG] saveBreakdownEdit - newStatus:', newStatus, '-> dbStatus:', dbStatus);
                 await CraderoAPI.breakdowns.update(br.id, {
                     equipment_id: editEqMatch ? editEqMatch.id : undefined,
                     equipment_name: br.machine, title: br.faultDescription,
