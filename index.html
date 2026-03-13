@@ -304,6 +304,9 @@
 
         .tier-essential .order-part-btn { display: none; }
         .tier-essential .pro-only-feature { display: none; }
+        .tier-basic .order-part-btn { display: none; }
+        .tier-basic .pro-only-feature { display: none; }
+        .tier-basic .essential-only-feature { display: none; }
 
         .tab-content {
             display: none;
@@ -2265,7 +2268,7 @@
         <div id="reactive" class="tab-content">
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">&#9889; Reactive Maintenance Log</h2>
+                    <h2 class="card-title">Reactive Maintenance Log</h2>
                     <button class="btn btn-primary" onclick="openModal('logBreakdownModal')">+ Log Breakdown</button>
                 </div>
                 <div class="filter-bar">
@@ -2985,8 +2988,8 @@
                         </div>
                     </div>
 
-                    <!-- Parts Usage -->
-                    <div class="form-group" style="border-top:1px solid var(--gray-200);padding-top:1rem;">
+                    <!-- Parts Usage (Pro only) -->
+                    <div class="form-group" id="woPartsUsedSection" style="border-top:1px solid var(--gray-200);padding-top:1rem;">
                         <label class="form-label" style="font-weight:700;">Parts Used</label>
                         <div id="woPartsUsedList" style="margin-bottom:0.5rem;"></div>
                         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end;">
@@ -4059,12 +4062,16 @@
         // ─────────────────────────────────────────────────────────────────────
         // TIER ACCESS CONFIGURATION
         // ─────────────────────────────────────────────────────────────────────
-        var PRO_ONLY_TABS = ['purchaseOrders', 'permits', 'analytics', 'calendar'];
-        var currentUserTier = 'essential';
+        var PRO_ONLY_TABS = ['parts', 'purchaseOrders', 'permits', 'analytics', 'calendar', 'myTasks', 'auditTrail'];
+        var ESSENTIAL_ONLY_TABS = ['dailyLog'];
+        var BASIC_TABS = ['workOrders', 'equipment', 'pm', 'reactive', 'workRequests'];
+        var currentUserTier = 'basic';
 
         function hasAccess(tabName) {
             if (currentUserTier === 'pro') return true;
-            return PRO_ONLY_TABS.indexOf(tabName) === -1;
+            if (currentUserTier === 'essential') return PRO_ONLY_TABS.indexOf(tabName) === -1;
+            // basic tier — only BASIC_TABS
+            return BASIC_TABS.indexOf(tabName) !== -1;
         }
 
         function applyTierRestrictions() {
@@ -4085,7 +4092,7 @@
                 }
             });
             // Also hide the tab content panels for restricted tabs
-            PRO_ONLY_TABS.forEach(function(tabName) {
+            PRO_ONLY_TABS.concat(ESSENTIAL_ONLY_TABS).forEach(function(tabName) {
                 var panel = document.getElementById(tabName);
                 if (panel) {
                     panel.style.display = hasAccess(tabName) ? '' : 'none';
@@ -4104,11 +4111,17 @@
                     }
                 });
             }
-            // Toggle body class for CSS-based hiding (parts vendor elements)
+            // Toggle body class for CSS-based hiding (parts vendor elements, pro-only features)
+            document.body.classList.remove('tier-essential', 'tier-basic');
             if (currentUserTier === 'essential') {
                 document.body.classList.add('tier-essential');
-            } else {
-                document.body.classList.remove('tier-essential');
+            } else if (currentUserTier === 'basic') {
+                document.body.classList.add('tier-basic');
+            }
+            // Hide WO parts usage section for non-Pro tiers
+            var woPartsSection = document.getElementById('woPartsUsedSection');
+            if (woPartsSection) {
+                woPartsSection.style.display = currentUserTier === 'pro' ? '' : 'none';
             }
             // Register Service Worker only for Pro tier (offline mode)
             if (currentUserTier === 'pro' && 'serviceWorker' in navigator) {
@@ -4873,7 +4886,7 @@
                         .single();
                     if (profileResult.data) {
                         role = profileResult.data.role;
-                        currentUserTier = profileResult.data.tier || 'essential';
+                        currentUserTier = profileResult.data.tier || 'basic';
                         currentUserName = profileResult.data.full_name || user.email;
                     }
                     currentUserRole = role;
@@ -9011,16 +9024,18 @@
                 html += '</div>';
             }
 
-            // Parts usage section
-            html += '<div style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:1.5rem;">' +
-                '<label style="font-weight:700;font-size:0.95rem;display:block;margin-bottom:0.5rem;">Parts Used</label>' +
-                '<div id="pmPartsUsedList" style="margin-bottom:0.5rem;"><div style="color:var(--gray-500);font-size:0.85rem;font-style:italic;">No parts added yet.</div></div>' +
-                '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end;">' +
-                    '<select class="form-select" id="pmPartSelect" style="flex:2;min-width:150px;"><option value="">Select part...</option></select>' +
-                    '<input type="number" class="form-input" id="pmPartQty" placeholder="Qty" min="1" value="1" style="flex:0 0 80px;">' +
-                    '<button type="button" class="btn btn-primary btn-small" onclick="addPMPartUsage()">+ Add</button>' +
-                '</div>' +
-            '</div>';
+            // Parts usage section (Pro only)
+            if (hasAccess('parts')) {
+                html += '<div style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:1.5rem;">' +
+                    '<label style="font-weight:700;font-size:0.95rem;display:block;margin-bottom:0.5rem;">Parts Used</label>' +
+                    '<div id="pmPartsUsedList" style="margin-bottom:0.5rem;"><div style="color:var(--gray-500);font-size:0.85rem;font-style:italic;">No parts added yet.</div></div>' +
+                    '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end;">' +
+                        '<select class="form-select" id="pmPartSelect" style="flex:2;min-width:150px;"><option value="">Select part...</option></select>' +
+                        '<input type="number" class="form-input" id="pmPartQty" placeholder="Qty" min="1" value="1" style="flex:0 0 80px;">' +
+                        '<button type="button" class="btn btn-primary btn-small" onclick="addPMPartUsage()">+ Add</button>' +
+                    '</div>' +
+                '</div>';
+            }
 
             // Raise work order section
             html += '<div style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:1.5rem;">' +
