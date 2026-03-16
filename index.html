@@ -1813,6 +1813,7 @@
             <button class="nav-tab" onclick="switchTab('myTasks')" id="myTasksTab">My Tasks</button>
             <button class="nav-tab" onclick="switchTab('workRequests')" id="workRequestsTab">Work Requests</button>
             <button class="nav-tab" onclick="switchTab('auditTrail')">Audit Trail</button>
+            <button class="nav-tab" onclick="switchTab('userManagement')" id="userMgmtTab">User Management</button>
         </div>
 
         <!-- Work Orders Tab -->
@@ -2456,6 +2457,19 @@
                 </div>
                 <div id="auditTrailList" style="font-size:0.9rem;">
                     <p style="color:var(--gray-500);text-align:center;padding:2rem;">Loading audit trail...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Management (Admin only) -->
+        <div id="userManagement" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">User Management</h2>
+                    <p style="color:var(--gray-500);font-size:0.9rem;margin-top:0.25rem;">Manage user roles for your team. New user approvals and subscription changes are handled by Cradero.</p>
+                </div>
+                <div id="userManagementList" style="padding:1rem;">
+                    <p style="color:var(--gray-500);text-align:center;padding:2rem;">Loading users...</p>
                 </div>
             </div>
         </div>
@@ -4063,7 +4077,7 @@
         // TIER ACCESS CONFIGURATION
         // ─────────────────────────────────────────────────────────────────────
         var PRO_ONLY_TABS = ['parts', 'purchaseOrders', 'analytics', 'calendar'];
-        var ESSENTIAL_ONLY_TABS = ['dailyLog', 'myTasks', 'auditTrail', 'permits'];
+        var ESSENTIAL_ONLY_TABS = ['dailyLog', 'myTasks', 'auditTrail', 'permits', 'userManagement'];
         var BASIC_TABS = ['workOrders', 'equipment', 'pm', 'reactive', 'workRequests'];
         var currentUserTier = 'basic';
 
@@ -4522,6 +4536,116 @@
             container.innerHTML = html;
         }
 
+        // ── User Management (Admin only) ────────────────────────────────────
+        var userManagementData = [];
+
+        async function loadUserManagement() {
+            if (currentUserRole !== 'admin') {
+                showToast('Only admins can access User Management.', 'error');
+                return;
+            }
+            try {
+                var r = await supabaseClient.from('profiles').select('*').order('full_name');
+                if (r.error) throw r.error;
+                userManagementData = r.data || [];
+                renderUserManagement();
+            } catch (err) {
+                var container = document.getElementById('userManagementList');
+                if (container) container.innerHTML = '<p style="color:var(--danger);text-align:center;padding:2rem;">Failed to load users.</p>';
+            }
+        }
+
+        function renderUserManagement() {
+            var container = document.getElementById('userManagementList');
+            if (!container) return;
+            if (userManagementData.length === 0) {
+                container.innerHTML = '<p style="color:var(--gray-500);text-align:center;padding:2rem;">No users found.</p>';
+                return;
+            }
+
+            // Get current user's auth ID for the "You" check
+            var currentAuthId = '';
+            try {
+                var sess = supabaseClient.auth.session && supabaseClient.auth.session();
+                if (!sess) {
+                    // Try synchronous access if available
+                    currentAuthId = '';
+                }
+            } catch(e) {}
+
+            var html = '<table style="width:100%;border-collapse:collapse;font-size:0.9rem;">';
+            html += '<thead><tr>';
+            html += '<th style="text-align:left;padding:0.75rem;border-bottom:2px solid var(--gray-200);">Name</th>';
+            html += '<th style="text-align:left;padding:0.75rem;border-bottom:2px solid var(--gray-200);">Email</th>';
+            html += '<th style="text-align:left;padding:0.75rem;border-bottom:2px solid var(--gray-200);">Department</th>';
+            html += '<th style="text-align:left;padding:0.75rem;border-bottom:2px solid var(--gray-200);">Role</th>';
+            html += '<th style="text-align:center;padding:0.75rem;border-bottom:2px solid var(--gray-200);">Actions</th>';
+            html += '</tr></thead><tbody>';
+
+            var roles = ['engineer', 'manager', 'admin', 'production'];
+
+            userManagementData.forEach(function(user) {
+                var isCurrentUser = user.full_name === currentUserName && user.role === 'admin';
+                var isPending = user.role === 'pending';
+
+                html += '<tr style="border-bottom:1px solid var(--gray-200);">';
+                html += '<td style="padding:0.75rem;">' + escHtml(user.full_name || 'Unnamed') + (isCurrentUser ? ' <span style="color:var(--primary);font-weight:600;">(You)</span>' : '') + '</td>';
+                html += '<td style="padding:0.75rem;color:var(--gray-600);">' + escHtml(user.email || '—') + '</td>';
+                html += '<td style="padding:0.75rem;">' + escHtml(user.department || '—') + '</td>';
+
+                if (isPending) {
+                    html += '<td style="padding:0.75rem;"><span class="status-badge" style="background:var(--gray-200);color:var(--gray-600);padding:0.25rem 0.75rem;border-radius:12px;font-size:0.8rem;">Pending — Contact Cradero</span></td>';
+                    html += '<td style="padding:0.75rem;text-align:center;color:var(--gray-400);">—</td>';
+                } else if (isCurrentUser) {
+                    html += '<td style="padding:0.75rem;"><span style="text-transform:capitalize;font-weight:500;">' + escHtml(user.role) + '</span></td>';
+                    html += '<td style="padding:0.75rem;text-align:center;color:var(--gray-400);">—</td>';
+                } else {
+                    html += '<td style="padding:0.75rem;">';
+                    html += '<select class="form-select" id="roleSelect_' + user.id + '" style="min-width:130px;padding:0.4rem 0.6rem;font-size:0.85rem;">';
+                    roles.forEach(function(r) {
+                        html += '<option value="' + r + '"' + (user.role === r ? ' selected' : '') + ' style="text-transform:capitalize;">' + r.charAt(0).toUpperCase() + r.slice(1) + '</option>';
+                    });
+                    html += '</select>';
+                    html += '</td>';
+                    html += '<td style="padding:0.75rem;text-align:center;">';
+                    html += '<button class="btn btn-primary btn-small" onclick="saveUserRole(\'' + user.id + '\', \'' + escHtml(user.role) + '\')" style="padding:0.35rem 1rem;font-size:0.8rem;">Save</button>';
+                    html += '</td>';
+                }
+
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        async function saveUserRole(userId, previousRole) {
+            if (currentUserRole !== 'admin') {
+                showToast('Only admins can change user roles.', 'error');
+                return;
+            }
+            var select = document.getElementById('roleSelect_' + userId);
+            if (!select) return;
+            var newRole = select.value;
+            if (newRole === previousRole) {
+                showToast('Role is already ' + newRole + '.', 'info');
+                return;
+            }
+            try {
+                await CraderoAPI.profiles.update(userId, { role: newRole });
+                logAudit('update', 'profile', userId, { role: newRole, previousRole: previousRole });
+                showToast('Role updated to ' + newRole + '.', 'success');
+                // Refresh staffProfiles so engineer dropdowns update
+                var r = await supabaseClient.from('profiles').select('*').order('full_name');
+                if (r.data) {
+                    staffProfiles = r.data.filter(function(p) { return p.role && p.role !== 'pending'; });
+                }
+                loadUserManagement();
+            } catch (err) {
+                showToast('Failed to update role: ' + (err.message || 'Unknown error'), 'error');
+            }
+        }
+
         function sanitizeInput(str, maxLen) {
             if (typeof str !== 'string') return '';
             var truncated = str.trim().substring(0, maxLen || INPUT_LIMITS.general);
@@ -4968,6 +5092,11 @@
             if (typeof renderProAnalytics === 'function') renderProAnalytics();
             if (typeof updatePermitStats === 'function') updatePermitStats();
             if (role === 'production') applyProductionRestrictions();
+            // Hide User Management tab for non-admins
+            if (role !== 'admin') {
+                var umBtn = document.getElementById('userMgmtTab');
+                if (umBtn) umBtn.style.display = 'none';
+            }
         }
 
         function applyProductionRestrictions() {
@@ -6590,6 +6719,7 @@
             });
             // Auto-load data for certain tabs
             if (tabName === 'auditTrail') loadAuditTrail();
+            if (tabName === 'userManagement') loadUserManagement();
             // Close mobile nav if open
             closeMobileNav();
         }
@@ -10923,6 +11053,8 @@
             showEquipQR, printQRCode, openQRScanner, closeQRScanner, manualQRLookup,
             // Audit Trail
             loadAuditTrail, filterAuditTrail,
+            // User Management
+            loadUserManagement, saveUserRole,
             // SOP Documents
             handleEquipSopFiles, removeEquipSopFile, removeExistingSop,
             // Manufacturer Manuals
