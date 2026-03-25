@@ -8670,7 +8670,7 @@
                 // Save each line item
                 for (var i = 0; i < lineItems.length; i++) {
                     await CraderoAPI.purchaseOrders.addLineItem({
-                        po_id: created.id,
+                        purchase_order_id: created.id,
                         description: lineItems[i].description,
                         quantity: lineItems[i].quantity,
                         unit_price: lineItems[i].unit_price,
