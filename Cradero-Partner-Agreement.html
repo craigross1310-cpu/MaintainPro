@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cradero - Referral Partner Agreement</title>
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #1A1A1A;
+            line-height: 1.7;
+            background: white;
+            padding: 0;
+        }
+
+        @media print {
+            body { padding: 0; }
+            .page-break { page-break-before: always; }
+            .no-break { page-break-inside: avoid; }
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Cover Page */
+        .cover {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: linear-gradient(135deg, #0052CC 0%, #0066FF 50%, #3385FF 100%);
+            color: white;
+            padding: 3rem;
+        }
+
+        .cover-logo {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .cover-logo svg {
+            width: 50px;
+            height: 50px;
+        }
+
+        .cover h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.5px;
+        }
+
+        .cover .subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+
+        .cover .doc-type {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.7;
+            margin-bottom: 0.5rem;
+        }
+
+        .cover .version {
+            font-size: 0.85rem;
+            opacity: 0.6;
+        }
+
+        .cover .confidential {
+            margin-top: 3rem;
+            padding: 0.75rem 2rem;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            opacity: 0.7;
+        }
+
+        /* Section Headings */
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0052CC;
+            margin: 2.5rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #E8F0FE;
+        }
+
+        h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #1A1A1A;
+            margin: 1.5rem 0 0.75rem;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #444;
+            margin: 1rem 0 0.5rem;
+        }
+
+        p {
+            margin-bottom: 0.75rem;
+            color: #333;
+        }
+
+        ul, ol {
+            margin: 0.5rem 0 1rem 1.5rem;
+            color: #333;
+        }
+
+        li {
+            margin-bottom: 0.4rem;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border: 1px solid #E5E7EB;
+        }
+
+        th {
+            background: #F0F4FF;
+            font-weight: 600;
+            color: #0052CC;
+        }
+
+        tr:nth-child(even) {
+            background: #FAFBFF;
+        }
+
+        /* Highlight Box */
+        .highlight-box {
+            background: #F0F4FF;
+            border-left: 4px solid #0052CC;
+            padding: 1.25rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1.5rem 0;
+        }
+
+        .highlight-box.green {
+            background: #F0FFF4;
+            border-left-color: #16A34A;
+        }
+
+        .highlight-box.amber {
+            background: #FFFBEB;
+            border-left-color: #D97706;
+        }
+
+        .highlight-box p {
+            margin-bottom: 0.25rem;
+        }
+
+        .highlight-box p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Commission Tier Cards */
+        .tier-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .tier-card {
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .tier-card.essential {
+            border-color: #0052CC;
+        }
+
+        .tier-card.pro {
+            border-color: #7C3AED;
+            background: #FAFAFE;
+        }
+
+        .tier-card .tier-name {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .tier-card.essential .tier-name { color: #0052CC; }
+        .tier-card.pro .tier-name { color: #7C3AED; }
+
+        .tier-card .price {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1A1A1A;
+        }
+
+        .tier-card .price span {
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: #666;
+        }
+
+        .tier-card .commission {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #E5E7EB;
+        }
+
+        .tier-card .commission-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 0.25rem;
+        }
+
+        .tier-card .commission-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #16A34A;
+        }
+
+        .tier-card .commission-value span {
+            font-size: 0.85rem;
+            font-weight: 400;
+            color: #666;
+        }
+
+        /* Signature Block */
+        .signature-block {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+
+        .signature-area {
+            border-top: 2px solid #1A1A1A;
+            padding-top: 0.75rem;
+        }
+
+        .signature-area .label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 0.25rem;
+        }
+
+        .signature-area .line {
+            border-bottom: 1px solid #CCC;
+            height: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Earnings Example */
+        .earnings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .earnings-card {
+            background: #F0FFF4;
+            border: 1px solid #BBF7D0;
+            border-radius: 10px;
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .earnings-card .scenario {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .earnings-card .amount {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #16A34A;
+        }
+
+        .earnings-card .detail {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+
+        .section-number {
+            display: inline-block;
+            background: #0052CC;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Cover Page -->
+    <div class="cover">
+        <div class="cover-logo">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M30 9 A16.5 16.5 0 1 0 30 39" stroke="white" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+                <path d="M28.5 14.5 A10.5 10.5 0 1 0 28.5 33.5" stroke="white" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.35"/>
+                <path d="M22 20.5 L25.5 24 L22 27.5 L18.5 24 Z" stroke="white" stroke-width="1.5" fill="white" fill-opacity="0.15"/>
+                <circle cx="22" cy="24" r="1" fill="white"/>
+                <line x1="32" y1="8.5" x2="35.5" y2="6.5" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                <line x1="32" y1="39.5" x2="35.5" y2="41.5" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <div class="doc-type">Referral Partner Agreement</div>
+        <h1>Cradero CMMS</h1>
+        <div class="subtitle">Revenue Share Partnership Programme</div>
+        <div class="version">March 2026 &mdash; v1.0</div>
+        <div class="confidential">Confidential &mdash; For Intended Recipient Only</div>
+    </div>
+
+    <!-- Page 1: Overview -->
+    <div class="page-break"></div>
+    <div class="container">
+
+        <h2><span class="section-number">1</span> Introduction</h2>
+
+        <p>This document outlines the terms of a <strong>Referral Partner Agreement</strong> between <strong>Cradero</strong> ("the Company") and the undersigned referral partner ("the Partner") for the purpose of client acquisition and revenue sharing.</p>
+
+        <p>Cradero is a cloud-based <strong>Computerised Maintenance Management System (CMMS)</strong> designed for manufacturing, facilities management, and industrial maintenance teams. The Partner will identify, introduce, and help onboard prospective clients in exchange for an ongoing revenue share.</p>
+
+        <div class="highlight-box">
+            <p><strong>Key Principle:</strong> The Partner earns a recurring commission for every client they bring on board, for as long as that client remains an active paying subscriber. This is not a one-time referral fee &mdash; it is an ongoing revenue share that rewards long-term partnership.</p>
+        </div>
+
+        <!-- ============================================================ -->
+
+        <h2><span class="section-number">2</span> Product Pricing</h2>
+
+        <p>Cradero is offered as a SaaS subscription with two tiers, priced per user per month:</p>
+
+        <div class="tier-cards">
+            <div class="tier-card essential">
+                <div class="tier-name">Essential</div>
+                <div class="price">&pound;19 <span>/user/month</span></div>
+                <p style="font-size:0.85rem;color:#666;margin-top:0.5rem;">or &pound;15/user/month billed annually</p>
+                <div class="commission">
+                    <div class="commission-label">Your Commission (40%)</div>
+                    <div class="commission-value">&pound;7.60 <span>/user/month</span></div>
+                </div>
+            </div>
+            <div class="tier-card pro">
+                <div class="tier-name">Pro</div>
+                <div class="price">&pound;39 <span>/user/month</span></div>
+                <p style="font-size:0.85rem;color:#666;margin-top:0.5rem;">or &pound;32/user/month billed annually</p>
+                <div class="commission">
+                    <div class="commission-label">Your Commission (40%)</div>
+                    <div class="commission-value">&pound;15.60 <span>/user/month</span></div>
+                </div>
+            </div>
+        </div>
+
+        <p>Commission is calculated on the <strong>actual collected revenue</strong> from each client, not the list price. If a client is on an annual plan, commission is paid monthly based on the effective monthly rate.</p>
+
+        <!-- ============================================================ -->
+
+        <h2><span class="section-number">3</span> Revenue Share Structure</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Detail</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Commission Rate</strong></td><td>40% of collected monthly revenue per referred client</td></tr>
+                <tr><td><strong>Duration</strong></td><td>Recurring &mdash; paid for the lifetime of the client's active subscription</td></tr>
+                <tr><td><strong>Payment Frequency</strong></td><td>Monthly, within 14 days of the end of each calendar month</td></tr>
+                <tr><td><strong>Payment Method</strong></td><td>Bank transfer (details to be provided by Partner)</td></tr>
+                <tr><td><strong>Minimum Payout</strong></td><td>&pound;50 &mdash; balances below this roll over to the following month</td></tr>
+                <tr><td><strong>Attribution Window</strong></td><td>90 days from initial introduction to signed subscription</td></tr>
+            </tbody>
+        </table>
+
+        <div class="highlight-box green">
+            <p><strong>Example:</strong> You refer a manufacturing company with 8 engineers who sign up for the Pro plan at &pound;39/user/month.</p>
+            <p>Monthly revenue = 8 &times; &pound;39 = <strong>&pound;312</strong></p>
+            <p>Your monthly commission = &pound;312 &times; 40% = <strong>&pound;124.80/month, every month.</strong></p>
+        </div>
+
+        <!-- ============================================================ -->
+        <div class="page-break"></div>
+
+        <h2><span class="section-number">4</span> Earning Potential</h2>
+
+        <p>The following illustrates potential monthly earnings based on the number of active referred clients:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Clients Referred</th>
+                    <th>Avg Users/Client</th>
+                    <th>Plan</th>
+                    <th>Monthly Revenue</th>
+                    <th>Your 40% Share</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>10</td><td>3</td><td>Essential</td><td>&pound;570</td><td><strong>&pound;228</strong></td></tr>
+                <tr><td>10</td><td>5</td><td>Pro</td><td>&pound;1,950</td><td><strong>&pound;780</strong></td></tr>
+                <tr><td>25</td><td>5</td><td>Mixed</td><td>&pound;3,625</td><td><strong>&pound;1,450</strong></td></tr>
+                <tr><td>50</td><td>5</td><td>Pro</td><td>&pound;9,750</td><td><strong>&pound;3,900</strong></td></tr>
+                <tr><td>100</td><td>5</td><td>Pro</td><td>&pound;19,500</td><td><strong>&pound;7,800</strong></td></tr>
+            </tbody>
+        </table>
+
+        <div class="earnings-grid">
+            <div class="earnings-card">
+                <div class="scenario">10 Pro Clients</div>
+                <div class="amount">&pound;780</div>
+                <div class="detail">per month</div>
+            </div>
+            <div class="earnings-card">
+                <div class="scenario">50 Pro Clients</div>
+                <div class="amount">&pound;3,900</div>
+                <div class="detail">per month</div>
+            </div>
+            <div class="earnings-card">
+                <div class="scenario">100 Pro Clients</div>
+                <div class="amount">&pound;7,800</div>
+                <div class="detail">per month</div>
+            </div>
+        </div>
+
+        <p>Commissions are <strong>recurring</strong>. Once a client is onboarded, you continue earning every month without additional work. Revenue compounds as you add more clients.</p>
+
+        <!-- ============================================================ -->
+
+        <h2><span class="section-number">5</span> Partner Responsibilities</h2>
+
+        <ol>
+            <li><strong>Identify and introduce</strong> prospective clients who would benefit from a CMMS solution</li>
+            <li><strong>Facilitate introductions</strong> between the prospective client and Cradero for product demonstrations</li>
+            <li><strong>Represent the product accurately</strong> &mdash; do not make claims about features, pricing, or capabilities that are not documented</li>
+            <li><strong>Report referrals</strong> promptly via the agreed channel (email or shared tracker) including company name, contact person, and contact details</li>
+            <li><strong>Maintain professional conduct</strong> that reflects positively on the Cradero brand</li>
+        </ol>
+
+        <!-- ============================================================ -->
+
+        <h2><span class="section-number">6</span> Cradero Responsibilities</h2>
+
+        <ol>
+            <li><strong>Product delivery</strong> &mdash; provide, host, and maintain the Cradero CMMS platform</li>
+            <li><strong>Sales support</strong> &mdash; handle product demonstrations, technical questions, and client onboarding</li>
+            <li><strong>Client support</strong> &mdash; provide ongoing technical support to all active clients</li>
+            <li><strong>Transparent reporting</strong> &mdash; provide the Partner with monthly statements showing referred client subscriptions, revenue collected, and commission owed</li>
+            <li><strong>Timely payment</strong> &mdash; pay commission within 14 days of month-end</li>
+            <li><strong>Product development</strong> &mdash; continue to improve and maintain the platform</li>
+        </ol>
+
+        <!-- ============================================================ -->
+        <div class="page-break"></div>
+
+        <h2><span class="section-number">7</span> Intellectual Property &amp; Ownership</h2>
+
+        <div class="highlight-box amber">
+            <p><strong>All intellectual property rights</strong> in the Cradero software, including but not limited to source code, design, branding, documentation, and all associated materials, are and shall remain the <strong>sole and exclusive property of Cradero</strong>.</p>
+        </div>
+
+        <ul>
+            <li>This agreement does <strong>not</strong> grant the Partner any ownership, licence, or rights to the software, codebase, or brand</li>
+            <li>The Partner may <strong>not</strong> resell, sublicence, copy, modify, reverse-engineer, or redistribute the software</li>
+            <li>The Partner may <strong>not</strong> create derivative works or competing products based on Cradero</li>
+            <li>Marketing materials referencing Cradero must be approved in writing prior to use</li>
+            <li>Upon termination of this agreement, the Partner must cease all use of Cradero branding and materials</li>
+        </ul>
+
+        <!-- ============================================================ -->
+
+        <h2><span class="section-number">8</span> Client Ownership &amp; Attribution</h2>
+
+        <ul>
+            <li>A referral is attributed to the Partner when they provide a <strong>qualified introduction</strong> (company name + decision-maker contact) that results in a paid subscription within the <strong>90-day attribution window</strong></li>
+            <li>If a referred client cancels and later resubscribes within <strong>6 months</strong>, the Partner retains attribution</li>
+            <li>If a referred client was already in active discussion with Cradero prior to the Partner's introduction, attribution will not apply &mdash; disputes will be resolved in good faith</li>
+            <li>The <strong>client relationship</strong> belongs to Cradero &mdash; the Partner facilitates the introduction but does not manage the client account</li>
+        </ul>
+
+        <!-- ============================================================ -->
+
+        <h2><span class="section-number">9</span> Exclusivity &amp; Non-Compete</h2>
+
+        <ul>
+            <li>This agreement is <strong>non-exclusive</strong> &mdash; the Partner may refer clients to other products, and Cradero may engage other referral partners</li>
+            <li>The Partner agrees not to actively direct referred Cradero clients toward competing CMMS products for the duration of this agreement</li>
+            <li>The Partner may refer clients in any industry or geography unless otherwise agreed in writing</li>
+        </ul>
+
+        <!-- ============================================================ -->
+
+        <h2><span class="section-number">10</span> Term &amp; Termination</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Detail</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Initial Term</strong></td><td>12 months from the date of signing</td></tr>
+                <tr><td><strong>Renewal</strong></td><td>Automatically renews for successive 12-month periods unless either party gives 30 days' written notice</td></tr>
+                <tr><td><strong>Termination for Convenience</strong></td><td>Either party may terminate with 30 days' written notice</td></tr>
+                <tr><td><strong>Termination for Cause</strong></td><td>Immediate termination if either party breaches a material term and fails to remedy within 14 days of written notice</td></tr>
+                <tr><td><strong>Post-Termination Commission</strong></td><td>Upon termination, the Partner will continue to receive commission on existing referred clients for <strong>6 months</strong> after the termination date, after which all commission obligations cease</td></tr>
+            </tbody>
+        </table>
+
+        <!-- ============================================================ -->
+
+        <h2><span class="section-number">11</span> Confidentiality</h2>
+
+        <p>Both parties agree to keep confidential all non-public information shared under this agreement, including but not limited to:</p>
+
+        <ul>
+            <li>Pricing structures and commission rates</li>
+            <li>Client lists and contact information</li>
+            <li>Business strategies and financial information</li>
+            <li>Technical details of the software platform</li>
+        </ul>
+
+        <p>This obligation survives termination of the agreement for a period of <strong>2 years</strong>.</p>
+
+        <!-- ============================================================ -->
+        <div class="page-break"></div>
+
+        <h2><span class="section-number">12</span> General Provisions</h2>
+
+        <ul>
+            <li><strong>Independent Contractor:</strong> The Partner is an independent contractor, not an employee, agent, or legal representative of Cradero. The Partner has no authority to bind Cradero to any obligation.</li>
+            <li><strong>Amendments:</strong> This agreement may only be amended in writing, signed by both parties.</li>
+            <li><strong>Entire Agreement:</strong> This document constitutes the entire agreement between the parties and supersedes all prior discussions, representations, or agreements.</li>
+            <li><strong>Severability:</strong> If any provision is found unenforceable, the remaining provisions shall continue in full force.</li>
+            <li><strong>Governing Law:</strong> This agreement shall be governed by and construed in accordance with the laws of the jurisdiction in which Cradero operates.</li>
+            <li><strong>Dispute Resolution:</strong> Any disputes shall first be addressed through good-faith negotiation. If unresolved within 30 days, disputes may be escalated to mediation or arbitration.</li>
+        </ul>
+
+        <!-- ============================================================ -->
+
+        <h2><span class="section-number">13</span> Signatures</h2>
+
+        <p>By signing below, both parties agree to the terms and conditions set out in this Referral Partner Agreement.</p>
+
+        <div class="signature-block">
+            <div>
+                <h4>Cradero (The Company)</h4>
+                <div class="signature-area">
+                    <div class="line"></div>
+                    <div class="label">Signature</div>
+                </div>
+                <div class="signature-area">
+                    <div class="line"></div>
+                    <div class="label">Full Name</div>
+                </div>
+                <div class="signature-area">
+                    <div class="line"></div>
+                    <div class="label">Title / Position</div>
+                </div>
+                <div class="signature-area">
+                    <div class="line"></div>
+                    <div class="label">Date</div>
+                </div>
+            </div>
+            <div>
+                <h4>Referral Partner</h4>
+                <div class="signature-area">
+                    <div class="line"></div>
+                    <div class="label">Signature</div>
+                </div>
+                <div class="signature-area">
+                    <div class="line"></div>
+                    <div class="label">Full Name</div>
+                </div>
+                <div class="signature-area">
+                    <div class="line"></div>
+                    <div class="label">Company Name</div>
+                </div>
+                <div class="signature-area">
+                    <div class="line"></div>
+                    <div class="label">Date</div>
+                </div>
+            </div>
+        </div>
+
+        <br><br>
+        <p style="text-align:center;color:#999;font-size:0.8rem;">&copy; 2026 Cradero. All rights reserved. This document is confidential.</p>
+
+    </div>
+
+</body>
+</html>

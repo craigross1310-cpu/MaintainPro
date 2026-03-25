@@ -1,0 +1,11 @@
+PM Task Name,Equipment,Description,Frequency,Duration,Assigned To,Next Due Date
+Spindle Lubrication,CNC Lathe 01,Grease spindle bearings and check runout,weekly,30 min,Mike Torres,2026-03-15
+Hydraulic Oil Change,Hydraulic Press,Drain and replace hydraulic fluid - use ISO 46,quarterly,2 hours,James Lee,2026-04-01
+Belt Tension Check,Conveyor Belt Line 6,Inspect belt tracking and adjust tension,monthly,45 min,Sarah Kim,2026-03-20
+Air Filter Replacement,Air Compressor Main,Replace intake air filter element,monthly,20 min,Mike Torres,2026-03-18
+Robot Calibration,Welding Robot Arm,Run calibration routine and verify TCP,quarterly,3 hours,James Lee,2026-05-01
+Cooling Tower Treatment,Cooling Tower CT-2,Chemical treatment and basin cleaning,monthly,1 hour,Dave Patel,2026-03-25
+Forklift Safety Inspection,Forklift FL-04,OSHA compliance check - brakes lights horn,weekly,30 min,Sarah Kim,2026-03-14
+Paint Booth Filter Change,Paint Booth PB-1,Replace exhaust filters and clean intake,biweekly,1 hour,Dave Patel,2026-03-22
+Blade Alignment Check,Band Saw BS-02,Check blade guides and wheel alignment,monthly,45 min,Mike Torres,2026-03-28
+Chiller Refrigerant Check,Chiller Unit CH-1,Inspect refrigerant levels and check for leaks,quarterly,1 hour,James Lee,2026-06-01

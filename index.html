@@ -3637,10 +3637,10 @@
                             </div>
                             <div id="poLineItems">
                                 <div class="po-line-item" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;">
-                                    <input type="text" class="form-input" placeholder="Part name or description" style="margin: 0;">
-                                    <input type="number" class="form-input" placeholder="Qty" min="1" style="margin: 0;">
-                                    <input type="number" class="form-input" placeholder="£0.00" step="0.01" style="margin: 0;">
-                                    <input type="text" class="form-input" placeholder="£0.00" readonly style="margin: 0; background: var(--gray-200);">
+                                    <input type="text" class="form-input line-desc" placeholder="Part name or description" style="margin: 0;">
+                                    <input type="number" class="form-input line-qty" placeholder="Qty" min="1" style="margin: 0;" oninput="recalcPOTotals()">
+                                    <input type="number" class="form-input line-price" placeholder="£0.00" step="0.01" style="margin: 0;" oninput="recalcPOTotals()">
+                                    <input type="text" class="form-input line-total" placeholder="£0.00" readonly style="margin: 0; background: var(--gray-200);">
                                     <button type="button" class="btn btn-danger btn-small" onclick="removeLineItem(this)">✕</button>
                                 </div>
                             </div>
@@ -3651,40 +3651,40 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Shipping Cost</label>
-                            <input type="number" class="form-input" step="0.01" placeholder="£0.00">
+                            <input id="poShipping" type="number" class="form-input" step="0.01" placeholder="£0.00" oninput="recalcPOTotals()">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Tax</label>
-                            <input type="number" class="form-input" step="0.01" placeholder="£0.00">
+                            <input id="poTax" type="number" class="form-input" step="0.01" placeholder="£0.00" oninput="recalcPOTotals()">
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Expected Delivery Date</label>
-                        <input type="date" class="form-input">
+                        <input id="poDeliveryDate" type="date" class="form-input">
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Special Instructions / Notes</label>
-                        <textarea class="form-textarea" placeholder="Any special requirements or notes..."></textarea>
+                        <textarea id="poNotes" class="form-textarea" placeholder="Any special requirements or notes..."></textarea>
                     </div>
 
                     <div style="padding: 1rem; background: var(--gray-100); border-radius: 8px; margin-top: 1rem;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                             <span style="font-weight: 600;">Subtotal:</span>
-                            <span style="font-weight: 600;">£0.00</span>
+                            <span id="poSubtotal" style="font-weight: 600;">£0.00</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                             <span>Shipping:</span>
-                            <span>£0.00</span>
+                            <span id="poShippingDisplay">£0.00</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                             <span>Tax:</span>
-                            <span>£0.00</span>
+                            <span id="poTaxDisplay">£0.00</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; padding-top: 0.5rem; border-top: 2px solid var(--gray-300);">
                             <span style="font-weight: 700; font-size: 1.1rem;">Total:</span>
-                            <span style="font-weight: 700; font-size: 1.1rem; color: var(--primary);">£0.00</span>
+                            <span id="poTotal" style="font-weight: 700; font-size: 1.1rem; color: var(--primary);">£0.00</span>
                         </div>
                     </div>
                 </form>
@@ -8347,31 +8347,91 @@
             renderPurchaseOrders();
         }
 
+        function recalcPOTotals() {
+            var subtotal = 0;
+            var rows = document.querySelectorAll('#poLineItems .po-line-item');
+            rows.forEach(function(row) {
+                var qty = parseFloat(row.querySelector('.line-qty').value) || 0;
+                var price = parseFloat(row.querySelector('.line-price').value) || 0;
+                var lineTotal = qty * price;
+                row.querySelector('.line-total').value = lineTotal > 0 ? '£' + lineTotal.toFixed(2) : '';
+                subtotal += lineTotal;
+            });
+            var shipping = parseFloat(document.getElementById('poShipping').value) || 0;
+            var tax = parseFloat(document.getElementById('poTax').value) || 0;
+            var total = subtotal + shipping + tax;
+            document.getElementById('poSubtotal').textContent = '£' + subtotal.toFixed(2);
+            document.getElementById('poShippingDisplay').textContent = '£' + shipping.toFixed(2);
+            document.getElementById('poTaxDisplay').textContent = '£' + tax.toFixed(2);
+            document.getElementById('poTotal').textContent = '£' + total.toFixed(2);
+            return { subtotal: subtotal, shipping: shipping, tax: tax, total: total };
+        }
+        window.recalcPOTotals = recalcPOTotals;
+
         async function submitCreatePO() {
-            const vendorSel = document.querySelector('#createPOForm select');
-            const vendor = vendorSel ? vendorSel.value : '';
-            if (!vendor) {
-                showToast('Please select a vendor.', 'error');
-                return;
-            }
-            const vendorLabels = { rs: 'RS Components', grainger: 'Grainger', motion: 'Motion Industries', local: 'Local Supplier - BearingMax', other: 'Other Vendor' };
+            var vendor = document.getElementById('poVendor').value;
+            if (!vendor) { showToast('Please select a vendor.', 'error'); return; }
+            var poType = document.getElementById('poType').value;
+            if (!poType) { showToast('Please select a PO type.', 'error'); return; }
+            var budgetCode = document.getElementById('poBudgetCode').value;
+            if (!budgetCode) { showToast('Please select a budget code.', 'error'); return; }
+            var deliveryLocation = document.getElementById('poDeliveryLocation').value;
+            if (!deliveryLocation) { showToast('Please select a delivery location.', 'error'); return; }
+
+            // Gather line items
+            var lineItems = [];
+            var rows = document.querySelectorAll('#poLineItems .po-line-item');
+            rows.forEach(function(row) {
+                var desc = row.querySelector('.line-desc').value.trim();
+                var qty = parseFloat(row.querySelector('.line-qty').value) || 0;
+                var price = parseFloat(row.querySelector('.line-price').value) || 0;
+                if (desc && qty > 0 && price > 0) {
+                    lineItems.push({ description: desc, quantity: qty, unit_price: price, total_price: qty * price });
+                }
+            });
+            if (lineItems.length === 0) { showToast('Please add at least one line item with description, qty, and price.', 'error'); return; }
+
+            var totals = recalcPOTotals();
+            var vendorLabels = { rs: 'RS Components', grainger: 'Grainger', motion: 'Motion Industries', local: 'Local Supplier - BearingMax', other: 'Other Vendor' };
+            var budgetLabels = { maintenance: 'Maintenance Budget', emergency: 'Emergency Repairs', capital: 'Capital Projects', line1: 'Line 1 Operating', line2: 'Line 2 Operating', line3: 'Line 3 Operating', line4: 'Line 4 Operating' };
 
             try {
+                // Get the user's auth UUID for requested_by (column expects UUID)
+                var sessionResult = await supabaseClient.auth.getSession();
+                var userId = sessionResult.data && sessionResult.data.session ? sessionResult.data.session.user.id : null;
+
                 var dbRow = {
                     supplier: vendorLabels[vendor] || vendor,
                     status: 'pending',
                     title: 'New Purchase Order',
-                    priority: 'medium',
-                    total_cost: 0,
-                    notes: '',
-                    requested_by: currentUserName || 'User',
-                    budget_code: 'Maintenance Budget'
+                    priority: poType === 'emergency' ? 'high' : 'medium',
+                    total_cost: totals.total,
+                    notes: (document.getElementById('poNotes').value || '').trim(),
+                    requested_by: userId,
+                    budget_code: budgetLabels[budgetCode] || budgetCode
                 };
                 var created = await CraderoAPI.purchaseOrders.create(dbRow);
+
+                // Save each line item
+                for (var i = 0; i < lineItems.length; i++) {
+                    await CraderoAPI.purchaseOrders.addLineItem({
+                        po_id: created.id,
+                        description: lineItems[i].description,
+                        quantity: lineItems[i].quantity,
+                        unit_price: lineItems[i].unit_price,
+                        total_price: lineItems[i].total_price
+                    });
+                }
+
                 purchaseOrdersData.unshift(mapPoFromDb(created));
                 renderPurchaseOrders();
                 closeModal('createPOModal');
                 document.getElementById('createPOForm').reset();
+                // Reset summary display
+                document.getElementById('poSubtotal').textContent = '£0.00';
+                document.getElementById('poShippingDisplay').textContent = '£0.00';
+                document.getElementById('poTaxDisplay').textContent = '£0.00';
+                document.getElementById('poTotal').textContent = '£0.00';
                 refreshDashboards();
                 showToast((created.po_number || 'PO') + ' created — awaiting approval.', 'success');
             } catch (err) {
@@ -8385,16 +8445,17 @@
             newItem.className = 'po-line-item';
             newItem.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:0.5rem;margin-bottom:0.5rem;align-items:center;';
             newItem.innerHTML = `
-                <input type="text" class="form-input" placeholder="Part name or description" style="margin:0;">
-                <input type="number" class="form-input" placeholder="Qty" min="1" style="margin:0;">
-                <input type="number" class="form-input" placeholder="£0.00" step="0.01" style="margin:0;">
-                <input type="text" class="form-input" placeholder="£0.00" readonly style="margin:0;background:var(--gray-200);">
+                <input type="text" class="form-input line-desc" placeholder="Part name or description" style="margin:0;">
+                <input type="number" class="form-input line-qty" placeholder="Qty" min="1" style="margin:0;" oninput="recalcPOTotals()">
+                <input type="number" class="form-input line-price" placeholder="£0.00" step="0.01" style="margin:0;" oninput="recalcPOTotals()">
+                <input type="text" class="form-input line-total" placeholder="£0.00" readonly style="margin:0;background:var(--gray-200);">
                 <button type="button" class="btn btn-danger btn-small" onclick="removeLineItem(this)">✕</button>`;
             container.appendChild(newItem);
         }
 
         function removeLineItem(button) {
             button.parentElement.remove();
+            recalcPOTotals();
         }
 
         async function approvePO(poNumber) {

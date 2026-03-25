@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cradero - Features Overview</title>
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        @page { size: A4; margin: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Work Sans', -apple-system, sans-serif; color: #1A1A1A; line-height: 1.6; background: #fff; }
+
+        .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 0; position: relative; page-break-after: always; overflow: hidden; }
+        .page:last-child { page-break-after: auto; }
+
+        /* ── Cover Page ── */
+        .cover { background: linear-gradient(145deg, #001A4D 0%, #003DA6 30%, #0066FF 70%, #2979FF 100%); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 4rem 3rem; }
+        .cover-logo { width: 90px; height: 90px; background: rgba(255,255,255,0.15); border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 2rem; border: 2px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px); }
+        .cover-logo svg { width: 60px; height: 60px; }
+        .cover h1 { font-size: 3.5rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 0.5rem; }
+        .cover .tagline { font-size: 1.3rem; font-weight: 400; opacity: 0.85; margin-bottom: 3rem; }
+        .cover .subtitle { font-size: 1rem; opacity: 0.7; max-width: 450px; line-height: 1.7; }
+        .cover-footer { position: absolute; bottom: 3rem; left: 0; right: 0; text-align: center; font-size: 0.85rem; opacity: 0.5; }
+        .cover-stats { display: flex; gap: 2.5rem; margin: 3rem 0; }
+        .cover-stat { text-align: center; }
+        .cover-stat-value { font-size: 2.5rem; font-weight: 800; font-family: 'IBM Plex Mono', monospace; }
+        .cover-stat-label { font-size: 0.8rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* ── Content Pages ── */
+        .content-page { padding: 2.5rem 3rem; }
+        .page-header-bar { background: linear-gradient(135deg, #0052CC, #0066FF); color: white; padding: 1.5rem 3rem; margin: 0 -3rem 2rem -3rem; width: calc(100% + 6rem); }
+        .page-header-bar h2 { font-size: 1.6rem; font-weight: 700; }
+        .page-header-bar p { font-size: 0.9rem; opacity: 0.8; margin-top: 0.25rem; }
+
+        .section-title { font-size: 1.4rem; font-weight: 700; color: #0066FF; margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 3px solid #E5E5E5; }
+        .section-title:first-child { margin-top: 0; }
+
+        .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+        .feature-card { background: #F8F9FA; border-radius: 10px; padding: 1.1rem; border-left: 4px solid #0066FF; }
+        .feature-card.pro { border-left-color: #7C3AED; }
+        .feature-card h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.3rem; color: #1A1A1A; display: flex; align-items: center; gap: 0.4rem; }
+        .feature-card p { font-size: 0.8rem; color: #666; line-height: 1.5; }
+        .badge-pro { background: #7C3AED; color: white; font-size: 0.6rem; padding: 1px 6px; border-radius: 4px; font-weight: 700; letter-spacing: 0.5px; }
+
+        .feature-list { columns: 2; column-gap: 2rem; margin-bottom: 1.5rem; }
+        .feature-list li { font-size: 0.85rem; margin-bottom: 0.4rem; padding-left: 1.2rem; position: relative; list-style: none; break-inside: avoid; }
+        .feature-list li::before { content: ''; position: absolute; left: 0; top: 0.55rem; width: 6px; height: 6px; border-radius: 50%; background: #0066FF; }
+        .feature-list li.pro::before { background: #7C3AED; }
+
+        .full-width { grid-column: 1 / -1; }
+
+        .tier-comparison { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.85rem; }
+        .tier-comparison th { background: #F0F4FF; padding: 0.7rem 1rem; text-align: left; font-weight: 700; border-bottom: 2px solid #D0D8E8; }
+        .tier-comparison td { padding: 0.6rem 1rem; border-bottom: 1px solid #E5E5E5; }
+        .tier-comparison .check { color: #00C853; font-weight: 700; font-size: 1.1rem; }
+        .tier-comparison .dash { color: #CCC; }
+        .tier-comparison tr:nth-child(even) { background: #FAFBFC; }
+        .tier-col-header { background: #0066FF !important; color: white !important; text-align: center !important; }
+        .tier-col-header.pro-col { background: #7C3AED !important; }
+
+        .highlight-box { background: linear-gradient(135deg, #F0F4FF, #E8EDFF); border-radius: 10px; padding: 1.25rem; margin: 1rem 0; border: 1px solid #D0D8E8; }
+        .highlight-box h4 { font-size: 1rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+        .highlight-box p { font-size: 0.85rem; color: #555; }
+
+        .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+        .role-card { background: #F8F9FA; border-radius: 10px; padding: 1rem; text-align: center; }
+        .role-card h4 { font-size: 0.95rem; font-weight: 700; color: #1A1A1A; margin-bottom: 0.3rem; }
+        .role-card p { font-size: 0.78rem; color: #666; }
+        .role-icon { font-size: 1.8rem; margin-bottom: 0.4rem; }
+
+        .footer-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #F5F5F5; padding: 0.6rem 3rem; display: flex; justify-content: space-between; font-size: 0.7rem; color: #999; }
+
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .page { margin: 0; box-shadow: none; }
+            .no-print { display: none; }
+        }
+        @media screen {
+            body { background: #E5E5E5; padding: 1rem 0; }
+            .page { box-shadow: 0 4px 20px rgba(0,0,0,0.15); margin-bottom: 1rem; }
+        }
+        .print-btn { position: fixed; bottom: 2rem; right: 2rem; background: #0066FF; color: white; border: none; padding: 1rem 2rem; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 16px rgba(0,102,255,0.4); z-index: 100; font-family: inherit; }
+        .print-btn:hover { background: #0052CC; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">Save as PDF</button>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- PAGE 1: COVER -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<div class="page cover">
+    <div class="cover-logo">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M30 9 A16.5 16.5 0 1 0 30 39" stroke="white" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+            <path d="M28.5 14.5 A10.5 10.5 0 1 0 28.5 33.5" stroke="white" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.35"/>
+            <path d="M22 20.5 L25.5 24 L22 27.5 L18.5 24 Z" stroke="white" stroke-width="1.5" fill="white" fill-opacity="0.15"/>
+            <circle cx="22" cy="24" r="1" fill="white"/>
+            <line x1="32" y1="8.5" x2="35.5" y2="6.5" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <line x1="32" y1="39.5" x2="35.5" y2="41.5" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+    </div>
+    <h1>Cradero</h1>
+    <div class="tagline">Complete Maintenance Management</div>
+    <div class="cover-stats">
+        <div class="cover-stat">
+            <div class="cover-stat-value">13</div>
+            <div class="cover-stat-label">Modules</div>
+        </div>
+        <div class="cover-stat">
+            <div class="cover-stat-value">3</div>
+            <div class="cover-stat-label">Tiers</div>
+        </div>
+        <div class="cover-stat">
+            <div class="cover-stat-value">100+</div>
+            <div class="cover-stat-label">Features</div>
+        </div>
+        <div class="cover-stat">
+            <div class="cover-stat-value">4</div>
+            <div class="cover-stat-label">User Roles</div>
+        </div>
+    </div>
+    <div class="subtitle">
+        A modern, cloud-based CMMS built for manufacturing, food production, and facilities teams. Manage work orders, equipment, inventory, compliance, and analytics from a single platform.
+    </div>
+    <div class="cover-footer">Features Overview &mdash; 2026</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- PAGE 2: CORE MODULES -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<div class="page content-page">
+    <div class="page-header-bar">
+        <h2>Basic Tier &mdash; Core Modules</h2>
+        <p>Included in all tiers &mdash; the foundation of your maintenance operations</p>
+    </div>
+
+    <div class="feature-grid">
+        <div class="feature-card">
+            <h4>Work Order Management</h4>
+            <p>Create, assign, track, and complete work orders with priority levels, photo attachments, time tracking, comments, and parts usage logging. Full lifecycle management from open to completed.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Equipment & Asset Register</h4>
+            <p>Comprehensive equipment database with manufacturer details, location, install dates, criticality ratings (A/B/C), warranty tracking, maintenance history, and health scoring.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Preventive Maintenance</h4>
+            <p>Schedule recurring PM tasks with customisable checklists, frequency-based auto-scheduling, calendar sync, completion workflows, and automatic next-due-date calculation.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Reactive Maintenance</h4>
+            <p>Log breakdowns with fault cause classification, root cause analysis, downtime tracking, engineer time recording, and optional auto-generation of linked work orders.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Work Requests</h4>
+            <p>Production staff can submit maintenance requests with urgency levels. Managers review and approve requests, automatically converting them into assigned work orders.</p>
+        </div>
+    </div>
+
+    <div class="highlight-box">
+        <h4>Three-Tier Access</h4>
+        <p><strong>Basic</strong> &mdash; 5 core modules for essential maintenance operations. <strong>Essential</strong> &mdash; adds Notifications, Daily Log, My Tasks, Audit Trail, Permits, and CSV Import. <strong>Pro</strong> &mdash; unlocks everything including Parts Inventory, Purchase Orders, Analytics, Calendar, QR codes, dark mode, and offline access.</p>
+    </div>
+
+    <div class="footer-bar">
+        <span>Cradero - Features Overview</span>
+        <span>Page 2</span>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- PAGE 3: PRO MODULES -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<div class="page content-page">
+    <div class="page-header-bar" style="background: linear-gradient(135deg, #0052CC, #0066FF);">
+        <h2>Essential &amp; Pro Modules</h2>
+        <p>Additional capabilities beyond Basic tier</p>
+    </div>
+
+    <div class="section-title">Essential Tier Modules</div>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <h4>Notifications &amp; Alerts <span style="background:#0066FF;color:white;font-size:0.6rem;padding:1px 6px;border-radius:4px;font-weight:700;letter-spacing:0.5px;">ESSENTIAL</span></h4>
+            <p>Dynamic notification bell showing overdue PMs, unassigned work orders, high-priority tasks, low-stock parts, and equipment-down alerts.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Daily Activity Log <span style="background:#0066FF;color:white;font-size:0.6rem;padding:1px 6px;border-radius:4px;font-weight:700;letter-spacing:0.5px;">ESSENTIAL</span></h4>
+            <p>Timeline view of all maintenance activities for any selected date. Visual activity feed with completion tracking and daily summary statistics.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Engineer Dashboard (My Tasks) <span style="background:#0066FF;color:white;font-size:0.6rem;padding:1px 6px;border-radius:4px;font-weight:700;letter-spacing:0.5px;">ESSENTIAL</span></h4>
+            <p>Personalised task view showing assigned work orders and PM tasks sorted by priority. Quick-start functionality, today's summary stats, and overdue task highlighting.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Audit Trail <span style="background:#0066FF;color:white;font-size:0.6rem;padding:1px 6px;border-radius:4px;font-weight:700;letter-spacing:0.5px;">ESSENTIAL</span></h4>
+            <p>Every create, update, delete, and complete action is logged with user identity, timestamp, entity type, and change details. Filterable by action, entity, and date.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Permits Management <span style="background:#0066FF;color:white;font-size:0.6rem;padding:1px 6px;border-radius:4px;font-weight:700;letter-spacing:0.5px;">ESSENTIAL</span></h4>
+            <p>Issue and manage hot work permits and contractor work permits with safety checklists, compliance verification, expiry tracking, and a closed permits archive for auditing.</p>
+        </div>
+        <div class="feature-card">
+            <h4>CSV Import Wizard <span style="background:#0066FF;color:white;font-size:0.6rem;padding:1px 6px;border-radius:4px;font-weight:700;letter-spacing:0.5px;">ESSENTIAL</span></h4>
+            <p>4-step import wizard: upload file, map columns with auto-detection, preview with validation and duplicate detection, then batch import. Supports equipment, parts, and PM schedules.</p>
+        </div>
+    </div>
+
+    <div class="section-title">Pro Tier Modules</div>
+    <div class="feature-grid">
+        <div class="feature-card pro">
+            <h4>Parts Inventory <span class="badge-pro">PRO</span></h4>
+            <p>Track spare parts with stock levels, minimum thresholds, shelf/bin locations, supplier information, compatible equipment linking, and automated low-stock alerts.</p>
+        </div>
+        <div class="feature-card pro">
+            <h4>Purchase Orders <span class="badge-pro">PRO</span></h4>
+            <p>Create, approve, and track purchase orders with vendor management, line items, budget codes, priority shipping, and PDF export. Full procurement workflow from request to receipt.</p>
+        </div>
+        <div class="feature-card pro">
+            <h4>Analytics & Reports <span class="badge-pro">PRO</span></h4>
+            <p>Interactive charts and KPIs including equipment downtime, WO status distribution, PM compliance trends, MTTR/MTBF, fault cause analysis, technician workload, and cost breakdowns.</p>
+        </div>
+        <div class="feature-card pro">
+            <h4>Maintenance Calendar <span class="badge-pro">PRO</span></h4>
+            <p>Visual month and week views with colour-coded event types. Plan weekly PMs, monthly services, major shutdowns, and inspections. Auto-syncs with PM schedule.</p>
+        </div>
+    </div>
+
+    <div class="section-title">Analytics Detail</div>
+    <div class="feature-list">
+        <li class="pro">Equipment downtime by line (bar chart)</li>
+        <li class="pro">Work order status distribution (doughnut chart)</li>
+        <li class="pro">PM compliance trend (6-month line chart)</li>
+        <li class="pro">Top 5 problem equipment ranking</li>
+        <li class="pro">MTTR & MTBF per equipment</li>
+        <li class="pro">Fault cause frequency analysis</li>
+        <li class="pro">Recurring fault pattern detection</li>
+        <li class="pro">Technician workload overview</li>
+        <li class="pro">Equipment health scores (0-100)</li>
+        <li class="pro">Labor cost calculation by engineer</li>
+        <li class="pro">Downtime hours by equipment</li>
+        <li class="pro">Engineer hours tracking</li>
+        <li class="pro">Downtime & engineer hours trends (6-month)</li>
+        <li class="pro">Parts stock depletion forecast</li>
+        <li class="pro">Maintenance cost breakdown</li>
+        <li class="pro">PM completion rate statistics</li>
+    </div>
+
+    <div class="highlight-box">
+        <h4>PDF Report Export</h4>
+        <p>Export individual data sets (work orders, equipment, parts, breakdowns, PM schedule, purchase orders) as formatted PDFs, or generate a comprehensive full maintenance report covering all KPIs, equipment status, active work orders, PM schedule, and parts requiring attention.</p>
+    </div>
+
+    <div class="footer-bar">
+        <span>Cradero - Features Overview</span>
+        <span>Page 3</span>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- PAGE 4: WORK ORDER & PM DETAIL -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<div class="page content-page">
+    <div class="page-header-bar">
+        <h2>Feature Detail</h2>
+        <p>Deep dive into key workflows</p>
+    </div>
+
+    <div class="section-title">Work Order Lifecycle</div>
+    <div class="feature-list">
+        <li>Create with equipment, title, description, and priority</li>
+        <li>Assign to engineers from team profiles</li>
+        <li>Attach photos during creation or later</li>
+        <li>Track start time, finish time, and total job duration</li>
+        <li>Record machine downtime hours</li>
+        <li>Log parts used with automatic stock deduction</li>
+        <li>Return parts to stores if removed in error</li>
+        <li>Add timestamped comments for communication</li>
+        <li>View linked equipment details and history</li>
+        <li>Filter by status, priority, or sort order</li>
+        <li>Full-text search across all work order fields</li>
+        <li>Status flow: Open &rarr; In Progress &rarr; Completed / On Hold</li>
+    </div>
+
+    <div class="section-title">Preventive Maintenance Workflow</div>
+    <div class="feature-list">
+        <li>Define PM tasks with custom checklists</li>
+        <li>Set frequency: daily, weekly, bi-weekly, monthly, quarterly, semi-annual, annual</li>
+        <li>Assign to engineers with reassignment capability</li>
+        <li>Automatic due date calculation and status tracking</li>
+        <li>Checklist-driven completion &mdash; all items must be ticked</li>
+        <li>Record start/finish times during completion</li>
+        <li>Log parts used during PM with stock deduction</li>
+        <li>Attach photos during completion (managers/admins)</li>
+        <li>Raise follow-up work orders for issues found</li>
+        <li>Auto-calculate next due date after completion</li>
+        <li>Auto-sync calendar events with PM schedule</li>
+        <li>Edit PM tasks (managers/admins) with full checklist management</li>
+        <li>View completion history with checklist results and notes</li>
+        <li>Filter by status, equipment, and date range</li>
+    </div>
+
+    <div class="section-title">Reactive Maintenance</div>
+    <div class="feature-list">
+        <li>10 fault cause categories: electrical, mechanical, hydraulic, pneumatic, software/PLC, operator error, wear &amp; tear, contamination, calibration, other</li>
+        <li>Downtime start/end tracking with auto-calculation</li>
+        <li>Engineer job start/finish tracking</li>
+        <li>Root cause detail field for deeper analysis</li>
+        <li>Resolution/fix description</li>
+        <li>Auto-raise linked work order option</li>
+        <li>Filter by machine, status, fault cause, and date range</li>
+        <li>Edit all fields after initial logging</li>
+        <li>Auto-close linked WO when breakdown is resolved</li>
+    </div>
+
+    <div class="footer-bar">
+        <span>Cradero - Features Overview</span>
+        <span>Page 4</span>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- PAGE 5: EQUIPMENT, PARTS, SECURITY -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<div class="page content-page">
+    <div class="page-header-bar">
+        <h2>Equipment, Inventory & Security</h2>
+        <p>Asset management, stock control, and access governance</p>
+    </div>
+
+    <div class="section-title">Equipment Management</div>
+    <div class="feature-list">
+        <li>Full asset register with name, ID, manufacturer, model</li>
+        <li>Location tracking per equipment</li>
+        <li>Criticality ratings: A (Critical), B (Important), C (Low)</li>
+        <li>Warranty tracking with expiry alerts</li>
+        <li>Equipment health scoring (0-100) based on age, breakdowns, status, and WO load</li>
+        <li>Downtime analysis per equipment with MTTR, MTBF, and availability %</li>
+        <li>Compatible parts linking</li>
+        <li>SOP document attachments (PDF, Word, images)</li>
+        <li>Manufacturer manual attachments</li>
+        <li class="pro">QR code generation and scanning for quick lookup</li>
+        <li>Work order history (30-day count)</li>
+        <li>CSV bulk import with column mapping wizard</li>
+    </div>
+
+    <div class="section-title">Parts & Inventory</div>
+    <div class="feature-list">
+        <li>Part name, number, quantity, min stock, shelf/bin location</li>
+        <li>Multi-supplier tracking with pricing and lead times</li>
+        <li>Compatible equipment linking via checkboxes</li>
+        <li>Automatic stock deduction on WO/PM part usage</li>
+        <li>Return-to-stores functionality</li>
+        <li>Low stock and out-of-stock alerts in notifications</li>
+        <li class="pro">Stock forecast: months until depletion</li>
+        <li>Searchable parts dropdown with live stock display</li>
+        <li>Stock warnings when selecting parts for usage</li>
+        <li>CSV bulk import for inventory migration</li>
+    </div>
+
+    <div class="section-title">Security & Access Control</div>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <h4>Authentication</h4>
+            <p>Supabase-powered authentication with email/password login, account registration with admin approval workflow, and secure session management.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Session Security</h4>
+            <p>30-minute inactivity timeout with 5-minute warning. Client-side rate limiting (5 attempts, 30s lockout). Automatic session expiry on tab visibility change.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Content Security Policy</h4>
+            <p>Strict CSP headers limiting script sources, style sources, image sources, and connection endpoints. Frame ancestors blocked to prevent clickjacking.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Input Validation</h4>
+            <p>Comprehensive input sanitisation with length limits, HTML escaping, file type validation, size limits (10MB), and suspicious double-extension detection.</p>
+        </div>
+    </div>
+
+    <div class="footer-bar">
+        <span>Cradero - Features Overview</span>
+        <span>Page 5</span>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- PAGE 6: ROLES, TIERS, PLATFORM -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<div class="page content-page">
+    <div class="page-header-bar">
+        <h2>Roles, Tiers & Platform</h2>
+        <p>Access control, pricing tiers, and technical capabilities</p>
+    </div>
+
+    <div class="section-title">User Roles</div>
+    <div class="role-grid">
+        <div class="role-card">
+            <div class="role-icon">&#128119;</div>
+            <h4>Admin</h4>
+            <p>Full access to all features. Manage users, approve accounts, delete records, edit equipment, and configure system settings.</p>
+        </div>
+        <div class="role-card">
+            <div class="role-icon">&#128188;</div>
+            <h4>Manager</h4>
+            <p>Full operational access. Create/edit/delete work orders, equipment, and PM tasks. Approve work requests. Edit PM checklists. Upload SOPs.</p>
+        </div>
+        <div class="role-card">
+            <div class="role-icon">&#128736;</div>
+            <h4>Engineer</h4>
+            <p>Work on assigned tasks. Complete work orders and PM checklists. Log breakdowns. Record time and parts usage. Submit comments.</p>
+        </div>
+        <div class="role-card">
+            <div class="role-icon">&#127981;</div>
+            <h4>Production</h4>
+            <p>Submit maintenance requests via the Work Requests tab. View request status. Limited to request submission &mdash; no access to operational modules.</p>
+        </div>
+    </div>
+
+    <div class="section-title">Tier Comparison</div>
+    <table class="tier-comparison">
+        <thead>
+            <tr>
+                <th style="width:40%;">Feature</th>
+                <th class="tier-col-header" style="width:20%;text-align:center;background:#4A90D9 !important;">Basic</th>
+                <th class="tier-col-header" style="width:20%;text-align:center;">Essential</th>
+                <th class="tier-col-header pro-col" style="width:20%;text-align:center;">Pro</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Work Order Management</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Equipment Register</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Preventive Maintenance</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Reactive Maintenance</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Work Requests</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Notifications &amp; Alerts</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>CSV Import</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Daily Activity Log</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Engineer Dashboard (My Tasks)</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Audit Trail</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Permits (Hot Work &amp; Contractor)</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Parts Inventory</td><td class="dash" style="text-align:center;">&mdash;</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Purchase Orders</td><td class="dash" style="text-align:center;">&mdash;</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Analytics &amp; Reports</td><td class="dash" style="text-align:center;">&mdash;</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Maintenance Calendar</td><td class="dash" style="text-align:center;">&mdash;</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>QR Code Generation &amp; Scanning</td><td class="dash" style="text-align:center;">&mdash;</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Dark Mode</td><td class="dash" style="text-align:center;">&mdash;</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>SOP &amp; Manual Attachments</td><td class="dash" style="text-align:center;">&mdash;</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Stock Forecast &amp; Supplier Management</td><td class="dash" style="text-align:center;">&mdash;</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Equipment Health Scores</td><td class="dash" style="text-align:center;">&mdash;</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+            <tr><td>Offline Mode (Service Worker)</td><td class="dash" style="text-align:center;">&mdash;</td><td class="dash" style="text-align:center;">&mdash;</td><td class="check" style="text-align:center;">&#10003;</td></tr>
+        </tbody>
+    </table>
+
+    <div class="footer-bar">
+        <span>Cradero - Features Overview</span>
+        <span>Page 6</span>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- PAGE 7: PLATFORM & TECH -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<div class="page content-page">
+    <div class="page-header-bar" style="background: linear-gradient(135deg, #1A1A1A, #333);">
+        <h2>Platform & Technical</h2>
+        <p>Architecture, integrations, and deployment</p>
+    </div>
+
+    <div class="section-title">Platform Features</div>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <h4>Cloud-Based</h4>
+            <p>Hosted on Supabase with PostgreSQL database, real-time subscriptions, row-level security, and managed authentication. No servers to maintain.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Mobile Responsive</h4>
+            <p>Fully responsive design with slide-out navigation drawer, touch-friendly 44px tap targets, full-screen modals on mobile, and horizontal scroll for data tables.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Real-Time Notifications</h4>
+            <p>Dynamic notification bell showing overdue PMs, unassigned work orders, high-priority tasks, low-stock parts, and equipment-down alerts.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Full Audit Trail</h4>
+            <p>Every create, update, delete, and complete action is logged with user identity, timestamp, entity type, and change details. Filterable by action, entity, and date.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Photo Management</h4>
+            <p>Upload photos to work orders during creation or on the detail view. Stored securely in Supabase Storage. Drag-and-drop support with file type and size validation.</p>
+        </div>
+        <div class="feature-card">
+            <h4>CSV Import Wizard</h4>
+            <p>4-step import wizard: upload file, map columns with auto-detection, preview with validation and duplicate detection, then batch import. Supports equipment, parts, and PM schedules.</p>
+        </div>
+        <div class="feature-card">
+            <h4>PDF Generation</h4>
+            <p>Generate professional PDF reports for purchase orders and full maintenance reports using jsPDF. Includes headers, tables, KPIs, and page numbering.</p>
+        </div>
+        <div class="feature-card pro">
+            <h4>QR Codes <span class="badge-pro">PRO</span></h4>
+            <p>Generate scannable QR codes for any equipment using qrcode-generator. Scan via device camera using jsQR for instant equipment lookup. Manual ID entry fallback.</p>
+        </div>
+    </div>
+
+    <div class="section-title">Technical Stack</div>
+    <div class="feature-grid">
+        <div class="feature-card" style="border-left-color: #333;">
+            <h4>Frontend</h4>
+            <p>Single-page application built with vanilla JavaScript. No framework dependencies. Work Sans + IBM Plex Mono typography. CSS custom properties for theming.</p>
+        </div>
+        <div class="feature-card" style="border-left-color: #333;">
+            <h4>Backend</h4>
+            <p>Supabase (PostgreSQL + Auth + Storage + Row Level Security). RESTful data access layer with typed API wrapper. Real-time capabilities via Supabase subscriptions.</p>
+        </div>
+        <div class="feature-card" style="border-left-color: #333;">
+            <h4>Charts & Visualisation</h4>
+            <p>Chart.js 4.4 for interactive bar, doughnut, line, and trend charts. Responsive with maintained aspect ratios. Dynamic data-driven rendering.</p>
+        </div>
+        <div class="feature-card" style="border-left-color: #333;">
+            <h4>Libraries</h4>
+            <p>Supabase JS SDK v2.97, Chart.js v4.4, jsPDF v2.5 (PDF generation), jsQR v1.4 (QR scanning), qrcode-generator v1.4. All loaded via CDN with SRI hashes.</p>
+        </div>
+    </div>
+
+    <div class="highlight-box" style="margin-top: 1.5rem;">
+        <h4>Single-File Architecture</h4>
+        <p>Cradero is delivered as a single HTML file (plus a config.js for credentials), making deployment as simple as hosting a static file. No build step, no bundler, no npm install. The entire application &mdash; HTML structure, CSS styles, and JavaScript logic &mdash; lives in one file for maximum portability and zero-config deployment.</p>
+    </div>
+
+    <div class="footer-bar">
+        <span>Cradero - Features Overview</span>
+        <span>Page 7</span>
+    </div>
+</div>
+
+</body>
+</html>

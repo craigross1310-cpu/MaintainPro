@@ -1,0 +1,11 @@
+Equipment Name,Equipment ID,Manufacturer,Model,Location,Install Date,Status,Criticality
+CNC Lathe 01,EQ-CNC-001,Haas,ST-20Y,Machine Shop - Bay 1,2021-03-15,operational,A
+Hydraulic Press,EQ-HYD-002,Enerpac,IPE-2505,Fabrication Floor,2019-07-22,operational,B
+Conveyor Belt Line 6,EQ-CB-006,Dorner,2200 Series,Packaging Area,2022-01-10,maintenance,B
+Air Compressor Main,EQ-AC-001,Atlas Copco,GA 37+,Utility Room,2018-11-05,operational,A
+Welding Robot Arm,EQ-WR-003,Fanuc,Arc Mate 100iD,Assembly Line 2,2023-06-01,operational,A
+Cooling Tower CT-2,EQ-CT-002,Marley,NC Series,Roof - Mechanical,2017-04-18,down,B
+Forklift FL-04,EQ-FL-004,Toyota,8FGCU25,Warehouse,2020-09-30,operational,C
+Paint Booth PB-1,EQ-PB-001,Global Finishing,Spray Booth,Paint Shop,2021-12-12,operational,B
+Band Saw BS-02,EQ-BS-002,DoAll,C-916S,Machine Shop - Bay 3,2016-08-25,maintenance,C
+Chiller Unit CH-1,EQ-CH-001,Carrier,30XA,Mechanical Room,2019-02-14,operational,A
