@@ -3236,15 +3236,12 @@
 
                     <div class="form-group">
                         <label class="form-label">Category</label>
-                        <select class="form-select" id="addPartCategory">
-                            <option value="">Select category...</option>
-                            <option value="bearings">Bearings</option>
-                            <option value="belts">Belts & Chains</option>
-                            <option value="sensors">Sensors</option>
-                            <option value="electrical">Electrical Components</option>
-                            <option value="hydraulic">Hydraulic Parts</option>
-                            <option value="consumables">Consumables</option>
-                        </select>
+                        <div style="display:flex;gap:0.5rem;align-items:center;">
+                            <select class="form-select" id="addPartCategory" style="flex:1;">
+                                <option value="">Select category...</option>
+                            </select>
+                            <button type="button" class="btn btn-secondary btn-small" id="manageCategoriesBtn" onclick="openManageCategoriesModal()" style="white-space:nowrap;display:none;" title="Manage Categories">+ / -</button>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -3299,6 +3296,26 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="resetAndCloseAddPartModal()">Cancel</button>
                 <button class="btn btn-primary" onclick="submitAddPart()">Add Part</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Parts Categories Modal -->
+    <div id="manageCategoriesModal" class="modal-overlay">
+        <div class="modal" style="max-width:450px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Manage Categories</h2>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+                    <input type="text" class="form-input" id="newCategoryName" placeholder="New category name..." style="flex:1;">
+                    <button class="btn btn-primary btn-small" onclick="addPartCategory()">Add</button>
+                </div>
+                <div id="categoriesList" style="display:flex;flex-direction:column;gap:0.5rem;max-height:300px;overflow-y:auto;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('manageCategoriesModal')">Close</button>
             </div>
         </div>
     </div>
@@ -3555,7 +3572,7 @@
                 <form id="createPOForm">
                     <div class="form-group">
                         <label class="form-label">Vendor *</label>
-                        <select class="form-select" required>
+                        <select id="poVendor" class="form-select" required>
                             <option value="">Select vendor...</option>
                             <option value="rs">RS Components</option>
                             <option value="grainger">Grainger</option>
@@ -3567,7 +3584,7 @@
 
                     <div class="form-group">
                         <label class="form-label">PO Type *</label>
-                        <select class="form-select" required>
+                        <select id="poType" class="form-select" required>
                             <option value="">Select type...</option>
                             <option value="standard">Standard Order</option>
                             <option value="emergency">Emergency Order</option>
@@ -3578,7 +3595,7 @@
 
                     <div class="form-group">
                         <label class="form-label">Budget Code / Cost Center *</label>
-                        <select class="form-select" required>
+                        <select id="poBudgetCode" class="form-select" required>
                             <option value="">Select budget code...</option>
                             <option value="maintenance">Maintenance Budget</option>
                             <option value="emergency">Emergency Repairs</option>
@@ -3592,12 +3609,12 @@
 
                     <div class="form-group">
                         <label class="form-label">Work Order Number (Optional)</label>
-                        <input type="text" class="form-input" placeholder="e.g., WO-2024-001">
+                        <input id="poWorkOrder" type="text" class="form-input" placeholder="e.g., WO-2024-001">
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Delivery Location *</label>
-                        <select class="form-select" required>
+                        <select id="poDeliveryLocation" class="form-select" required>
                             <option value="">Select location...</option>
                             <option value="warehouse">Main Warehouse</option>
                             <option value="maintenance">Maintenance Shop</option>
@@ -4789,6 +4806,23 @@
                     if (r.error) throw r.error;
                 }
             },
+            // --- Parts Categories ---
+            partsCategories: {
+                list: async function() {
+                    var r = await supabaseClient.from('parts_categories').select('*').order('name');
+                    if (r.error) throw r.error;
+                    return r.data;
+                },
+                create: async function(name) {
+                    var r = await supabaseClient.from('parts_categories').insert({ name: name }).select().single();
+                    if (r.error) throw r.error;
+                    return r.data;
+                },
+                delete: async function(id) {
+                    var r = await supabaseClient.from('parts_categories').delete().eq('id', id);
+                    if (r.error) throw r.error;
+                }
+            },
             // --- Purchase Orders ---
             purchaseOrders: {
                 list: async function() {
@@ -5042,6 +5076,7 @@
                     renderWorkOrders();
                     renderEquipment();
                     renderParts();
+                    populateCategoryDropdown();
                     renderPurchaseOrders();
                     renderHotWorkPermits();
                     renderContractorPermits();
@@ -5376,6 +5411,7 @@
         var workRequestsData = [];
         var equipmentList = [];
         var partsData = [];
+        var partsCategoriesData = [];
         var purchaseOrdersData = [];
         var hotWorkPermits = [];
         var contractorPermits = [];
@@ -5515,7 +5551,8 @@
                 shelf: row.shelf || '', bin: row.bin || '',
                 monthlyUsage: row.monthly_usage || 0,
                 compatibleEquipment: row.compatible_equipment || [],
-                suppliers: row.suppliers || []
+                suppliers: row.suppliers || [],
+                category: row.category || ''
             };
         }
         function mapPartToDb(p) {
@@ -5529,6 +5566,7 @@
             if (p.monthlyUsage !== undefined) obj.monthly_usage = p.monthlyUsage;
             if (p.compatibleEquipment !== undefined) obj.compatible_equipment = p.compatibleEquipment;
             if (p.suppliers !== undefined) obj.suppliers = p.suppliers;
+            if (p.category !== undefined) obj.category = p.category;
             return obj;
         }
         function mapPoFromDb(row) {
@@ -5661,7 +5699,8 @@
                     CraderoAPI.pm.list(),
                     CraderoAPI.calendar.list(),
                     supabaseClient.from('work_requests').select('*').order('created_at', { ascending: false }),
-                    CraderoAPI.profiles.list()
+                    CraderoAPI.profiles.list(),
+                    CraderoAPI.partsCategories.list()
                 ]);
                 workOrdersData = results[0].map(mapWoFromDb);
                 equipmentList = results[1].map(mapEquipFromDb);
@@ -5678,6 +5717,7 @@
                 var wrResult = results[8];
                 workRequestsData = (wrResult.data || []).map(mapWorkRequestFromDb);
                 staffProfiles = (results[9] || []).filter(function(p) { return p.role && p.role !== 'pending'; });
+                partsCategoriesData = results[10] || [];
                 // Compute workOrders30d for each equipment from actual work order data
                 var thirtyDaysAgo = new Date();
                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -8018,6 +8058,7 @@
             const minStock = parseInt(document.getElementById('addPartMinStock').value) || 0;
             const shelf    = document.getElementById('addPartShelf').value.trim();
             const bin      = document.getElementById('addPartBin').value.trim();
+            const category = (document.getElementById('addPartCategory').value || '').trim();
 
             if (!name || !number) {
                 showToast('Part Name and Part Number are required.', 'error');
@@ -8026,7 +8067,7 @@
 
             capturePendingSupplier();
             try {
-                var dbRow = mapPartToDb({ name: name, partNumber: number, qty: qty, minStock: minStock, shelf: shelf, bin: bin, monthlyUsage: 0, compatibleEquipment: getSelectedPartEquipment(), suppliers: partSupplierItems.slice() });
+                var dbRow = mapPartToDb({ name: name, partNumber: number, qty: qty, minStock: minStock, shelf: shelf, bin: bin, category: category, monthlyUsage: 0, compatibleEquipment: getSelectedPartEquipment(), suppliers: partSupplierItems.slice() });
                 var created = await CraderoAPI.parts.create(dbRow);
                 logAudit('create', 'part', created.id, { name: name });
                 partsData.push(mapPartFromDb(created));
@@ -8054,6 +8095,7 @@
             document.getElementById('addPartMinStock').value = p.minStock;
             document.getElementById('addPartShelf').value    = p.shelf;
             document.getElementById('addPartBin').value      = p.bin;
+            document.getElementById('addPartCategory').value = p.category || '';
             // Load existing suppliers into builder
             partSupplierItems = (p.suppliers || []).map(function(s) { return { supplier: s.supplier, supplierPartNo: s.supplierPartNo, price: s.price, leadTime: s.leadTime }; });
             renderPartSupplierBuilder();
@@ -8079,6 +8121,7 @@
             capturePendingSupplier();
             p.suppliers = partSupplierItems.slice();
             p.compatibleEquipment = getSelectedPartEquipment();
+            p.category = (document.getElementById('addPartCategory').value || '').trim();
             try {
                 await CraderoAPI.parts.update(p.id, mapPartToDb(p));
                 renderParts();
@@ -8112,6 +8155,100 @@
                 showToast('Part removed from inventory.', 'info');
             } catch (err) {
                 showToast('Failed to delete part: ' + err.message, 'error');
+            }
+        }
+
+        // ── Parts Categories Management ──────────────────────────────────
+        function populateCategoryDropdown() {
+            var sel = document.getElementById('addPartCategory');
+            if (!sel) return;
+            var currentVal = sel.value;
+            sel.innerHTML = '<option value="">Select category...</option>';
+            partsCategoriesData.forEach(function(c) {
+                var opt = document.createElement('option');
+                opt.value = c.name;
+                opt.textContent = c.name;
+                sel.appendChild(opt);
+            });
+            sel.value = currentVal;
+            // Show manage button only for manager/admin
+            var btn = document.getElementById('manageCategoriesBtn');
+            if (btn) btn.style.display = (currentUserRole === 'admin' || currentUserRole === 'manager') ? '' : 'none';
+        }
+
+        async function loadPartsCategories() {
+            try {
+                var rows = await CraderoAPI.partsCategories.list();
+                partsCategoriesData = rows || [];
+                populateCategoryDropdown();
+            } catch (e) {
+                console.error('[Cradero] Failed to load parts categories:', e);
+            }
+        }
+
+        function openManageCategoriesModal() {
+            if (currentUserRole !== 'admin' && currentUserRole !== 'manager') {
+                showToast('Only managers and admins can manage categories.', 'error');
+                return;
+            }
+            renderCategoriesList();
+            openModal('manageCategoriesModal');
+        }
+
+        function renderCategoriesList() {
+            var container = document.getElementById('categoriesList');
+            if (!container) return;
+            if (partsCategoriesData.length === 0) {
+                container.innerHTML = '<div style="color:var(--gray-500);text-align:center;padding:1rem;">No categories yet.</div>';
+                return;
+            }
+            container.innerHTML = partsCategoriesData.map(function(c) {
+                return '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;">' +
+                    '<span>' + escHtml(c.name) + '</span>' +
+                    '<button class="btn btn-danger btn-small" onclick="deletePartCategory(\'' + c.id + '\')">Remove</button>' +
+                '</div>';
+            }).join('');
+        }
+
+        async function addPartCategory() {
+            if (currentUserRole !== 'admin' && currentUserRole !== 'manager') {
+                showToast('Only managers and admins can manage categories.', 'error');
+                return;
+            }
+            var name = (document.getElementById('newCategoryName').value || '').trim();
+            if (!name) { showToast('Enter a category name.', 'error'); return; }
+            if (partsCategoriesData.some(function(c) { return c.name.toLowerCase() === name.toLowerCase(); })) {
+                showToast('Category already exists.', 'error'); return;
+            }
+            try {
+                var created = await CraderoAPI.partsCategories.create(name);
+                partsCategoriesData.push(created);
+                partsCategoriesData.sort(function(a, b) { return a.name.localeCompare(b.name); });
+                populateCategoryDropdown();
+                renderCategoriesList();
+                document.getElementById('newCategoryName').value = '';
+                showToast('Category "' + name + '" added!', 'success');
+            } catch (err) {
+                showToast('Failed to add category: ' + err.message, 'error');
+            }
+        }
+
+        async function deletePartCategory(catId) {
+            if (currentUserRole !== 'admin' && currentUserRole !== 'manager') {
+                showToast('Only managers and admins can manage categories.', 'error');
+                return;
+            }
+            var cat = partsCategoriesData.find(function(c) { return c.id === catId; });
+            if (!cat) return;
+            if (!confirm('Remove category "' + cat.name + '"?')) return;
+            try {
+                await CraderoAPI.partsCategories.delete(catId);
+                partsCategoriesData = partsCategoriesData.filter(function(c) { return c.id !== catId; });
+                populateCategoryDropdown();
+                renderCategoriesList();
+                showToast('Category removed.', 'info');
+            } catch (err) {
+                showToast('Failed to remove category: ' + err.message, 'error');
             }
         }
 
@@ -11007,6 +11144,7 @@
             // Parts
             openAddPartModal, resetAndCloseAddPartModal, submitAddPart, openEditPart, saveEditPart, deletePart, orderPart,
             addPartSupplier, removePartSupplier, submitPartOrder,
+            openManageCategoriesModal, addPartCategory, deletePartCategory,
             // Purchase Orders
             filterPOs, openPODetail, approvePO, deletePO, addLineItem, removeLineItem, submitCreatePO, downloadPOPDF,
             // Permits
