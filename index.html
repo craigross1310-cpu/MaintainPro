@@ -8856,12 +8856,37 @@
             y += 6;
             doc.setFontSize(10);
             doc.setFont(undefined, 'normal');
-            if (po.tags && po.tags.length) {
-                po.tags.forEach(function(t, i) {
+            if (po.lineItems && po.lineItems.length) {
+                var colDesc = leftMargin;
+                var colQty = 120;
+                var colUnit = 145;
+                var colTotal = 170;
+                // Table header
+                doc.setFillColor(0, 102, 255);
+                doc.rect(leftMargin, y - 4, pageWidth - leftMargin * 2, 8, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFont(undefined, 'bold');
+                doc.setFontSize(9);
+                doc.text('Description', colDesc + 4, y + 1);
+                doc.text('Qty', colQty, y + 1);
+                doc.text('Unit Cost', colUnit, y + 1);
+                doc.text('Total', colTotal, y + 1);
+                y += 10;
+                doc.setTextColor(0, 0, 0);
+                doc.setFont(undefined, 'normal');
+                doc.setFontSize(10);
+                po.lineItems.forEach(function(li, i) {
                     if (y > 270) { doc.addPage(); y = 20; }
-                    doc.setFillColor(245, 245, 245);
-                    doc.rect(leftMargin, y - 4, pageWidth - leftMargin * 2, 8, 'F');
-                    doc.text((i + 1) + '.  ' + t, leftMargin + 4, y + 1);
+                    if (i % 2 === 0) {
+                        doc.setFillColor(245, 245, 245);
+                        doc.rect(leftMargin, y - 4, pageWidth - leftMargin * 2, 8, 'F');
+                    }
+                    var desc = li.description || '';
+                    if (desc.length > 40) desc = desc.substring(0, 37) + '...';
+                    doc.text(desc, colDesc + 4, y + 1);
+                    doc.text(String(li.quantity || 0), colQty, y + 1);
+                    doc.text('\u00a3' + parseFloat(li.unit_cost || 0).toFixed(2), colUnit, y + 1);
+                    doc.text('\u00a3' + parseFloat(li.total_cost || (li.quantity * li.unit_cost) || 0).toFixed(2), colTotal, y + 1);
                     y += 10;
                 });
             } else {
