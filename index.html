@@ -5987,6 +5987,7 @@
 
         function getPoStatusBadge(status) {
             const map = {
+                'draft':      { bg: 'rgba(158,158,158,0.1)',  color: 'var(--gray-600)', label: 'DRAFT' },
                 'ordered':    { bg: 'rgba(255,179,0,0.1)',   color: 'var(--warning)', label: 'ORDERED' },
                 'pending':    { bg: 'rgba(0,102,255,0.1)',   color: 'var(--primary)', label: 'PENDING' },
                 'in-transit': { bg: 'rgba(255,179,0,0.1)',   color: 'var(--warning)', label: 'IN TRANSIT' },
@@ -8555,7 +8556,7 @@
                 var dbRow = {
                     po_number: poNum,
                     supplier: vendor,
-                    status: 'pending',
+                    status: 'draft',
                     priority: order.isEmergency ? 'high' : 'medium',
                     title: (order.isEmergency ? 'Emergency Order - ' : 'Parts Order - ') + order.partName,
                     total_cost: 0,
@@ -8656,7 +8657,7 @@
                 var dbRow = {
                     po_number: poNumber,
                     supplier: vendorLabels[vendor] || vendor,
-                    status: 'pending',
+                    status: 'draft',
                     title: 'New Purchase Order',
                     priority: poType === 'emergency' ? 'high' : 'medium',
                     total_cost: totals.total,
