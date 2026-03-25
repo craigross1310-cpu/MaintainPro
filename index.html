@@ -3665,6 +3665,11 @@
             <div class="modal-body">
                 <form id="createPOForm">
                     <div class="form-group">
+                        <label class="form-label">PO Number (Optional)</label>
+                        <input id="poCustomNumber" type="text" class="form-input" placeholder="Auto-generated if left blank (e.g., PO-20260325-0001)">
+                    </div>
+
+                    <div class="form-group">
                         <label class="form-label">Vendor *</label>
                         <select id="poVendor" class="form-select" required>
                             <option value="">Select vendor...</option>
@@ -6020,7 +6025,7 @@
                         <div class="wo-meta">
                             <div class="wo-meta-item"><span>🏢</span><span>${escHtml(po.vendor)}</span></div>
                             <div class="wo-meta-item"><span>📦</span><span>${po.items} items</span></div>
-                            <div class="wo-meta-item"><span>💰</span><span style="font-weight:700;color:var(--dark);">${escHtml(po.total)}</span></div>
+                            <div class="wo-meta-item"><span>💰</span><span style="font-weight:700;color:var(--dark);">£${parseFloat(po.total || 0).toFixed(2)}</span></div>
                             <div class="wo-meta-item"><span>📅</span><span>Created: ${escHtml(po.created)}</span></div>
                         </div>
                         ${tagsHtml}
@@ -8647,12 +8652,18 @@
                 var sessionResult = await supabaseClient.auth.getSession();
                 var userId = sessionResult.data && sessionResult.data.session ? sessionResult.data.session.user.id : null;
 
-                // Generate PO number: PO-YYYYMMDD-XXXX
-                var now = new Date();
-                var poNumber = 'PO-' + now.getFullYear() +
-                    String(now.getMonth() + 1).padStart(2, '0') +
-                    String(now.getDate()).padStart(2, '0') + '-' +
-                    String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+                // Use custom PO number if provided, otherwise auto-generate
+                var customPoNumber = (document.getElementById('poCustomNumber') ? document.getElementById('poCustomNumber').value.trim() : '');
+                var poNumber;
+                if (customPoNumber) {
+                    poNumber = customPoNumber;
+                } else {
+                    var now = new Date();
+                    poNumber = 'PO-' + now.getFullYear() +
+                        String(now.getMonth() + 1).padStart(2, '0') +
+                        String(now.getDate()).padStart(2, '0') + '-' +
+                        String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+                }
 
                 var dbRow = {
                     po_number: poNumber,
@@ -8668,15 +8679,19 @@
                 var created = await CraderoAPI.purchaseOrders.create(dbRow);
 
                 // Save each line item
+                var savedLineItems = [];
                 for (var i = 0; i < lineItems.length; i++) {
-                    await CraderoAPI.purchaseOrders.addLineItem({
+                    var savedItem = await CraderoAPI.purchaseOrders.addLineItem({
                         purchase_order_id: created.id,
                         description: lineItems[i].description,
                         quantity: lineItems[i].quantity,
                         unit_cost: lineItems[i].unit_price
                     });
+                    savedLineItems.push(savedItem || { description: lineItems[i].description, quantity: lineItems[i].quantity, unit_cost: lineItems[i].unit_price, total_cost: lineItems[i].quantity * lineItems[i].unit_price });
                 }
 
+                // Attach line items to created PO before mapping
+                created.po_line_items = savedLineItems;
                 purchaseOrdersData.unshift(mapPoFromDb(created));
                 renderPurchaseOrders();
                 closeModal('createPOModal');
@@ -8761,8 +8776,20 @@
                 </div>
                 <div class="form-group"><label class="form-label">Budget Code</label><div>${escHtml(po.budgetCode || '—')}</div></div>
                 ${po.tracking ? `<div class="form-group"><label class="form-label">Tracking</label><div style="font-family:'IBM Plex Mono',monospace;">${escHtml(po.tracking)}</div></div>` : ''}
-                <div class="form-group"><label class="form-label">Items</label><div style="padding:1rem;background:var(--gray-100);border-radius:8px;">${po.tags && po.tags.length ? po.tags.map(t => `<div style="padding:0.5rem 0;border-bottom:1px solid var(--gray-200);">${escHtml(t)}</div>`).join('') : `<div>${po.items} item(s)</div>`}</div></div>
-                <div class="form-group"><label class="form-label">Total</label><div style="font-size:1.25rem;font-weight:700;color:var(--primary);">${escHtml(po.total)}</div></div>
+                <div class="form-group"><label class="form-label">Line Items</label><div style="padding:1rem;background:var(--gray-100);border-radius:8px;">
+                    ${po.lineItems && po.lineItems.length ? `
+                        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;font-weight:700;font-size:0.85rem;color:var(--gray-600);border-bottom:2px solid var(--gray-300);padding-bottom:0.5rem;">
+                            <div>Description</div><div>Qty</div><div>Unit Cost</div><div>Total</div>
+                        </div>
+                        ${po.lineItems.map(li => `<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0.5rem;padding:0.5rem 0;border-bottom:1px solid var(--gray-200);">
+                            <div>${escHtml(li.description)}</div>
+                            <div>${li.quantity}</div>
+                            <div>£${parseFloat(li.unit_cost || 0).toFixed(2)}</div>
+                            <div style="font-weight:600;">£${parseFloat(li.total_cost || (li.quantity * li.unit_cost) || 0).toFixed(2)}</div>
+                        </div>`).join('')}
+                    ` : `<div>${po.items} item(s)</div>`}
+                </div></div>
+                <div class="form-group"><label class="form-label">Total</label><div style="font-size:1.25rem;font-weight:700;color:var(--primary);">£${parseFloat(po.total || 0).toFixed(2)}</div></div>
                 ${po.notes ? `<div class="form-group"><label class="form-label">Notes</label><div style="padding:1rem;background:var(--gray-100);border-radius:8px;">${escHtml(po.notes)}</div></div>` : ''}`;
             openModal('poDetailModal');
         }
@@ -8848,7 +8875,7 @@
             doc.rect(leftMargin, y - 5, pageWidth - leftMargin * 2, 12, 'F');
             doc.setFontSize(13);
             doc.setFont(undefined, 'bold');
-            doc.text('TOTAL: ' + (po.total || '-'), leftMargin + 4, y + 2);
+            doc.text('TOTAL: \u00a3' + parseFloat(po.total || 0).toFixed(2), leftMargin + 4, y + 2);
             y += 16;
 
             // Notes
