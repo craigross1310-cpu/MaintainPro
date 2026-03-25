@@ -1874,6 +1874,7 @@
                 <div class="card-header">
                     <h2 class="card-title">Equipment Assets</h2>
                     <div style="display:flex;gap:0.5rem;">
+                        <button class="btn btn-secondary" onclick="toggleEquipFilter()">Filter & Sort</button>
                         <button class="btn btn-secondary essential-only-feature" id="importEquipBtn" onclick="openCsvImport('equipment')" style="display:none;">Import CSV</button>
                         <button class="btn btn-primary" id="addEquipmentBtn" onclick="openModal('equipmentModal')">+ Add Equipment</button>
                     </div>
@@ -1882,6 +1883,54 @@
                 <div class="search-bar">
                     <span class="search-icon">🔍</span>
                     <input type="text" class="search-input" id="eqSearchInput" placeholder="Search equipment by name, ID, or location..." oninput="searchEquipment()">
+                </div>
+
+                <div id="equipFilterPanel" style="display:none;padding:1rem;background:var(--gray-100);border-radius:8px;margin-bottom:1rem;">
+                    <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Location</label>
+                            <select class="form-select" id="equipFilterLocation" style="min-width:140px;">
+                                <option value="">All Locations</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="equipFilterStatus" style="min-width:140px;">
+                                <option value="">All Statuses</option>
+                                <option value="operational">Operational</option>
+                                <option value="maintenance">Maintenance</option>
+                                <option value="out-of-service">Out of Service</option>
+                                <option value="decommissioned">Decommissioned</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Criticality</label>
+                            <select class="form-select" id="equipFilterCriticality" style="min-width:140px;">
+                                <option value="">All Criticalities</option>
+                                <option value="critical">Critical</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Manufacturer</label>
+                            <select class="form-select" id="equipFilterManufacturer" style="min-width:140px;">
+                                <option value="">All Manufacturers</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Sort By</label>
+                            <select class="form-select" id="equipSortBy" style="min-width:160px;">
+                                <option value="name">Name (A→Z)</option>
+                                <option value="name-desc">Name (Z→A)</option>
+                                <option value="location">Location</option>
+                                <option value="criticality">Criticality (High→Low)</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary btn-small" onclick="applyEquipFilter()" style="align-self:flex-end;">Apply</button>
+                        <button class="btn btn-secondary btn-small" onclick="clearEquipFilter()" style="align-self:flex-end;">Clear</button>
+                    </div>
                 </div>
 
                 <div class="equipment-grid" id="equipmentGrid"></div>
@@ -1894,6 +1943,7 @@
                 <div class="card-header">
                     <h2 class="card-title">Parts Inventory</h2>
                     <div style="display:flex;gap:0.5rem;">
+                        <button class="btn btn-secondary" onclick="togglePartsFilter()">Filter & Sort</button>
                         <button class="btn btn-secondary essential-only-feature" id="importPartsBtn" onclick="openCsvImport('parts')" style="display:none;">Import CSV</button>
                         <button class="btn btn-primary" onclick="openAddPartModal()">+ Add Part</button>
                     </div>
@@ -1902,6 +1952,50 @@
                 <div class="search-bar">
                     <span class="search-icon">🔍</span>
                     <input type="text" class="search-input" id="partsSearchInput" placeholder="Search parts by name, number, or location..." oninput="searchParts()">
+                </div>
+
+                <div id="partsFilterPanel" style="display:none;padding:1rem;background:var(--gray-100);border-radius:8px;margin-bottom:1rem;">
+                    <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Category</label>
+                            <select class="form-select" id="partsFilterCategory" style="min-width:140px;">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Shelf</label>
+                            <select class="form-select" id="partsFilterShelf" style="min-width:140px;">
+                                <option value="">All Shelves</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Bin</label>
+                            <select class="form-select" id="partsFilterBin" style="min-width:140px;">
+                                <option value="">All Bins</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Stock Status</label>
+                            <select class="form-select" id="partsFilterStock" style="min-width:140px;">
+                                <option value="">All</option>
+                                <option value="in-stock">In Stock</option>
+                                <option value="low-stock">Low Stock</option>
+                                <option value="out-of-stock">Out of Stock</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Sort By</label>
+                            <select class="form-select" id="partsSortBy" style="min-width:160px;">
+                                <option value="name">Name (A→Z)</option>
+                                <option value="name-desc">Name (Z→A)</option>
+                                <option value="qty-asc">Qty (Low→High)</option>
+                                <option value="qty-desc">Qty (High→Low)</option>
+                                <option value="shelf">Shelf</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary btn-small" onclick="applyPartsFilter()" style="align-self:flex-end;">Apply</button>
+                        <button class="btn btn-secondary btn-small" onclick="clearPartsFilter()" style="align-self:flex-end;">Clear</button>
+                    </div>
                 </div>
 
                 <div class="parts-grid" id="partsGrid"></div>
@@ -5077,6 +5171,8 @@
                     renderEquipment();
                     renderParts();
                     populateCategoryDropdown();
+                    populateEquipFilterDropdowns();
+                    populatePartsFilterDropdowns();
                     renderPurchaseOrders();
                     renderHotWorkPermits();
                     renderContractorPermits();
@@ -7599,6 +7695,148 @@
             renderParts(filtered);
         }
 
+        // --- Equipment Filter & Sort ---
+        function toggleEquipFilter() {
+            var panel = document.getElementById('equipFilterPanel');
+            if (panel) panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        }
+
+        function populateEquipFilterDropdowns() {
+            var locSelect = document.getElementById('equipFilterLocation');
+            var mfgSelect = document.getElementById('equipFilterManufacturer');
+            if (!locSelect || !mfgSelect) return;
+
+            var locations = [];
+            var manufacturers = [];
+            equipmentList.forEach(function(eq) {
+                var loc = (eq.location || '').trim();
+                if (loc && locations.indexOf(loc) === -1) locations.push(loc);
+                var mfg = (eq.manufacturer || '').trim();
+                if (mfg && manufacturers.indexOf(mfg) === -1) manufacturers.push(mfg);
+            });
+            locations.sort();
+            manufacturers.sort();
+
+            locSelect.innerHTML = '<option value="">All Locations</option>';
+            locations.forEach(function(l) {
+                locSelect.innerHTML += '<option value="' + l + '">' + l + '</option>';
+            });
+
+            mfgSelect.innerHTML = '<option value="">All Manufacturers</option>';
+            manufacturers.forEach(function(m) {
+                mfgSelect.innerHTML += '<option value="' + m + '">' + m + '</option>';
+            });
+        }
+
+        function applyEquipFilter() {
+            var location = document.getElementById('equipFilterLocation').value;
+            var status = document.getElementById('equipFilterStatus').value;
+            var criticality = document.getElementById('equipFilterCriticality').value;
+            var manufacturer = document.getElementById('equipFilterManufacturer').value;
+            var sortBy = document.getElementById('equipSortBy').value;
+            var filtered = equipmentList.slice();
+
+            if (location) filtered = filtered.filter(function(eq) { return (eq.location || '') === location; });
+            if (status) filtered = filtered.filter(function(eq) { return (eq.status || '') === status; });
+            if (criticality) filtered = filtered.filter(function(eq) { return (eq.criticality || '') === criticality; });
+            if (manufacturer) filtered = filtered.filter(function(eq) { return (eq.manufacturer || '') === manufacturer; });
+
+            var critOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+            if (sortBy === 'name') filtered.sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); });
+            else if (sortBy === 'name-desc') filtered.sort(function(a, b) { return (b.name || '').localeCompare(a.name || ''); });
+            else if (sortBy === 'location') filtered.sort(function(a, b) { return (a.location || '').localeCompare(b.location || ''); });
+            else if (sortBy === 'criticality') filtered.sort(function(a, b) { return (critOrder[a.criticality] || 2) - (critOrder[b.criticality] || 2); });
+
+            renderEquipment(filtered);
+        }
+
+        function clearEquipFilter() {
+            document.getElementById('equipFilterLocation').value = '';
+            document.getElementById('equipFilterStatus').value = '';
+            document.getElementById('equipFilterCriticality').value = '';
+            document.getElementById('equipFilterManufacturer').value = '';
+            document.getElementById('equipSortBy').value = 'name';
+            document.getElementById('eqSearchInput').value = '';
+            renderEquipment();
+        }
+
+        // --- Parts Inventory Filter & Sort ---
+        function togglePartsFilter() {
+            var panel = document.getElementById('partsFilterPanel');
+            if (panel) panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        }
+
+        function populatePartsFilterDropdowns() {
+            var catSelect = document.getElementById('partsFilterCategory');
+            var shelfSelect = document.getElementById('partsFilterShelf');
+            var binSelect = document.getElementById('partsFilterBin');
+            if (!catSelect || !shelfSelect || !binSelect) return;
+
+            var categories = [];
+            var shelves = [];
+            var bins = [];
+            partsData.forEach(function(p) {
+                var cat = (p.category || '').trim();
+                if (cat && categories.indexOf(cat) === -1) categories.push(cat);
+                var shelf = (p.shelf || '').trim();
+                if (shelf && shelves.indexOf(shelf) === -1) shelves.push(shelf);
+                var bin = (p.bin || '').trim();
+                if (bin && bins.indexOf(bin) === -1) bins.push(bin);
+            });
+            categories.sort();
+            shelves.sort();
+            bins.sort();
+
+            catSelect.innerHTML = '<option value="">All Categories</option>';
+            categories.forEach(function(c) {
+                catSelect.innerHTML += '<option value="' + c + '">' + c + '</option>';
+            });
+
+            shelfSelect.innerHTML = '<option value="">All Shelves</option>';
+            shelves.forEach(function(s) {
+                shelfSelect.innerHTML += '<option value="' + s + '">' + s + '</option>';
+            });
+
+            binSelect.innerHTML = '<option value="">All Bins</option>';
+            bins.forEach(function(b) {
+                binSelect.innerHTML += '<option value="' + b + '">' + b + '</option>';
+            });
+        }
+
+        function applyPartsFilter() {
+            var category = document.getElementById('partsFilterCategory').value;
+            var shelf = document.getElementById('partsFilterShelf').value;
+            var bin = document.getElementById('partsFilterBin').value;
+            var stockStatus = document.getElementById('partsFilterStock').value;
+            var sortBy = document.getElementById('partsSortBy').value;
+            var filtered = partsData.slice();
+
+            if (category) filtered = filtered.filter(function(p) { return (p.category || '') === category; });
+            if (shelf) filtered = filtered.filter(function(p) { return (p.shelf || '') === shelf; });
+            if (bin) filtered = filtered.filter(function(p) { return (p.bin || '') === bin; });
+            if (stockStatus === 'out-of-stock') filtered = filtered.filter(function(p) { return (p.qty || 0) === 0; });
+            else if (stockStatus === 'low-stock') filtered = filtered.filter(function(p) { return (p.qty || 0) > 0 && (p.qty || 0) <= (p.minStock || 0); });
+            else if (stockStatus === 'in-stock') filtered = filtered.filter(function(p) { return (p.qty || 0) > (p.minStock || 0); });
+
+            if (sortBy === 'name') filtered.sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); });
+            else if (sortBy === 'name-desc') filtered.sort(function(a, b) { return (b.name || '').localeCompare(a.name || ''); });
+            else if (sortBy === 'qty-asc') filtered.sort(function(a, b) { return (a.qty || 0) - (b.qty || 0); });
+            else if (sortBy === 'qty-desc') filtered.sort(function(a, b) { return (b.qty || 0) - (a.qty || 0); });
+            else if (sortBy === 'shelf') filtered.sort(function(a, b) { return (a.shelf || '').localeCompare(b.shelf || ''); });
+
+            renderParts(filtered);
+        }
+
+        function clearPartsFilter() {
+            document.getElementById('partsFilterCategory').value = '';
+            document.getElementById('partsFilterShelf').value = '';
+            document.getElementById('partsFilterBin').value = '';
+            document.getElementById('partsFilterStock').value = '';
+            document.getElementById('partsSortBy').value = 'name';
+            document.getElementById('partsSearchInput').value = '';
+            renderParts();
+        }
+
         function searchPOs() {
             var term = (document.getElementById('poSearchInput').value || '').trim().toLowerCase();
             if (!term) { renderPurchaseOrders(); return; }
@@ -8307,14 +8545,22 @@
             }
             const order = window.currentOrder;
             try {
+                var sessionRes = await supabaseClient.auth.getSession();
+                var uid = sessionRes.data && sessionRes.data.session ? sessionRes.data.session.user.id : null;
+                var now2 = new Date();
+                var poNum = 'PO-' + now2.getFullYear() +
+                    String(now2.getMonth() + 1).padStart(2, '0') +
+                    String(now2.getDate()).padStart(2, '0') + '-' +
+                    String(Math.floor(Math.random() * 10000)).padStart(4, '0');
                 var dbRow = {
+                    po_number: poNum,
                     supplier: vendor,
                     status: 'pending',
                     priority: order.isEmergency ? 'high' : 'medium',
                     title: (order.isEmergency ? 'Emergency Order - ' : 'Parts Order - ') + order.partName,
                     total_cost: 0,
                     notes: order.isEmergency ? 'Emergency order' : 'Standard order',
-                    requested_by: currentUserName || 'User',
+                    requested_by: uid,
                     budget_code: order.isEmergency ? 'Emergency Repairs' : 'Maintenance Budget'
                 };
                 var created = await CraderoAPI.purchaseOrders.create(dbRow);
@@ -8400,7 +8646,15 @@
                 var sessionResult = await supabaseClient.auth.getSession();
                 var userId = sessionResult.data && sessionResult.data.session ? sessionResult.data.session.user.id : null;
 
+                // Generate PO number: PO-YYYYMMDD-XXXX
+                var now = new Date();
+                var poNumber = 'PO-' + now.getFullYear() +
+                    String(now.getMonth() + 1).padStart(2, '0') +
+                    String(now.getDate()).padStart(2, '0') + '-' +
+                    String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+
                 var dbRow = {
+                    po_number: poNumber,
                     supplier: vendorLabels[vendor] || vendor,
                     status: 'pending',
                     title: 'New Purchase Order',
@@ -11200,6 +11454,8 @@
             submitWorkOrder, updateWorkOrder, deleteWorkOrder, openWorkOrderDetail, addWoComment,
             toggleWoFilter, searchWorkOrders, applyWoFilter, clearWoFilter,
             searchEquipment, searchParts, searchPOs, searchPMs,
+            toggleEquipFilter, applyEquipFilter, clearEquipFilter, populateEquipFilterDropdowns,
+            togglePartsFilter, applyPartsFilter, clearPartsFilter, populatePartsFilterDropdowns,
             // Equipment
             submitEquipment, openEquipmentHistory, openEquipmentEdit, saveEquipmentEdit, deleteEquipment,
             // Parts
