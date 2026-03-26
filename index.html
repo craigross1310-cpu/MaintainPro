@@ -9923,7 +9923,7 @@
         }
 
         async function approveRequest(reqId) {
-            var req = workRequestsData.find(function(r) { return r.id === reqId; });
+            var req = workRequestsData.find(function(r) { return r.id == reqId; });
             if (!req) return;
             var assignSel = document.getElementById('reqAssign_' + reqId);
             var assignedTo = assignSel ? assignSel.value : '';
@@ -9955,7 +9955,7 @@
         }
 
         async function declineRequest(reqId) {
-            var req = workRequestsData.find(function(r) { return r.id === reqId; });
+            var req = workRequestsData.find(function(r) { return r.id == reqId; });
             if (!req) return;
             if (!confirm('Decline this maintenance request?')) return;
             try {
