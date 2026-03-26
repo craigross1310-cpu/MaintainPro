@@ -8952,9 +8952,11 @@
             }
 
             try {
+                var sessionResult = await supabaseClient.auth.getSession();
+                var userId = sessionResult.data && sessionResult.data.session ? sessionResult.data.session.user.id : null;
                 var dbRow = {
                     permit_type: 'hot_work', title: desc,
-                    work_location: location, requested_by: engineer,
+                    work_location: location, requested_by: userId,
                     engineer: engineer, fire_watch: fireWatch,
                     start_time_of_day: startTime, end_time_of_day: endTime,
                     status: 'active', description: desc
@@ -9019,6 +9021,8 @@
             }
 
             try {
+                var sessionResult = await supabaseClient.auth.getSession();
+                var userId = sessionResult.data && sessionResult.data.session ? sessionResult.data.session.user.id : null;
                 var dbRow = {
                     permit_type: 'contractor', title: desc + ' - ' + company,
                     description: desc, contractor_company: company,
@@ -9027,7 +9031,7 @@
                     work_location: location,
                     valid_from: startDate, valid_until: endDate,
                     insurance: insurance, scope: desc,
-                    status: 'active', requested_by: currentUserName || 'User'
+                    status: 'active', requested_by: userId
                 };
                 var created = await CraderoAPI.permits.create(dbRow);
                 var mapped = mapPermitFromDb(created);
