@@ -2056,6 +2056,11 @@
                     <div class="stat-change positive" id="permitStatCPNote">All valid</div>
                 </div>
                 <div class="stat-card">
+                    <div class="stat-label">Contractor Hot Work</div>
+                    <div class="stat-value" id="permitStatCHW">0</div>
+                    <div class="stat-change" id="permitStatCHWNote">—</div>
+                </div>
+                <div class="stat-card">
                     <div class="stat-label">Closed (Archived)</div>
                     <div class="stat-value" id="permitStatClosed">0</div>
                     <div class="stat-change" id="permitStatClosedNote">Available for audit</div>
@@ -2075,6 +2080,7 @@
                             <option value="">All Types</option>
                             <option value="hotwork">Hot Work Only</option>
                             <option value="contractor">Contractor Only</option>
+                            <option value="contractor_hot_work">Contractor Hot Work Only</option>
                         </select>
                     </div>
                 </div>
@@ -2104,6 +2110,22 @@
                 </div>
 
                 <div class="work-orders-list" id="contractorPermitsList"></div>
+            </div>
+
+            <!-- Contractor Hot Work Permits -->
+            <div class="card" style="margin-top: 1rem;">
+                <div class="card-header">
+                    <h2 class="card-title">🔥👷 Contractor Hot Work Permits</h2>
+                    <button class="btn btn-primary" onclick="openModal('contractorHotWorkPermitModal')">+ Issue Contractor Hot Work Permit</button>
+                </div>
+
+                <div class="work-orders-list" id="contractorHotWorkList"></div>
+                <div class="empty-state" style="padding: 2rem;">
+                    <p style="color: var(--gray-600); font-size: 0.95rem;">
+                        🔥👷 Contractor hot work permits are required when external contractors perform welding, cutting, grinding, or any work producing sparks or flames.
+                        Combines contractor compliance with hot work safety requirements.
+                    </p>
+                </div>
             </div>
 
             <!-- Closed Permits Archive -->
@@ -2986,6 +3008,136 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('contractorPermitModal')">Cancel</button>
                 <button class="btn btn-primary" onclick="submitContractorPermit()">Issue Permit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contractor Hot Work Permit Modal -->
+    <div id="contractorHotWorkPermitModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">🔥👷 Issue Contractor Hot Work Permit</h2>
+            </div>
+            <div class="modal-body">
+                <form id="contractorHotWorkPermitForm">
+                    <div class="form-group">
+                        <label class="form-label">Work Description *</label>
+                        <input type="text" class="form-input" id="chwDescription" placeholder="e.g., Welding repair on cooling system" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Company Name *</label>
+                            <input type="text" class="form-input" id="chwCompany" placeholder="e.g., XYZ Welding Services" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Supervisor Name *</label>
+                            <input type="text" class="form-input" id="chwSupervisor" placeholder="e.g., Tom Davis" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Supervisor Phone *</label>
+                            <input type="tel" class="form-input" id="chwPhone" placeholder="e.g., (555) 123-4567" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Number of Workers *</label>
+                            <input type="number" class="form-input" id="chwWorkers" min="1" placeholder="e.g., 3" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Work Location *</label>
+                        <input type="text" class="form-input" id="chwLocation" placeholder="e.g., Production Floor - Line 3" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Fire Watch Person *</label>
+                            <input type="text" class="form-input" id="chwFireWatch" placeholder="Name of fire watch" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Insurance Certificate *</label>
+                            <input type="text" class="form-input" id="chwInsurance" placeholder="e.g., INS-2024-12345" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Start Date *</label>
+                            <input type="date" class="form-input" id="chwStartDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">End Date *</label>
+                            <input type="date" class="form-input" id="chwEndDate" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Start Time *</label>
+                            <input type="time" class="form-input" id="chwStartTime" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">End Time *</label>
+                            <input type="time" class="form-input" id="chwEndTime" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Safety Checklist *</label>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" required>
+                                <span>Fire extinguisher is on-site and accessible</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" required>
+                                <span>Work area has been cleared of flammable materials</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" required>
+                                <span>Fire watch personnel assigned and briefed</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" required>
+                                <span>Hot work equipment inspected and in good condition</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" required>
+                                <span>Emergency procedures reviewed with all personnel</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Compliance Checklist *</label>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" required>
+                                <span>Safety orientation completed</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" required>
+                                <span>Insurance certificate verified and on file</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" required>
+                                <span>PPE requirements communicated</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Additional Notes</label>
+                        <textarea class="form-textarea" id="chwNotes" placeholder="Any special precautions or scope of work..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('contractorHotWorkPermitModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitContractorHotWorkPermit()">Issue Permit</button>
             </div>
         </div>
     </div>
@@ -5516,8 +5668,10 @@
         var purchaseOrdersData = [];
         var hotWorkPermits = [];
         var contractorPermits = [];
+        var contractorHotWorkPermits = [];
         var closedHotWorkPermits = [];
         var closedContractorPermits = [];
+        var closedContractorHotWorkPermits = [];
         var pmData = [];
         var breakdownsData = [];
         var calendarEvents = [];
@@ -5696,6 +5850,18 @@
                 p.endTime = row.end_time_of_day || '';
                 p.validText = row.valid_from ? 'Valid from: ' + new Date(row.valid_from).toLocaleTimeString() : '';
                 p.expiryText = row.valid_until ? 'Expires: ' + new Date(row.valid_until).toLocaleString() : '';
+            } else if (row.permit_type === 'contractor_hot_work') {
+                p.company = row.contractor_company || '';
+                p.supervisor = row.contractor_name || '';
+                p.phone = row.phone || ''; p.workers = row.workers || 0;
+                p.fireWatch = row.fire_watch || '';
+                p.startTime = row.start_time_of_day || '';
+                p.endTime = row.end_time_of_day || '';
+                p.startDate = row.valid_from ? new Date(row.valid_from).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '';
+                p.endDate = row.valid_until ? new Date(row.valid_until).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '';
+                p.insurance = row.insurance || '';
+                p.scope = row.scope || row.description || '';
+                p.expiryText = row.status === 'closed' ? 'Closed' : (row.valid_until ? 'Expires: ' + new Date(row.valid_until).toLocaleString() : '');
             } else {
                 p.company = row.contractor_company || '';
                 p.supervisor = row.contractor_name || '';
@@ -5810,8 +5976,10 @@
                 var allPermits = results[4].map(mapPermitFromDb);
                 hotWorkPermits = allPermits.filter(function(p) { return p.permit_type === 'hot_work' && p.status !== 'closed'; });
                 contractorPermits = allPermits.filter(function(p) { return p.permit_type === 'contractor' && p.status !== 'closed'; });
+                contractorHotWorkPermits = allPermits.filter(function(p) { return p.permit_type === 'contractor_hot_work' && p.status !== 'closed'; });
                 closedHotWorkPermits = allPermits.filter(function(p) { return p.permit_type === 'hot_work' && p.status === 'closed'; });
                 closedContractorPermits = allPermits.filter(function(p) { return p.permit_type === 'contractor' && p.status === 'closed'; });
+                closedContractorHotWorkPermits = allPermits.filter(function(p) { return p.permit_type === 'contractor_hot_work' && p.status === 'closed'; });
                 breakdownsData = results[5].map(mapBreakdownFromDb);
                 pmData = results[6].map(mapPmFromDb);
                 calendarEvents = results[7].map(mapCalendarFromDb);
@@ -6094,6 +6262,42 @@
                 <div style="display:flex;gap:0.5rem;">
                     <button class="btn btn-primary btn-small" onclick="openPermitDetail('contractor','${p.id}')">View</button>
                     <button class="btn btn-danger btn-small" onclick="closeContractorPermit('${p.id}')">Close</button>
+                </div>
+            </div>`).join('');
+        }
+
+        function renderContractorHotWorkPermits() {
+            const container = document.getElementById('contractorHotWorkList');
+            if (!container) return;
+            if (contractorHotWorkPermits.length === 0) {
+                container.innerHTML = `<div style="padding:1.5rem;color:var(--gray-600);">No active contractor hot work permits.</div>`;
+                return;
+            }
+            container.innerHTML = contractorHotWorkPermits.map(p => `<div class="work-order-item" style="border-left:6px solid var(--warning);">
+                <div class="wo-priority high"></div>
+                <div class="wo-details">
+                    <div class="wo-title">${escHtml(p.title)}</div>
+                    <div class="wo-meta">
+                        <div class="wo-meta-item"><span>🏢</span><span>${escHtml(p.company)}</span></div>
+                        <div class="wo-meta-item"><span>👤</span><span>Supervisor: ${escHtml(p.supervisor)}</span></div>
+                        <div class="wo-meta-item"><span>🏭</span><span>${escHtml(p.location)}</span></div>
+                        <div class="wo-meta-item"><span>📅</span><span>Valid: ${escHtml(p.startDate)} – ${escHtml(p.endDate)}</span></div>
+                    </div>
+                    <div class="wo-meta" style="margin-top:0.5rem;">
+                        <div class="wo-meta-item"><span>🔥</span><span>Fire Watch: ${escHtml(p.fireWatch)}</span></div>
+                        <div class="wo-meta-item"><span>⏱️</span><span>Hours: ${escHtml(p.startTime)} – ${escHtml(p.endTime)}</span></div>
+                        <div class="wo-meta-item"><span>⏱️</span><span style="color:var(--danger);font-weight:600;">${escHtml(p.expiryText)}</span></div>
+                    </div>
+                    <div class="wo-meta" style="margin-top:0.5rem;">
+                        <div class="wo-meta-item"><span>✅</span><span>Fire extinguisher on-site</span></div>
+                        <div class="wo-meta-item"><span>✅</span><span>Insurance verified</span></div>
+                        <div class="wo-meta-item"><span>✅</span><span>Safety orientation completed</span></div>
+                    </div>
+                </div>
+                <div class="status-badge in-progress">Active</div>
+                <div style="display:flex;gap:0.5rem;">
+                    <button class="btn btn-primary btn-small" onclick="openPermitDetail('contractor_hot_work','${p.id}')">View</button>
+                    <button class="btn btn-danger btn-small" onclick="closeContractorHotWorkPermit('${p.id}')">Close</button>
                 </div>
             </div>`).join('');
         }
@@ -9072,8 +9276,132 @@
             }
         }
 
+        async function submitContractorHotWorkPermit() {
+            const desc       = document.getElementById('chwDescription').value.trim();
+            const company    = document.getElementById('chwCompany').value.trim();
+            const supervisor = document.getElementById('chwSupervisor').value.trim();
+            const phone      = document.getElementById('chwPhone').value.trim();
+            const workers    = document.getElementById('chwWorkers').value;
+            const location   = document.getElementById('chwLocation').value.trim();
+            const fireWatch  = document.getElementById('chwFireWatch').value.trim();
+            const insurance  = document.getElementById('chwInsurance').value.trim();
+            const startDate  = document.getElementById('chwStartDate').value;
+            const endDate    = document.getElementById('chwEndDate').value;
+            const startTime  = document.getElementById('chwStartTime').value;
+            const endTime    = document.getElementById('chwEndTime').value;
+
+            if (!desc || !company || !supervisor || !phone || !location || !fireWatch || !insurance || !startDate || !endDate || !startTime || !endTime) {
+                showToast('Please fill in all required fields.', 'error');
+                return;
+            }
+            if (!validateDateRange(startDate, endDate)) {
+                showToast('End date must be on or after start date.', 'error');
+                return;
+            }
+
+            try {
+                var sessionResult = await supabaseClient.auth.getSession();
+                var userId = sessionResult.data && sessionResult.data.session ? sessionResult.data.session.user.id : null;
+                var dbRow = {
+                    permit_type: 'contractor_hot_work', title: desc + ' - ' + company,
+                    description: desc, contractor_company: company,
+                    contractor_name: supervisor, phone: phone,
+                    workers: parseInt(workers) || 1,
+                    work_location: location,
+                    fire_watch: fireWatch, insurance: insurance,
+                    valid_from: startDate, valid_until: endDate,
+                    start_time_of_day: startTime, end_time_of_day: endTime,
+                    scope: desc, status: 'active', requested_by: userId
+                };
+                var created = await CraderoAPI.permits.create(dbRow);
+                var mapped = mapPermitFromDb(created);
+                contractorHotWorkPermits.push(mapped);
+                renderContractorHotWorkPermits();
+                closeModal('contractorHotWorkPermitModal');
+                document.getElementById('contractorHotWorkPermitForm').reset();
+                updatePermitStats();
+                refreshDashboards();
+                showToast('Contractor hot work permit issued!', 'success');
+            } catch (err) {
+                showToast('Failed to create permit: ' + err.message, 'error');
+            }
+        }
+
+        async function closeContractorHotWorkPermit(id) {
+            if (!confirm('Close this contractor hot work permit? It will be moved to the closed permits archive.')) return;
+            var permit = contractorHotWorkPermits.find(function(p) { return p.id === id; });
+            if (permit) {
+                try {
+                    var now = new Date();
+                    await CraderoAPI.permits.update(permit.id, { status: 'closed', closed_date: now.toISOString(), closed_by: currentUserName || 'User' });
+                    logAudit('close', 'permit', permit.id, { type: 'contractor_hot_work' });
+                    permit.status = 'closed';
+                    permit.expiryText = 'Closed';
+                    permit.closedDate = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                    permit.closedBy = currentUserName || 'User';
+                    closedContractorHotWorkPermits.unshift(permit);
+                    contractorHotWorkPermits = contractorHotWorkPermits.filter(p => p.id !== id);
+                    renderContractorHotWorkPermits();
+                    renderClosedPermits();
+                    updatePermitStats();
+                    refreshDashboards();
+                    showToast('Contractor hot work permit closed and archived.', 'info');
+                } catch (err) {
+                    showToast('Failed to close permit: ' + err.message, 'error');
+                }
+            }
+        }
+
         function openPermitDetail(type, permitId) {
-            if (type === 'contractor') {
+            if (type === 'contractor_hot_work') {
+                const permit = contractorHotWorkPermits.find(p => p.id === permitId);
+                if (!permit) return;
+                currentEditPermitType = type;
+                currentEditPermitId = permitId;
+                document.getElementById('permitDetailTitle').textContent = '🔥👷 ' + permit.title;
+                document.getElementById('permitDetailContent').innerHTML = `
+                    <div class="form-group"><label class="form-label">Permit ID</label><div style="font-family:'IBM Plex Mono',monospace;font-weight:600;">CHW-${String(permit.id).padStart(4,'0')}</div></div>
+                    <div class="form-row">
+                        <div class="form-group"><label class="form-label">Company</label><div style="font-weight:600;">${escHtml(permit.company)}</div></div>
+                        <div class="form-group"><label class="form-label">Status</label><span class="status-badge in-progress">${escHtml(permit.status)}</span></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label class="form-label">Supervisor</label><div>${escHtml(permit.supervisor)}</div></div>
+                        <div class="form-group"><label class="form-label">Phone</label><div>${escHtml(permit.phone)}</div></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label class="form-label">Workers</label><div>${permit.workers}</div></div>
+                        <div class="form-group"><label class="form-label">Location</label><div>${escHtml(permit.location)}</div></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label class="form-label">Valid From</label><div>${escHtml(permit.startDate)}</div></div>
+                        <div class="form-group"><label class="form-label">Valid Until</label><div>${escHtml(permit.endDate)}</div></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label class="form-label">Work Hours</label><div>${escHtml(permit.startTime)} – ${escHtml(permit.endTime)}</div></div>
+                        <div class="form-group"><label class="form-label">Fire Watch</label><div style="font-weight:600;color:var(--danger);">${escHtml(permit.fireWatch)}</div></div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Insurance Certificate</label><div style="font-family:'IBM Plex Mono',monospace;font-weight:600;">${escHtml(permit.insurance)}</div></div>
+                    <div class="form-group"><label class="form-label">Scope of Work</label><div style="padding:1rem;background:var(--gray-100);border-radius:8px;">${escHtml(permit.scope)}</div></div>
+                    <div class="form-group"><label class="form-label">Safety Checklist</label>
+                        <div style="display:flex;flex-direction:column;gap:0.75rem;padding:1rem;background:var(--gray-100);border-radius:8px;">
+                            <div>✅ Fire extinguisher on-site and accessible</div>
+                            <div>✅ Work area cleared of flammable materials</div>
+                            <div>✅ Fire watch personnel assigned and briefed</div>
+                            <div>✅ Hot work equipment inspected</div>
+                            <div>✅ Emergency procedures reviewed</div>
+                        </div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Compliance Checklist</label>
+                        <div style="display:flex;flex-direction:column;gap:0.75rem;padding:1rem;background:var(--gray-100);border-radius:8px;">
+                            <div>✅ Safety orientation completed</div>
+                            <div>✅ Insurance certificate verified</div>
+                            <div>✅ PPE requirements communicated</div>
+                        </div>
+                    </div>`;
+                document.getElementById('permitActionBtn').textContent = 'Revoke Permit';
+                openModal('permitDetailModal');
+            } else if (type === 'contractor') {
                 const permit = contractorPermits.find(p => p.id === permitId);
                 if (!permit) return;
                 currentEditPermitType = type;
@@ -9115,7 +9443,30 @@
 
         async function revokePermitFromModal() {
             if (!confirm('Revoke/close this permit?')) return;
-            if (currentEditPermitType === 'contractor') {
+            if (currentEditPermitType === 'contractor_hot_work') {
+                var permit = contractorHotWorkPermits.find(function(p) { return p.id === currentEditPermitId; });
+                if (permit) {
+                    try {
+                        var now = new Date();
+                        await CraderoAPI.permits.update(permit.id, { status: 'closed', closed_date: now.toISOString(), closed_by: currentUserName || 'User' });
+                        logAudit('close', 'permit', permit.id, { type: 'contractor_hot_work', action: 'revoke' });
+                        permit.status = 'closed';
+                        permit.expiryText = 'Closed';
+                        permit.closedDate = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                        permit.closedBy = currentUserName || 'User';
+                        closedContractorHotWorkPermits.unshift(permit);
+                        contractorHotWorkPermits = contractorHotWorkPermits.filter(p => p.id !== currentEditPermitId);
+                        renderContractorHotWorkPermits();
+                        renderClosedPermits();
+                        updatePermitStats();
+                        closeModal('permitDetailModal');
+                        refreshDashboards();
+                        showToast('Permit closed and archived.', 'info');
+                    } catch (err) {
+                        showToast('Failed to close permit: ' + err.message, 'error');
+                    }
+                }
+            } else if (currentEditPermitType === 'contractor') {
                 var permit = contractorPermits.find(function(p) { return p.id === currentEditPermitId; });
                 if (permit) {
                     try {
@@ -9805,9 +10156,10 @@
                 }
 
                 // Create a pm_completion record
+                var completedByProfile = staffProfiles.find(function(p) { return p.full_name === pm.assignedTo; });
                 var completionData = {
                     pm_task_id: pm.id,
-                    completed_by: pm.assignedTo,
+                    completed_by: completedByProfile ? completedByProfile.id : null,
                     completed_at: nowDate.toISOString(),
                     checklist_results: pm.checklist || [],
                     notes: 'Start: ' + startTime + ', Finish: ' + finishTime
