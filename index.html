@@ -5901,6 +5901,72 @@
                 checklist: row.checklist || [], description: row.description || ''
             };
         }
+
+        // Generate projected next-occurrence entries for overdue PMs (audit purposes)
+        function generateProjectedPMs() {
+            // Remove any previously projected entries
+            pmData = pmData.filter(function(pm) { return !pm._projected; });
+            calendarEvents = calendarEvents.filter(function(e) { return !e._projected; });
+
+            var today = new Date(); today.setHours(0,0,0,0);
+
+            pmData.slice().forEach(function(pm) {
+                if (pm.dueStatus !== 'overdue' || !pm.scheduledDate || !pm.frequency) return;
+
+                var overdueDateObj = new Date(pm.scheduledDate + 'T00:00:00');
+                // Walk forward from the overdue date until we find the next occurrence that is today or in the future
+                var nextDate = overdueDateObj;
+                var safety = 0;
+                do {
+                    nextDate = calcNextDueDate(nextDate, pm.frequency);
+                    safety++;
+                } while (nextDate < today && safety < 365);
+
+                if (safety >= 365) return; // safety guard
+
+                var nextISO = nextDate.getFullYear() + '-' + String(nextDate.getMonth() + 1).padStart(2, '0') + '-' + String(nextDate.getDate()).padStart(2, '0');
+                var diff = Math.ceil((nextDate - today) / 86400000);
+                var projDueStatus = 'upcoming';
+                var projDueText = '';
+                if (diff === 0) { projDueStatus = 'due-soon'; projDueText = 'Due today (next scheduled)'; }
+                else if (diff === 1) { projDueStatus = 'due-soon'; projDueText = 'Due tomorrow (next scheduled)'; }
+                else if (diff <= 3) { projDueStatus = 'due-soon'; projDueText = 'Due in ' + diff + ' days (next scheduled)'; }
+                else { projDueText = 'Due in ' + diff + ' days (next scheduled)'; }
+
+                // Add projected PM entry to the list
+                pmData.push({
+                    id: pm.id,
+                    title: pm.title,
+                    equipment: pm.equipment,
+                    frequency: pm.frequency,
+                    duration: pm.duration,
+                    assignedTo: pm.assignedTo,
+                    dueStatus: projDueStatus,
+                    dueText: projDueText,
+                    status: projDueStatus,
+                    lastCompleted: pm.lastCompleted,
+                    scheduledDate: nextISO,
+                    checklist: pm.checklist,
+                    description: pm.description,
+                    _projected: true
+                });
+
+                // Add projected calendar event
+                var calType = pm.frequency.toLowerCase().indexOf('week') !== -1 ? 'weekly-pm' : 'monthly-pm';
+                calendarEvents.push({
+                    id: 'proj-' + pm.id,
+                    title: pm.title + ' (next scheduled)',
+                    date: nextISO,
+                    type: calType,
+                    duration: pm.duration,
+                    assignedTo: pm.assignedTo,
+                    description: 'Projected next PM (overdue PM not yet completed)',
+                    notes: 'Projected next PM (overdue PM not yet completed)',
+                    _projected: true
+                });
+            });
+        }
+
         function mapBreakdownFromDb(row) {
             var createdDate = row.created_at ? new Date(row.created_at) : null;
             var totalDowntimeHours = 0;
@@ -5984,6 +6050,7 @@
                 breakdownsData = results[5].map(mapBreakdownFromDb);
                 pmData = results[6].map(mapPmFromDb);
                 calendarEvents = results[7].map(mapCalendarFromDb);
+                generateProjectedPMs();
                 var wrResult = results[8];
                 workRequestsData = (wrResult.data || []).map(mapWorkRequestFromDb);
                 staffProfiles = (results[9] || []).filter(function(p) { return p.role && p.role !== 'pending'; });
@@ -9992,6 +10059,7 @@
                     await syncPMCalendarEvent(mapped.id || created.id, taskName, dueDate, frequency, assignTo);
                 }
 
+                generateProjectedPMs();
                 renderPM();
                 renderCalendar();
                 closeModal('addPMModal');
@@ -10284,6 +10352,7 @@
                 }
 
                 closeModal('completePMModal');
+                generateProjectedPMs();
                 renderPM();
                 renderParts();
                 if (typeof renderEngineerDashboard === 'function') renderEngineerDashboard();
@@ -10510,6 +10579,7 @@
 
                 logAudit('update', 'pm_task', pm.id, { title: title, action: 'edit' });
                 closeModal('editPMModal');
+                generateProjectedPMs();
                 renderPM();
                 if (typeof renderEngineerDashboard === 'function') renderEngineerDashboard();
                 refreshDashboards();
@@ -10548,6 +10618,7 @@
                 await CraderoAPI.pm.delete(pm ? pm.id : pmId);
                 logAudit('delete', 'pm_task', pm ? pm.id : pmId);
                 pmData = pmData.filter(p => p.id !== pmId);
+                calendarEvents = calendarEvents.filter(function(e) { return e.id !== 'proj-' + pmId; });
                 renderPM();
                 refreshDashboards();
                 showToast('PM task removed.', 'info');
