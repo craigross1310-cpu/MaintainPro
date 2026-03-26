@@ -1779,22 +1779,22 @@
             <div class="stat-card">
                 <div class="stat-label">Open Work Orders</div>
                 <div class="stat-value" id="openWorkOrders">12</div>
-                <div class="stat-change positive">↑ 2 from yesterday</div>
+                <div class="stat-change" id="openWorkOrdersChange"></div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Equipment Assets</div>
                 <div class="stat-value" id="totalEquipment">24</div>
-                <div class="stat-change positive">3 operational issues</div>
+                <div class="stat-change" id="totalEquipmentChange"></div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">PM Compliance</div>
-                <div class="stat-value">94%</div>
-                <div class="stat-change positive">↑ 3% this month</div>
+                <div class="stat-value" id="pmComplianceKPI">—</div>
+                <div class="stat-change" id="pmComplianceChange"></div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Downtime This Week</div>
-                <div class="stat-value">8.5h</div>
-                <div class="stat-change negative">↑ 2.1h vs last week</div>
+                <div class="stat-value" id="downtimeWeekKPI">—</div>
+                <div class="stat-change" id="downtimeWeekChange"></div>
             </div>
         </div>
 
@@ -5897,6 +5897,7 @@
                 dueStatus: dueStatus, dueText: dueText,
                 status: dueStatus,
                 lastCompleted: row.last_completed_at ? new Date(row.last_completed_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '',
+                lastCompletedRaw: row.last_completed_at || '',
                 scheduledDate: row.next_due_date || '',
                 checklist: row.checklist || [], description: row.description || ''
             };
@@ -5945,6 +5946,7 @@
                     dueText: projDueText,
                     status: projDueStatus,
                     lastCompleted: pm.lastCompleted,
+                    lastCompletedRaw: pm.lastCompletedRaw || '',
                     scheduledDate: nextISO,
                     checklist: pm.checklist,
                     description: pm.description,
@@ -6564,6 +6566,92 @@
             var openWo = workOrdersData.filter(function(wo) { return wo.status === 'open' || wo.status === 'in-progress'; }).length;
             document.getElementById('openWorkOrders').textContent = openWo;
             document.getElementById('totalEquipment').textContent = equipmentList.length;
+
+            // PM Compliance KPI — completed / (completed + overdue + due-soon) as percentage
+            var realPMs = pmData.filter(function(pm) { return !pm._projected; });
+            var pmCompleted = realPMs.filter(function(pm) { return pm.dueStatus === 'completed'; }).length;
+            var pmOverdue = realPMs.filter(function(pm) { return pm.dueStatus === 'overdue'; }).length;
+            var pmTotal = realPMs.length;
+            var pmCompliancePct = pmTotal > 0 ? Math.round((pmCompleted / pmTotal) * 100) : 0;
+            var pmCompEl = document.getElementById('pmComplianceKPI');
+            if (pmCompEl) pmCompEl.textContent = pmCompliancePct + '%';
+            var pmCompChangeEl = document.getElementById('pmComplianceChange');
+            if (pmCompChangeEl) {
+                if (pmOverdue > 0) {
+                    pmCompChangeEl.className = 'stat-change negative';
+                    pmCompChangeEl.textContent = pmOverdue + ' overdue';
+                } else {
+                    pmCompChangeEl.className = 'stat-change positive';
+                    pmCompChangeEl.textContent = 'All on schedule';
+                }
+            }
+
+            // Downtime This Week KPI — sum of breakdown downtime hours for current week
+            var now = new Date();
+            var dow = (now.getDay() + 6) % 7; // Mon=0
+            var weekStart = new Date(now); weekStart.setDate(now.getDate() - dow); weekStart.setHours(0,0,0,0);
+            var weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 7);
+            var lastWeekStart = new Date(weekStart); lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+
+            var thisWeekDowntime = 0;
+            var lastWeekDowntime = 0;
+            breakdownsData.forEach(function(br) {
+                if (!br.downtimeStart) return;
+                var brDate = new Date(br.downtimeStart);
+                if (brDate >= weekStart && brDate < weekEnd) thisWeekDowntime += (br.totalDowntimeHours || 0);
+                if (brDate >= lastWeekStart && brDate < weekStart) lastWeekDowntime += (br.totalDowntimeHours || 0);
+            });
+            // Also include work order machine downtime
+            workOrdersData.forEach(function(wo) {
+                if (!wo.finishTime) return;
+                var woDate = new Date(wo.finishTime);
+                var dt = parseFloat(wo.machineDowntime) || 0;
+                if (dt > 0) {
+                    if (woDate >= weekStart && woDate < weekEnd) thisWeekDowntime += dt;
+                    if (woDate >= lastWeekStart && woDate < weekStart) lastWeekDowntime += dt;
+                }
+            });
+            var dtEl = document.getElementById('downtimeWeekKPI');
+            if (dtEl) dtEl.textContent = thisWeekDowntime.toFixed(1) + 'h';
+            var dtChangeEl = document.getElementById('downtimeWeekChange');
+            if (dtChangeEl) {
+                var dtDiff = thisWeekDowntime - lastWeekDowntime;
+                if (dtDiff > 0) {
+                    dtChangeEl.className = 'stat-change negative';
+                    dtChangeEl.textContent = '\u2191 ' + dtDiff.toFixed(1) + 'h vs last week';
+                } else if (dtDiff < 0) {
+                    dtChangeEl.className = 'stat-change positive';
+                    dtChangeEl.textContent = '\u2193 ' + Math.abs(dtDiff).toFixed(1) + 'h vs last week';
+                } else {
+                    dtChangeEl.className = 'stat-change';
+                    dtChangeEl.textContent = 'Same as last week';
+                }
+            }
+
+            // Open WO change indicator
+            var woChangeEl = document.getElementById('openWorkOrdersChange');
+            if (woChangeEl) {
+                var inProgress = workOrdersData.filter(function(wo) { return wo.status === 'in-progress'; }).length;
+                if (inProgress > 0) {
+                    woChangeEl.className = 'stat-change';
+                    woChangeEl.textContent = inProgress + ' in progress';
+                } else {
+                    woChangeEl.textContent = '';
+                }
+            }
+
+            // Equipment change indicator
+            var eqChangeEl = document.getElementById('totalEquipmentChange');
+            if (eqChangeEl) {
+                var downCount = equipmentList.filter(function(eq) { return eq.status === 'down'; }).length;
+                if (downCount > 0) {
+                    eqChangeEl.className = 'stat-change negative';
+                    eqChangeEl.textContent = downCount + ' currently down';
+                } else {
+                    eqChangeEl.className = 'stat-change positive';
+                    eqChangeEl.textContent = 'All operational';
+                }
+            }
         }
 
         function refreshDashboards() {
@@ -6682,6 +6770,7 @@
                     }
                 });
                 pmData.forEach(function(pm) {
+                    if (pm._projected) return;
                     if (pm.assignedTo && pm.dueStatus !== 'completed') {
                         if (!engineers[pm.assignedTo]) engineers[pm.assignedTo] = { wo: 0, pm: 0 };
                         engineers[pm.assignedTo].pm++;
@@ -6886,6 +6975,7 @@
 
             // Overdue PM tasks
             pmData.forEach(function(pm) {
+                if (pm._projected) return;
                 if (pm.dueStatus === 'overdue') {
                     items.push({ unread: true, icon: '⚠️', title: 'PM Maintenance Overdue', text: escHtml(pm.title) + ' — ' + escHtml(pm.equipment), tab: 'pm', id: pm.id, sort: 1 });
                 } else if (pm.dueStatus === 'due-soon') {
@@ -6954,14 +7044,14 @@
 
             // Build activities from work orders
             workOrdersData.forEach(function(wo) {
-                if (!wo.created) return;
-                var woDate = wo.created.slice(0, 10);
+                if (!wo.createdRaw) return;
+                var woDate = wo.createdRaw.slice(0, 10);
                 if (woDate !== selectedDate) return;
                 var dotClass = wo.status === 'completed' ? 'completed' : wo.status === 'in-progress' ? 'in-progress' : 'created';
                 var icon = wo.status === 'completed' ? '✅' : wo.status === 'in-progress' ? '🔧' : '📋';
                 var label = wo.status === 'completed' ? 'Work Order Completed' : wo.status === 'in-progress' ? 'Work Order In Progress' : 'Work Order Created';
                 activities.push({
-                    date: new Date(wo.created),
+                    date: new Date(wo.createdRaw),
                     dotClass: dotClass,
                     icon: icon,
                     title: label,
@@ -6972,8 +7062,10 @@
 
             // Build activities from PM tasks
             pmData.forEach(function(pm) {
+                if (pm._projected) return;
                 if (pm.dueStatus === 'completed') {
-                    var pmDateRaw = pm.lastCompleted || new Date().toISOString();
+                    var pmDateRaw = pm.lastCompletedRaw || '';
+                    if (!pmDateRaw) return;
                     var pmDate = pmDateRaw.slice(0, 10);
                     if (pmDate !== selectedDate) return;
                     activities.push({
@@ -7035,9 +7127,19 @@
             if (!container) return;
             var dateInput = document.getElementById('activityDateInput');
             var today = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().slice(0, 10);
-            var woCreated = workOrdersData.filter(function(wo) { return wo.created && wo.created.slice(0, 10) === today; }).length;
-            var woCompleted = workOrdersData.filter(function(wo) { return wo.status === 'completed' && wo.created && wo.created.slice(0, 10) === today; }).length;
-            var pmCompleted = pmData.filter(function(pm) { return pm.dueStatus === 'completed' && pm.lastCompleted && pm.lastCompleted.slice(0, 10) === today; }).length;
+            var woCreated = workOrdersData.filter(function(wo) { return wo.createdRaw && wo.createdRaw.slice(0, 10) === today; }).length;
+            var woCompleted = workOrdersData.filter(function(wo) {
+                if (wo.status !== 'completed') return false;
+                // Check finish time first, fall back to creation date
+                var dateStr = wo.finishTime || wo.createdRaw || '';
+                return dateStr.slice(0, 10) === today;
+            }).length;
+            var pmCompleted = pmData.filter(function(pm) {
+                if (pm._projected) return false;
+                if (pm.dueStatus !== 'completed') return false;
+                var raw = pm.lastCompletedRaw || '';
+                return raw.slice(0, 10) === today;
+            }).length;
             var downEquip = equipmentList.filter(function(eq) { return eq.status === 'down'; }).length;
             container.innerHTML =
                 '<div class="stat-card"><div class="stat-label">Work Orders Created</div><div class="stat-value">' + woCreated + '</div></div>' +
@@ -7085,10 +7187,11 @@
         function renderPMCompletionStats() {
             var container = document.getElementById('pmCompletionList');
             if (!container) return;
-            var completed = pmData.filter(function(pm) { return pm.dueStatus === 'completed'; }).length;
-            var overdue = pmData.filter(function(pm) { return pm.dueStatus === 'overdue'; }).length;
-            var dueSoon = pmData.filter(function(pm) { return pm.dueStatus === 'due-soon'; }).length;
-            var total = pmData.length;
+            var realPMs = pmData.filter(function(pm) { return !pm._projected; });
+            var completed = realPMs.filter(function(pm) { return pm.dueStatus === 'completed'; }).length;
+            var overdue = realPMs.filter(function(pm) { return pm.dueStatus === 'overdue'; }).length;
+            var dueSoon = realPMs.filter(function(pm) { return pm.dueStatus === 'due-soon'; }).length;
+            var total = realPMs.length;
             var rate = total > 0 ? Math.round((completed / total) * 100) : 0;
             container.innerHTML =
                 '<div class="metric-item"><span class="metric-label">Completed</span><span class="metric-value" style="color:var(--success);">' + completed + '</span></div>' +
@@ -10303,6 +10406,7 @@
                 });
 
                 pm.lastCompleted = now;
+                pm.lastCompletedRaw = nowDate.toISOString();
                 pm.lastChecklistResults = JSON.parse(JSON.stringify(pm.checklist || []));
                 pm.completedBy = pm.assignedTo;
                 pm.completedAt = now;
@@ -11421,7 +11525,7 @@
                     compLabels.push(monthNames[d.getMonth()]);
                     // Count PMs that were due in this month and completed
                     var dueInMonth = pmData.filter(function(pm) {
-                        return pm.scheduledDate && new Date(pm.scheduledDate) >= d && new Date(pm.scheduledDate) <= monthEnd;
+                        return !pm._projected && pm.scheduledDate && new Date(pm.scheduledDate) >= d && new Date(pm.scheduledDate) <= monthEnd;
                     });
                     var completedInMonth = dueInMonth.filter(function(pm) {
                         return pm.lastCompleted && pm.lastCompleted !== '' && pm.lastCompleted !== '—';
