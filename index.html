@@ -5333,6 +5333,7 @@
                     renderPurchaseOrders();
                     renderHotWorkPermits();
                     renderContractorPermits();
+                    renderContractorHotWorkPermits();
                     renderPM();
                     refreshDashboards();
                     initializeCharts();
@@ -9510,6 +9511,8 @@
             var activeHW = hwListEl ? hwListEl.closest('.card') : null;
             var cpListEl = document.getElementById('contractorPermitsList');
             var activeCP = cpListEl ? cpListEl.closest('.card') : null;
+            var chwListEl = document.getElementById('contractorHotWorkList');
+            var activeCHW = chwListEl ? chwListEl.closest('.card') : null;
             var closedCard = document.getElementById('closedPermitsCard');
 
             // Reset filter button styles
@@ -9526,9 +9529,11 @@
             // Type filter
             var showHW = !typeFilter || typeFilter === 'hotwork';
             var showCP = !typeFilter || typeFilter === 'contractor';
+            var showCHW = !typeFilter || typeFilter === 'contractor_hot_work';
 
             if (activeHW) activeHW.style.display = (showActive && showHW) ? '' : 'none';
             if (activeCP) activeCP.style.display = (showActive && showCP) ? '' : 'none';
+            if (activeCHW) activeCHW.style.display = (showActive && showCHW) ? '' : 'none';
             if (closedCard) closedCard.style.display = showClosed ? '' : 'none';
 
             if (showClosed) renderClosedPermits();
@@ -9554,6 +9559,13 @@
             if (!typeFilter || typeFilter === 'contractor') {
                 closedContractorPermits.forEach(function(p) {
                     items.push({ type: 'contractor', data: p, sortDate: p.closedDate || '' });
+                });
+            }
+
+            // Closed contractor hot work permits
+            if (!typeFilter || typeFilter === 'contractor_hot_work') {
+                closedContractorHotWorkPermits.forEach(function(p) {
+                    items.push({ type: 'contractor_hot_work', data: p, sortDate: p.closedDate || '' });
                 });
             }
 
@@ -9592,6 +9604,27 @@
                         '<div class="status-badge" style="background: var(--gray-200); color: var(--gray-700);">CLOSED</div>' +
                         '<span style="font-size: 0.8rem; color: var(--gray-500); padding: 0.5rem;">Hot Work</span>' +
                     '</div>';
+                } else if (item.type === 'contractor_hot_work') {
+                    return '<div class="work-order-item" style="border-left: 6px solid var(--gray-400); opacity: 0.85;">' +
+                        '<div class="wo-priority" style="background: var(--gray-400);"></div>' +
+                        '<div class="wo-details">' +
+                            '<div class="wo-title">' + escHtml(p.title) + '</div>' +
+                            '<div class="wo-meta">' +
+                                '<div class="wo-meta-item"><span>🏢</span><span>' + escHtml(p.company) + '</span></div>' +
+                                '<div class="wo-meta-item"><span>👤</span><span>Supervisor: ' + escHtml(p.supervisor) + '</span></div>' +
+                                '<div class="wo-meta-item"><span>🏭</span><span>' + escHtml(p.location) + '</span></div>' +
+                                '<div class="wo-meta-item"><span>🔥</span><span>Fire Watch: ' + escHtml(p.fireWatch) + '</span></div>' +
+                                '<div class="wo-meta-item"><span>⏱️</span><span>' + escHtml(p.startTime) + ' – ' + escHtml(p.endTime) + '</span></div>' +
+                            '</div>' +
+                            '<div class="wo-meta" style="margin-top: 0.5rem;">' +
+                                '<div class="wo-meta-item"><span>📅</span><span>Closed: ' + escHtml(p.closedDate) + '</span></div>' +
+                                (p.closedBy ? '<div class="wo-meta-item"><span>👤</span><span>Closed by: ' + escHtml(p.closedBy) + '</span></div>' : '') +
+                                '<div class="wo-meta-item"><span>📋</span><span>Insurance: ' + escHtml(p.insurance) + '</span></div>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="status-badge" style="background: var(--gray-200); color: var(--gray-700);">CLOSED</div>' +
+                        '<span style="font-size: 0.8rem; color: var(--gray-500); padding: 0.5rem;">Contractor Hot Work</span>' +
+                    '</div>';
                 } else {
                     return '<div class="work-order-item" style="border-left: 6px solid var(--gray-400); opacity: 0.85;">' +
                         '<div class="wo-priority" style="background: var(--gray-400);"></div>' +
@@ -9618,8 +9651,8 @@
         }
 
         function updatePermitStats() {
-            var activeTotal = hotWorkPermits.length + contractorPermits.length;
-            var closedTotal = closedHotWorkPermits.length + closedContractorPermits.length;
+            var activeTotal = hotWorkPermits.length + contractorPermits.length + contractorHotWorkPermits.length;
+            var closedTotal = closedHotWorkPermits.length + closedContractorPermits.length + closedContractorHotWorkPermits.length;
 
             var el = document.getElementById('permitStatActive');
             if (el) el.textContent = activeTotal;
@@ -9635,6 +9668,11 @@
             if (cpEl) cpEl.textContent = contractorPermits.length;
             var cpNote = document.getElementById('permitStatCPNote');
             if (cpNote) cpNote.textContent = contractorPermits.length === 0 ? 'None active' : 'All valid';
+
+            var chwEl = document.getElementById('permitStatCHW');
+            if (chwEl) chwEl.textContent = contractorHotWorkPermits.length;
+            var chwNote = document.getElementById('permitStatCHWNote');
+            if (chwNote) chwNote.textContent = contractorHotWorkPermits.length === 0 ? 'None active' : contractorHotWorkPermits.length + ' active';
 
             var clEl = document.getElementById('permitStatClosed');
             if (clEl) clEl.textContent = closedTotal;
