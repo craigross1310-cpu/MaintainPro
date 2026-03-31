@@ -3215,26 +3215,37 @@
                     </div>
 
                     <div class="form-group" style="border-top:1px solid var(--gray-200);padding-top:1rem;">
-                        <label class="form-label">Time Tracking</label>
+                        <label class="form-label" style="font-weight:700;">Machine Downtime</label>
                         <div class="form-row">
                             <div class="form-group">
-                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Start Time</label>
-                                <input type="datetime-local" class="form-input" id="woDetailStartTime">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Downtime Start</label>
+                                <input type="datetime-local" class="form-input" id="woDetailDowntimeStart" onchange="calcWoTimes()">
                             </div>
                             <div class="form-group">
-                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Finish Time</label>
-                                <input type="datetime-local" class="form-input" id="woDetailFinishTime">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Downtime End</label>
+                                <input type="datetime-local" class="form-input" id="woDetailDowntimeEnd" onchange="calcWoTimes()">
                             </div>
                         </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Total Downtime</label>
+                            <div id="woDetailTotalDowntime" style="padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;font-weight:600;">---</div>
+                        </div>
+                    </div>
+                    <div style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:0.5rem;">
+                        <label class="form-label" style="font-weight:700;">Engineer Time</label>
                         <div class="form-row">
                             <div class="form-group">
-                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Total Job Time</label>
-                                <div id="woDetailTotalJobTime" style="padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;font-weight:600;">—</div>
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Job Start</label>
+                                <input type="datetime-local" class="form-input" id="woDetailJobStart" onchange="calcWoTimes()">
                             </div>
                             <div class="form-group">
-                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Machine Downtime</label>
-                                <input type="number" class="form-input" id="woDetailMachineDowntime" step="0.25" min="0" placeholder="Hours (e.g., 2.5)">
+                                <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Job Finish</label>
+                                <input type="datetime-local" class="form-input" id="woDetailJobFinish" onchange="calcWoTimes()">
                             </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:0.85rem;color:var(--gray-600);">Total Engineer Time</label>
+                            <div id="woDetailTotalJobTime" style="padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;font-weight:600;">---</div>
                         </div>
                     </div>
 
@@ -5746,7 +5757,23 @@
                 description: row.description || row.notes || '',
                 hasPhotos: row.has_photos || false, photoUrls: row.photo_urls || [], comments: row.comments || [],
                 startTime: row.start_time || '', finishTime: row.finish_time || '',
-                totalJobTime: row.total_job_time || '', machineDowntime: row.machine_downtime || ''
+                totalJobTime: row.total_job_time || '', machineDowntime: row.machine_downtime || '',
+                downtimeStart: row.downtime_started || '', downtimeEnd: row.downtime_ended || '',
+                totalDowntimeHours: (function() {
+                    if (row.downtime_started && row.downtime_ended) {
+                        var d = new Date(row.downtime_ended) - new Date(row.downtime_started);
+                        return d > 0 ? d / 3600000 : 0;
+                    }
+                    return parseFloat(row.machine_downtime) || 0;
+                })(),
+                jobStart: row.job_started || '', jobFinish: row.job_finished || '',
+                totalJobHours: (function() {
+                    if (row.job_started && row.job_finished) {
+                        var d = new Date(row.job_finished) - new Date(row.job_started);
+                        return d > 0 ? d / 3600000 : 0;
+                    }
+                    return 0;
+                })()
             };
         }
         function mapWoToDb(wo) {
@@ -5765,6 +5792,10 @@
             if (wo.finishTime !== undefined) obj.finish_time = wo.finishTime || null;
             if (wo.totalJobTime !== undefined) obj.total_job_time = wo.totalJobTime;
             if (wo.machineDowntime !== undefined) obj.machine_downtime = wo.machineDowntime;
+            if (wo.downtimeStart !== undefined) obj.downtime_started = wo.downtimeStart || null;
+            if (wo.downtimeEnd !== undefined) obj.downtime_ended = wo.downtimeEnd || null;
+            if (wo.jobStart !== undefined) obj.job_started = wo.jobStart || null;
+            if (wo.jobFinish !== undefined) obj.job_finished = wo.jobFinish || null;
             return obj;
         }
         function mapEquipFromDb(row) {
@@ -6601,15 +6632,15 @@
                 if (brDate >= weekStart && brDate < weekEnd) thisWeekDowntime += (br.totalDowntimeHours || 0);
                 if (brDate >= lastWeekStart && brDate < weekStart) lastWeekDowntime += (br.totalDowntimeHours || 0);
             });
-            // Also include work order machine downtime
+            // Also include work order downtime
             workOrdersData.forEach(function(wo) {
-                if (!wo.finishTime) return;
-                var woDate = new Date(wo.finishTime);
-                var dt = parseFloat(wo.machineDowntime) || 0;
-                if (dt > 0) {
-                    if (woDate >= weekStart && woDate < weekEnd) thisWeekDowntime += dt;
-                    if (woDate >= lastWeekStart && woDate < weekStart) lastWeekDowntime += dt;
-                }
+                var dt = wo.totalDowntimeHours || (parseFloat(wo.machineDowntime) || 0);
+                if (dt <= 0) return;
+                var woDateStr = wo.downtimeStart || wo.finishTime;
+                if (!woDateStr) return;
+                var woDate = new Date(woDateStr);
+                if (woDate >= weekStart && woDate < weekEnd) thisWeekDowntime += dt;
+                if (woDate >= lastWeekStart && woDate < weekStart) lastWeekDowntime += dt;
             });
             var dtEl = document.getElementById('downtimeWeekKPI');
             if (dtEl) dtEl.textContent = thisWeekDowntime.toFixed(1) + 'h';
@@ -6820,11 +6851,13 @@
                 var laborRates = loadData('laborRates', { 'John Smith': 25.00, 'Mike Johnson': 28.00, 'Sarah Williams': 30.00 });
                 var laborByEngineer = {};
                 workOrdersData.forEach(function(wo) {
-                    if (wo.assignedTo && wo.totalJobTime) {
-                        var match = wo.totalJobTime.match(/([\d]+)h\s*([\d]*)m?/);
-                        var hours = 0;
-                        if (match) { hours = parseFloat(match[1]) + (match[2] ? parseFloat(match[2]) / 60 : 0); }
-                        else { var mMatch = wo.totalJobTime.match(/([\d]+)m/); if (mMatch) hours = parseFloat(mMatch[1]) / 60; }
+                    if (wo.assignedTo) {
+                        var hours = wo.totalJobHours || 0;
+                        if (!hours && wo.totalJobTime) {
+                            var match = wo.totalJobTime.match(/([\d]+)h\s*([\d]*)m?/);
+                            if (match) { hours = parseFloat(match[1]) + (match[2] ? parseFloat(match[2]) / 60 : 0); }
+                            else { var mMatch = wo.totalJobTime.match(/([\d]+)m/); if (mMatch) hours = parseFloat(mMatch[1]) / 60; }
+                        }
                         if (hours > 0) {
                             if (!laborByEngineer[wo.assignedTo]) laborByEngineer[wo.assignedTo] = 0;
                             laborByEngineer[wo.assignedTo] += hours;
@@ -6855,12 +6888,10 @@
                     dtMapByEquip[name] += (b.totalDowntimeHours || 0);
                 });
                 workOrdersData.forEach(function(wo) {
-                    if (wo.machineDowntime && wo.equipment) {
-                        var dt = parseFloat(wo.machineDowntime) || 0;
-                        if (dt > 0) {
-                            if (!dtMapByEquip[wo.equipment]) dtMapByEquip[wo.equipment] = 0;
-                            dtMapByEquip[wo.equipment] += dt;
-                        }
+                    var dt = wo.totalDowntimeHours || (parseFloat(wo.machineDowntime) || 0);
+                    if (dt > 0 && wo.equipment) {
+                        if (!dtMapByEquip[wo.equipment]) dtMapByEquip[wo.equipment] = 0;
+                        dtMapByEquip[wo.equipment] += dt;
                     }
                 });
                 var dtEntries = Object.keys(dtMapByEquip)
@@ -6893,15 +6924,15 @@
                     }
                 });
                 workOrdersData.forEach(function(wo) {
-                    if (wo.totalJobTime && wo.assignedTo) {
+                    var hours = wo.totalJobHours || 0;
+                    if (!hours && wo.totalJobTime) {
                         var match = wo.totalJobTime.match(/([\d]+)h\s*([\d]*)m?/);
-                        var hours = 0;
                         if (match) { hours = parseFloat(match[1]) + (match[2] ? parseFloat(match[2]) / 60 : 0); }
                         else { var mMatch = wo.totalJobTime.match(/([\d]+)m/); if (mMatch) hours = parseFloat(mMatch[1]) / 60; }
-                        if (hours > 0) {
-                            if (!engMap[wo.assignedTo]) engMap[wo.assignedTo] = { breakdowns: 0, hours: 0 };
-                            engMap[wo.assignedTo].hours += hours;
-                        }
+                    }
+                    if (hours > 0 && wo.assignedTo) {
+                        if (!engMap[wo.assignedTo]) engMap[wo.assignedTo] = { breakdowns: 0, hours: 0 };
+                        engMap[wo.assignedTo].hours += hours;
                     }
                 });
                 var engEntries = Object.keys(engMap)
@@ -6940,6 +6971,16 @@
                         if (dtByMonth[bKey] !== undefined) {
                             dtByMonth[bKey] += (b.totalDowntimeHours || 0);
                             engByMonth[bKey] += (b.totalJobHours || 0);
+                        }
+                    }
+                });
+                workOrdersData.forEach(function(wo) {
+                    var woDate = wo.downtimeStart || wo.jobStart || wo.finishTime || wo.createdRaw;
+                    if (woDate) {
+                        var wKey = woDate.substring(0, 7);
+                        if (dtByMonth[wKey] !== undefined) {
+                            dtByMonth[wKey] += (wo.totalDowntimeHours || 0);
+                            engByMonth[wKey] += (wo.totalJobHours || 0);
                         }
                     }
                 });
@@ -7479,13 +7520,11 @@
             document.getElementById('woDetailPhotos').innerHTML = photosHtml;
 
             // Populate time fields
-            document.getElementById('woDetailStartTime').value = wo.startTime || '';
-            document.getElementById('woDetailFinishTime').value = wo.finishTime || '';
-            document.getElementById('woDetailMachineDowntime').value = wo.machineDowntime || '';
-            calcWoJobTime();
-            // Auto-calc on change
-            document.getElementById('woDetailStartTime').onchange = calcWoJobTime;
-            document.getElementById('woDetailFinishTime').onchange = calcWoJobTime;
+            document.getElementById('woDetailDowntimeStart').value = wo.downtimeStart || '';
+            document.getElementById('woDetailDowntimeEnd').value = wo.downtimeEnd || '';
+            document.getElementById('woDetailJobStart').value = wo.jobStart || wo.startTime || '';
+            document.getElementById('woDetailJobFinish').value = wo.jobFinish || wo.finishTime || '';
+            calcWoTimes();
 
             // Render comments
             renderWoComments(wo);
@@ -7517,26 +7556,39 @@
             const newStatus = document.getElementById('woUpdateStatus').value;
             if (newAssign) wo.assignedTo = newAssign;
             if (newStatus) wo.status = newStatus;
-            wo.startTime = document.getElementById('woDetailStartTime').value;
-            wo.finishTime = document.getElementById('woDetailFinishTime').value;
-            wo.machineDowntime = document.getElementById('woDetailMachineDowntime').value.trim();
-            if (wo.startTime && wo.finishTime) {
-                var diffMs = new Date(wo.finishTime) - new Date(wo.startTime);
-                if (diffMs > 0) {
-                    var hrs = Math.floor(diffMs / 3600000);
-                    var mins = Math.floor((diffMs % 3600000) / 60000);
-                    wo.totalJobTime = hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
-                }
+            wo.downtimeStart = document.getElementById('woDetailDowntimeStart').value;
+            wo.downtimeEnd = document.getElementById('woDetailDowntimeEnd').value;
+            wo.jobStart = document.getElementById('woDetailJobStart').value;
+            wo.jobFinish = document.getElementById('woDetailJobFinish').value;
+            // Calculate downtime hours
+            if (wo.downtimeStart && wo.downtimeEnd) {
+                var dtDiff = new Date(wo.downtimeEnd) - new Date(wo.downtimeStart);
+                wo.totalDowntimeHours = dtDiff > 0 ? dtDiff / 3600000 : 0;
+                wo.machineDowntime = wo.totalDowntimeHours.toFixed(2);
+            } else { wo.totalDowntimeHours = 0; }
+            // Calculate engineer time
+            if (wo.jobStart && wo.jobFinish) {
+                var jDiff = new Date(wo.jobFinish) - new Date(wo.jobStart);
+                wo.totalJobHours = jDiff > 0 ? jDiff / 3600000 : 0;
+                var hrs = Math.floor(wo.totalJobHours);
+                var mins = Math.floor((jDiff % 3600000) / 60000);
+                wo.totalJobTime = hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
+            } else { wo.totalJobHours = 0; }
+            // Keep start/finish in sync for backward compat
+            wo.startTime = wo.jobStart;
+            wo.finishTime = wo.jobFinish;
+            if (newStatus === 'in-progress' && !wo.jobStart) {
+                wo.jobStart = new Date().toISOString().slice(0, 16);
+                wo.startTime = wo.jobStart;
             }
-            if (newStatus === 'in-progress' && !wo.startTime) {
-                wo.startTime = new Date().toISOString().slice(0, 16);
-            }
-            if (newStatus === 'completed' && !wo.finishTime) {
-                wo.finishTime = new Date().toISOString().slice(0, 16);
-                if (wo.startTime) {
-                    var diffMs2 = new Date(wo.finishTime) - new Date(wo.startTime);
+            if (newStatus === 'completed' && !wo.jobFinish) {
+                wo.jobFinish = new Date().toISOString().slice(0, 16);
+                wo.finishTime = wo.jobFinish;
+                if (wo.jobStart) {
+                    var diffMs2 = new Date(wo.jobFinish) - new Date(wo.jobStart);
                     if (diffMs2 > 0) {
-                        var hrs2 = Math.floor(diffMs2 / 3600000);
+                        wo.totalJobHours = diffMs2 / 3600000;
+                        var hrs2 = Math.floor(wo.totalJobHours);
                         var mins2 = Math.floor((diffMs2 % 3600000) / 60000);
                         wo.totalJobTime = hrs2 > 0 ? hrs2 + 'h ' + mins2 + 'm' : mins2 + 'm';
                     }
@@ -7952,20 +8004,9 @@
             try { await CraderoAPI.workOrders.update(wo.id, { comments: wo.comments }); } catch (e) { console.error('[Cradero] Failed to save comment:', e); }
         }
 
-        function calcWoJobTime() {
-            var start = document.getElementById('woDetailStartTime').value;
-            var finish = document.getElementById('woDetailFinishTime').value;
-            var el = document.getElementById('woDetailTotalJobTime');
-            if (start && finish) {
-                var diffMs = new Date(finish) - new Date(start);
-                if (diffMs > 0) {
-                    var hrs = Math.floor(diffMs / 3600000);
-                    var mins = Math.floor((diffMs % 3600000) / 60000);
-                    el.textContent = hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
-                    return;
-                }
-            }
-            el.textContent = '—';
+        function calcWoTimes() {
+            _calcTimeDiff('woDetailDowntimeStart', 'woDetailDowntimeEnd', 'woDetailTotalDowntime');
+            _calcTimeDiff('woDetailJobStart', 'woDetailJobFinish', 'woDetailTotalJobTime');
         }
 
         function _calcTimeDiff(startId, endId, displayId) {
@@ -12126,7 +12167,7 @@
             // WO Detail Photo Upload
             handleWoDetailFiles, removeWoDetailFile, uploadWoDetailPhotos,
             // Downtime & Engineer Time Tracking
-            calcBrTimes, calcBrEditTimes, syncBrDowntimeStart,
+            calcBrTimes, calcBrEditTimes, calcWoTimes, syncBrDowntimeStart,
             // QR Codes
             showEquipQR, printQRCode, openQRScanner, closeQRScanner, manualQRLookup,
             // Audit Trail
