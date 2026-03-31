@@ -5194,6 +5194,11 @@
                     var r = await supabaseClient.from('pm_completions').select('*').eq('pm_task_id', taskId).order('completed_at', { ascending: false });
                     if (r.error) throw r.error;
                     return r.data;
+                },
+                allCompletionsWithParts: async function() {
+                    var r = await supabaseClient.from('pm_completions').select('*').not('parts_used', 'is', null).order('completed_at', { ascending: false });
+                    if (r.error) throw r.error;
+                    return r.data || [];
                 }
             },
             // --- Calendar Events ---
@@ -5245,6 +5250,11 @@
                 },
                 listByWorkOrder: async function(woId) {
                     var r = await supabaseClient.from('parts_usage').select('*').eq('work_order_id', woId).order('used_at', { ascending: false });
+                    if (r.error) throw r.error;
+                    return r.data || [];
+                },
+                listByPart: async function(partId) {
+                    var r = await supabaseClient.from('parts_usage').select('*').eq('part_id', partId).order('used_at', { ascending: false });
                     if (r.error) throw r.error;
                     return r.data || [];
                 },
@@ -6250,13 +6260,187 @@
                         ${hasAccess('purchaseOrders') && p.suppliers && p.suppliers.length > 0 ? `<div class="part-detail-row"><span class="part-detail-label">Suppliers</span><span class="part-detail-value" style="color:var(--primary);font-weight:600;">${p.suppliers.length} supplier${p.suppliers.length > 1 ? 's' : ''}</span></div>` : ''}
                         ${hasAccess('purchaseOrders') ? (function() { var m = p.monthlyUsage > 0 ? Math.floor(p.qty / p.monthlyUsage) : -1; var fColor = m < 0 ? 'var(--gray-600)' : m < 2 ? '#dc2626' : m < 4 ? '#f59e0b' : '#22c55e'; var fText = m < 0 ? 'No usage data' : m === 0 ? 'Depleted this month' : m + ' months remaining'; return '<div class="part-detail-row pro-only-feature"><span class="part-detail-label">Stock Forecast</span><span class="part-detail-value" style="color:' + fColor + ';font-weight:600;">' + fText + '</span></div>'; })() : ''}
                     </div>
-                    <div style="display:flex;gap:0.5rem;margin-top:1rem;">
+                    <div style="margin-top:0.75rem;">
+                        <button class="btn btn-secondary btn-small" onclick="openPartWhereUsed('${p.id}')" style="width:100%;margin-bottom:0.5rem;font-size:0.8rem;">Where Used</button>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;margin-top:0.25rem;">
                         ${hasAccess('purchaseOrders') ? `<button class="btn ${orderBtnClass}" style="flex:1;" onclick="orderPart('${escHtml(p.partNumber)}','${escHtml(p.name)}',${stock.cls !== 'in-stock'})">${orderBtnLabel}</button>` : ''}
                         <button class="btn btn-secondary btn-small" onclick="openEditPart('${p.id}')" style="flex:1;">Edit</button>
                         ${(currentUserRole === 'admin' || currentUserRole === 'manager') ? '<button class="btn btn-danger btn-small" onclick="deletePart(\'' + p.id + '\')" style="flex:1;">Delete</button>' : ''}
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        // --- Part Where Used Modal ---
+        async function openPartWhereUsed(partId) {
+            var part = partsData.find(function(p) { return p.id === partId; });
+            if (!part) { showToast('Part not found.', 'error'); return; }
+
+            // Show modal immediately with loading state
+            var modalHtml = '<div id="whereUsedModal" class="modal-overlay active" onclick="if(event.target===this)this.remove()">' +
+                '<div class="modal" style="max-width:700px;width:95%;max-height:85vh;display:flex;flex-direction:column;">' +
+                    '<div class="modal-header"><h3 style="margin:0;">Where Used: ' + escHtml(part.name) + '</h3>' +
+                    '<span style="font-size:0.85rem;color:var(--gray-500);">' + escHtml(part.partNumber) + '</span>' +
+                    '<button onclick="document.getElementById(\'whereUsedModal\').remove()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--gray-500);">&times;</button></div>' +
+                    '<div class="modal-body" id="whereUsedContent" style="overflow-y:auto;flex:1;padding:1rem;">' +
+                        '<div style="text-align:center;padding:2rem;color:var(--gray-500);">Loading usage history...</div>' +
+                    '</div>' +
+                '</div></div>';
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            try {
+                // Fetch work order usage
+                var woUsage = await CraderoAPI.partsUsage.listByPart(partId);
+
+                // Fetch PM completion usage
+                var pmCompletions = await CraderoAPI.pm.allCompletionsWithParts();
+                var pmUsage = [];
+                pmCompletions.forEach(function(comp) {
+                    var partsUsed = comp.parts_used || [];
+                    if (typeof partsUsed === 'string') { try { partsUsed = JSON.parse(partsUsed); } catch(e) { partsUsed = []; } }
+                    partsUsed.forEach(function(pu) {
+                        if (pu.partId === partId) {
+                            pmUsage.push({
+                                pmTaskId: comp.pm_task_id,
+                                completedAt: comp.completed_at,
+                                completedBy: comp.completed_by,
+                                qty: pu.qty || 1
+                            });
+                        }
+                    });
+                });
+
+                // Map work order IDs to work order details
+                var woUsageEnriched = woUsage.map(function(u) {
+                    var wo = workOrdersData.find(function(w) { return w.id === u.work_order_id; });
+                    return {
+                        type: 'Work Order',
+                        refId: wo ? wo.woId : 'WO-' + (u.work_order_id || '').substring(0, 8),
+                        equipment: wo ? wo.equipment : '',
+                        date: u.used_at,
+                        qty: u.quantity_used || 1,
+                        usedBy: u.used_by || ''
+                    };
+                });
+
+                // Map PM task IDs to PM details
+                var pmUsageEnriched = pmUsage.map(function(u) {
+                    var pm = pmData.find(function(p) { return p.id === u.pmTaskId; });
+                    return {
+                        type: 'PM Task',
+                        refId: pm ? pm.title : 'PM-' + (u.pmTaskId || '').substring(0, 8),
+                        equipment: pm ? pm.equipment : '',
+                        date: u.completedAt,
+                        qty: u.qty || 1,
+                        usedBy: u.completedBy || ''
+                    };
+                });
+
+                // Combine all usage
+                var allUsage = woUsageEnriched.concat(pmUsageEnriched);
+                allUsage.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+
+                // Build equipment trend analysis
+                var equipmentTrends = {};
+                allUsage.forEach(function(u) {
+                    var eqName = u.equipment || 'Unassigned';
+                    if (!equipmentTrends[eqName]) equipmentTrends[eqName] = { count: 0, totalQty: 0, lastUsed: null };
+                    equipmentTrends[eqName].count++;
+                    equipmentTrends[eqName].totalQty += u.qty;
+                    if (!equipmentTrends[eqName].lastUsed || new Date(u.date) > new Date(equipmentTrends[eqName].lastUsed)) {
+                        equipmentTrends[eqName].lastUsed = u.date;
+                    }
+                });
+
+                // Sort trends by total quantity descending
+                var trendEntries = Object.keys(equipmentTrends).map(function(eq) {
+                    return { equipment: eq, count: equipmentTrends[eq].count, totalQty: equipmentTrends[eq].totalQty, lastUsed: equipmentTrends[eq].lastUsed };
+                }).sort(function(a, b) { return b.totalQty - a.totalQty; });
+
+                // Build HTML
+                var html = '';
+
+                // Summary stats
+                var totalUsages = allUsage.length;
+                var totalQtyUsed = allUsage.reduce(function(sum, u) { return sum + u.qty; }, 0);
+                html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1.25rem;">' +
+                    '<div style="background:var(--gray-100);border-radius:8px;padding:0.75rem;text-align:center;">' +
+                        '<div style="font-size:1.5rem;font-weight:700;color:var(--primary);">' + totalUsages + '</div>' +
+                        '<div style="font-size:0.75rem;color:var(--gray-600);">Total Uses</div>' +
+                    '</div>' +
+                    '<div style="background:var(--gray-100);border-radius:8px;padding:0.75rem;text-align:center;">' +
+                        '<div style="font-size:1.5rem;font-weight:700;color:var(--primary);">' + totalQtyUsed + '</div>' +
+                        '<div style="font-size:0.75rem;color:var(--gray-600);">Total Qty Used</div>' +
+                    '</div>' +
+                    '<div style="background:var(--gray-100);border-radius:8px;padding:0.75rem;text-align:center;">' +
+                        '<div style="font-size:1.5rem;font-weight:700;color:var(--primary);">' + trendEntries.length + '</div>' +
+                        '<div style="font-size:0.75rem;color:var(--gray-600);">Machines</div>' +
+                    '</div>' +
+                '</div>';
+
+                // Equipment Trend section
+                if (trendEntries.length > 0) {
+                    html += '<div style="margin-bottom:1.25rem;">' +
+                        '<h4 style="margin:0 0 0.5rem;font-size:0.9rem;color:var(--dark);">Equipment Trends</h4>';
+                    var maxQty = trendEntries[0].totalQty;
+                    trendEntries.forEach(function(t) {
+                        var pct = maxQty > 0 ? Math.round((t.totalQty / maxQty) * 100) : 0;
+                        var barColor = t.count >= 5 ? '#dc2626' : t.count >= 3 ? '#f59e0b' : 'var(--primary)';
+                        var trendLabel = t.count >= 5 ? 'High frequency' : t.count >= 3 ? 'Moderate' : '';
+                        html += '<div style="margin-bottom:0.5rem;">' +
+                            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">' +
+                                '<span style="font-size:0.85rem;font-weight:600;">' + escHtml(t.equipment) + '</span>' +
+                                '<span style="font-size:0.75rem;color:var(--gray-500);">' + t.totalQty + ' qty / ' + t.count + ' time' + (t.count !== 1 ? 's' : '') +
+                                    (trendLabel ? ' <span style="color:' + barColor + ';font-weight:600;">' + trendLabel + '</span>' : '') +
+                                '</span>' +
+                            '</div>' +
+                            '<div style="background:var(--gray-200);border-radius:4px;height:8px;overflow:hidden;">' +
+                                '<div style="background:' + barColor + ';height:100%;width:' + pct + '%;border-radius:4px;transition:width 0.3s;"></div>' +
+                            '</div>' +
+                        '</div>';
+                    });
+                    html += '</div>';
+                }
+
+                // Usage history table
+                if (allUsage.length > 0) {
+                    html += '<h4 style="margin:0 0 0.5rem;font-size:0.9rem;color:var(--dark);">Usage History</h4>' +
+                        '<div style="overflow-x:auto;">' +
+                        '<table style="width:100%;border-collapse:collapse;font-size:0.8rem;">' +
+                        '<thead><tr style="background:var(--gray-100);text-align:left;">' +
+                            '<th style="padding:6px 8px;border-bottom:2px solid var(--gray-300);">Type</th>' +
+                            '<th style="padding:6px 8px;border-bottom:2px solid var(--gray-300);">Reference</th>' +
+                            '<th style="padding:6px 8px;border-bottom:2px solid var(--gray-300);">Equipment</th>' +
+                            '<th style="padding:6px 8px;border-bottom:2px solid var(--gray-300);">Qty</th>' +
+                            '<th style="padding:6px 8px;border-bottom:2px solid var(--gray-300);">Date</th>' +
+                            '<th style="padding:6px 8px;border-bottom:2px solid var(--gray-300);">Used By</th>' +
+                        '</tr></thead><tbody>';
+                    allUsage.forEach(function(u) {
+                        var typeBg = u.type === 'Work Order' ? 'rgba(0,102,255,0.1)' : u.type === 'PM Task' ? 'rgba(0,200,83,0.1)' : 'rgba(255,179,0,0.1)';
+                        var typeColor = u.type === 'Work Order' ? 'var(--primary)' : u.type === 'PM Task' ? 'var(--success)' : 'var(--warning)';
+                        var dateStr = u.date ? new Date(u.date).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : '-';
+                        html += '<tr style="border-bottom:1px solid var(--gray-200);">' +
+                            '<td style="padding:6px 8px;"><span style="background:' + typeBg + ';color:' + typeColor + ';padding:2px 6px;border-radius:4px;font-weight:600;font-size:0.7rem;white-space:nowrap;">' + u.type + '</span></td>' +
+                            '<td style="padding:6px 8px;font-weight:500;">' + escHtml(u.refId) + '</td>' +
+                            '<td style="padding:6px 8px;">' + escHtml(u.equipment || '-') + '</td>' +
+                            '<td style="padding:6px 8px;font-weight:600;">x' + u.qty + '</td>' +
+                            '<td style="padding:6px 8px;white-space:nowrap;">' + dateStr + '</td>' +
+                            '<td style="padding:6px 8px;">' + escHtml(u.usedBy || '-') + '</td>' +
+                        '</tr>';
+                    });
+                    html += '</tbody></table></div>';
+                } else {
+                    html += '<div style="text-align:center;padding:2rem;color:var(--gray-500);font-style:italic;">No usage history found for this part.</div>';
+                }
+
+                var contentEl = document.getElementById('whereUsedContent');
+                if (contentEl) contentEl.innerHTML = html;
+
+            } catch (err) {
+                var contentEl = document.getElementById('whereUsedContent');
+                if (contentEl) contentEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--danger);">Failed to load usage data: ' + escHtml(err.message) + '</div>';
+            }
         }
 
         function getPoStatusBadge(status) {
