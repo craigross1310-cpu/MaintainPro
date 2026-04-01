@@ -4078,6 +4078,22 @@
                             <div id="brTotalJobTime" style="padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;font-weight:600;">---</div>
                         </div>
                     </div>
+                    <!-- Parts Used -->
+                    <div class="form-group" id="brPartsUsedSection" style="border-top:1px solid var(--gray-200);padding-top:1rem;">
+                        <label class="form-label" style="font-weight:700;">Parts Used</label>
+                        <div id="brPartsUsedList" style="margin-bottom:0.5rem;"><div style="color:var(--gray-500);font-size:0.85rem;font-style:italic;">No parts added yet.</div></div>
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end;">
+                            <div style="flex:2;min-width:150px;position:relative;">
+                                <input type="text" class="form-input" id="brPartSearchInput" placeholder="Search parts by name or number..." autocomplete="off" oninput="filterBrPartsDropdown()" onfocus="filterBrPartsDropdown()">
+                                <input type="hidden" id="brPartSelect" value="">
+                                <div id="brPartDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid var(--gray-300);border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+                                <div id="brPartStockWarning" style="display:none;font-size:0.75rem;color:var(--warning);margin-top:2px;font-weight:600;"></div>
+                            </div>
+                            <input type="number" class="form-input" id="brPartQty" placeholder="Qty" min="1" value="1" style="flex:0 0 80px;" onchange="checkBrPartStockWarning()">
+                            <button type="button" class="btn btn-primary btn-small" onclick="addBrPartUsage()">+ Add</button>
+                        </div>
+                    </div>
+
                     <div class="form-group" id="brRaiseWoWrap">
                         <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-weight:600;">
                             <input type="checkbox" id="brRaiseWo" style="width:18px;height:18px;">
@@ -4192,6 +4208,22 @@
                         <div id="brEditTotalJobTime" style="padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;font-weight:600;">---</div>
                     </div>
                 </div>
+                <!-- Parts Used -->
+                <div class="form-group" id="brEditPartsUsedSection" style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:0.5rem;">
+                    <label class="form-label" style="font-weight:700;">Parts Used</label>
+                    <div id="brEditPartsUsedList" style="margin-bottom:0.5rem;"><div style="color:var(--gray-500);font-size:0.85rem;font-style:italic;">No parts added yet.</div></div>
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end;">
+                        <div style="flex:2;min-width:150px;position:relative;">
+                            <input type="text" class="form-input" id="brEditPartSearchInput" placeholder="Search parts by name or number..." autocomplete="off" oninput="filterBrEditPartsDropdown()" onfocus="filterBrEditPartsDropdown()">
+                            <input type="hidden" id="brEditPartSelect" value="">
+                            <div id="brEditPartDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid var(--gray-300);border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+                            <div id="brEditPartStockWarning" style="display:none;font-size:0.75rem;color:var(--warning);margin-top:2px;font-weight:600;"></div>
+                        </div>
+                        <input type="number" class="form-input" id="brEditPartQty" placeholder="Qty" min="1" value="1" style="flex:0 0 80px;" onchange="checkBrEditPartStockWarning()">
+                        <button type="button" class="btn btn-primary btn-small" onclick="addBrEditPartUsage()">+ Add</button>
+                    </div>
+                </div>
+
                 <div id="brDetailLinkedWo" style="margin-top:0.5rem;"></div>
             </div>
             <div class="modal-footer">
@@ -6040,7 +6072,8 @@
                 dateISO: row.downtime_started ? row.downtime_started.substring(0, 10) : (createdDate ? createdDate.toISOString().substring(0, 10) : ''),
                 time: row.downtime_started ? row.downtime_started.substring(11, 16) : '',
                 created: row.created_at || '',
-                linkedWoId: row.linked_wo_id || null
+                linkedWoId: row.linked_wo_id || null,
+                partsUsed: row.parts_used || []
             };
         }
         function mapCalendarFromDb(row) {
@@ -7504,6 +7537,17 @@
             if (partDropdown && partSearch && !partSearch.contains(e.target) && !partDropdown.contains(e.target)) {
                 partDropdown.style.display = 'none';
             }
+            // Close breakdown parts dropdowns if clicking outside
+            var brPartSearch = document.getElementById('brPartSearchInput');
+            var brPartDrop = document.getElementById('brPartDropdown');
+            if (brPartDrop && brPartSearch && !brPartSearch.contains(e.target) && !brPartDrop.contains(e.target)) {
+                brPartDrop.style.display = 'none';
+            }
+            var brEditPartSearch = document.getElementById('brEditPartSearchInput');
+            var brEditPartDrop = document.getElementById('brEditPartDropdown');
+            if (brEditPartDrop && brEditPartSearch && !brEditPartSearch.contains(e.target) && !brEditPartDrop.contains(e.target)) {
+                brEditPartDrop.style.display = 'none';
+            }
         });
 
         function updateNotificationCount() {
@@ -8038,6 +8082,235 @@
             var fields = document.getElementById('pmRaiseWOFields');
             var checked = document.getElementById('pmRaiseWO').checked;
             if (fields) fields.style.display = checked ? '' : 'none';
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // BREAKDOWN PARTS USAGE (log modal — accumulate before submit)
+        // ─────────────────────────────────────────────────────────────────────
+        var brPartsUsed = [];
+
+        function filterBrPartsDropdown() {
+            var input = document.getElementById('brPartSearchInput');
+            var dropdown = document.getElementById('brPartDropdown');
+            if (!input || !dropdown) return;
+            var query = input.value.toLowerCase().trim();
+            var filtered = partsData.filter(function(p) {
+                if (!query) return true;
+                return (p.name && p.name.toLowerCase().indexOf(query) !== -1) ||
+                       (p.partNumber && p.partNumber.toLowerCase().indexOf(query) !== -1);
+            });
+            if (filtered.length === 0) {
+                dropdown.innerHTML = '<div style="padding:0.5rem 0.75rem;color:var(--gray-500);font-size:0.85rem;">No parts found</div>';
+                dropdown.style.display = 'block';
+                return;
+            }
+            dropdown.innerHTML = filtered.map(function(p) {
+                var stockColor = p.qty <= 0 ? 'var(--danger)' : p.qty <= (p.minStock || 0) ? 'var(--warning)' : 'var(--success)';
+                var stockLabel = p.qty <= 0 ? 'OUT OF STOCK' : p.qty + ' in stock';
+                var opacity = p.qty <= 0 ? 'opacity:0.5;' : '';
+                return '<div onclick="selectBrPart(\'' + p.id + '\')" style="padding:0.5rem 0.75rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-100);' + opacity + '" onmouseover="this.style.background=\'var(--gray-100)\'" onmouseout="this.style.background=\'white\'">' +
+                    '<div>' +
+                        '<div style="font-weight:600;font-size:0.85rem;">' + escHtml(p.name) + '</div>' +
+                        '<div style="font-size:0.75rem;color:var(--gray-500);">' + (p.partNumber ? escHtml(p.partNumber) : '') + (p.location ? ' · ' + escHtml(p.location) : '') + '</div>' +
+                    '</div>' +
+                    '<span style="font-size:0.75rem;font-weight:600;color:' + stockColor + ';">' + stockLabel + '</span>' +
+                '</div>';
+            }).join('');
+            dropdown.style.display = 'block';
+        }
+
+        function selectBrPart(partId) {
+            var part = partsData.find(function(p) { return p.id === partId; });
+            if (!part) return;
+            document.getElementById('brPartSelect').value = partId;
+            document.getElementById('brPartSearchInput').value = part.name + (part.partNumber ? ' (' + part.partNumber + ')' : '');
+            document.getElementById('brPartDropdown').style.display = 'none';
+            checkBrPartStockWarning();
+        }
+
+        function checkBrPartStockWarning() {
+            var partId = document.getElementById('brPartSelect').value;
+            var qty = parseInt(document.getElementById('brPartQty').value) || 1;
+            var warning = document.getElementById('brPartStockWarning');
+            if (!warning) return;
+            if (!partId) { warning.style.display = 'none'; return; }
+            var part = partsData.find(function(p) { return p.id === partId; });
+            if (!part) { warning.style.display = 'none'; return; }
+            if (part.qty <= 0) {
+                warning.textContent = 'This part is out of stock!';
+                warning.style.color = 'var(--danger)';
+                warning.style.display = 'block';
+            } else if (part.qty < qty) {
+                warning.textContent = 'Only ' + part.qty + ' available — not enough for requested quantity!';
+                warning.style.color = 'var(--danger)';
+                warning.style.display = 'block';
+            } else if ((part.qty - qty) <= (part.minStock || 0)) {
+                warning.textContent = 'Stock will drop below minimum threshold after this usage.';
+                warning.style.color = 'var(--warning)';
+                warning.style.display = 'block';
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+
+        function addBrPartUsage() {
+            var partId = document.getElementById('brPartSelect').value;
+            var qty = parseInt(document.getElementById('brPartQty').value) || 1;
+            if (!partId) { showToast('Please select a part.', 'error'); return; }
+            if (qty < 1) { showToast('Quantity must be at least 1.', 'error'); return; }
+
+            var part = partsData.find(function(p) { return p.id === partId; });
+            if (!part) return;
+            if (part.qty < qty) {
+                showToast('Insufficient stock! Only ' + part.qty + ' available.', 'error');
+                return;
+            }
+
+            brPartsUsed.push({ partId: partId, partName: part.name, qty: qty });
+            document.getElementById('brPartSelect').value = '';
+            document.getElementById('brPartSearchInput').value = '';
+            document.getElementById('brPartQty').value = '1';
+            var stockWarn = document.getElementById('brPartStockWarning');
+            if (stockWarn) stockWarn.style.display = 'none';
+            renderBrPartsUsed();
+        }
+
+        function removeBrPartUsage(idx) {
+            brPartsUsed.splice(idx, 1);
+            renderBrPartsUsed();
+        }
+
+        function renderBrPartsUsed() {
+            var container = document.getElementById('brPartsUsedList');
+            if (!container) return;
+            if (brPartsUsed.length === 0) {
+                container.innerHTML = '<div style="color:var(--gray-500);font-size:0.85rem;font-style:italic;">No parts added yet.</div>';
+                return;
+            }
+            var html = '<div style="display:flex;flex-direction:column;gap:4px;">';
+            brPartsUsed.forEach(function(u, i) {
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--gray-100);border-radius:4px;font-size:0.85rem;">' +
+                    '<span>' + escHtml(u.partName) + ' x' + u.qty + '</span>' +
+                    '<button type="button" onclick="removeBrPartUsage(' + i + ')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1rem;padding:0 4px;">&times;</button>' +
+                    '</div>';
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // BREAKDOWN PARTS USAGE (edit modal — accumulate + load existing)
+        // ─────────────────────────────────────────────────────────────────────
+        var brEditPartsUsed = [];
+        var brEditPartsOriginal = [];
+
+        function filterBrEditPartsDropdown() {
+            var input = document.getElementById('brEditPartSearchInput');
+            var dropdown = document.getElementById('brEditPartDropdown');
+            if (!input || !dropdown) return;
+            var query = input.value.toLowerCase().trim();
+            var filtered = partsData.filter(function(p) {
+                if (!query) return true;
+                return (p.name && p.name.toLowerCase().indexOf(query) !== -1) ||
+                       (p.partNumber && p.partNumber.toLowerCase().indexOf(query) !== -1);
+            });
+            if (filtered.length === 0) {
+                dropdown.innerHTML = '<div style="padding:0.5rem 0.75rem;color:var(--gray-500);font-size:0.85rem;">No parts found</div>';
+                dropdown.style.display = 'block';
+                return;
+            }
+            dropdown.innerHTML = filtered.map(function(p) {
+                var stockColor = p.qty <= 0 ? 'var(--danger)' : p.qty <= (p.minStock || 0) ? 'var(--warning)' : 'var(--success)';
+                var stockLabel = p.qty <= 0 ? 'OUT OF STOCK' : p.qty + ' in stock';
+                var opacity = p.qty <= 0 ? 'opacity:0.5;' : '';
+                return '<div onclick="selectBrEditPart(\'' + p.id + '\')" style="padding:0.5rem 0.75rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-100);' + opacity + '" onmouseover="this.style.background=\'var(--gray-100)\'" onmouseout="this.style.background=\'white\'">' +
+                    '<div>' +
+                        '<div style="font-weight:600;font-size:0.85rem;">' + escHtml(p.name) + '</div>' +
+                        '<div style="font-size:0.75rem;color:var(--gray-500);">' + (p.partNumber ? escHtml(p.partNumber) : '') + (p.location ? ' · ' + escHtml(p.location) : '') + '</div>' +
+                    '</div>' +
+                    '<span style="font-size:0.75rem;font-weight:600;color:' + stockColor + ';">' + stockLabel + '</span>' +
+                '</div>';
+            }).join('');
+            dropdown.style.display = 'block';
+        }
+
+        function selectBrEditPart(partId) {
+            var part = partsData.find(function(p) { return p.id === partId; });
+            if (!part) return;
+            document.getElementById('brEditPartSelect').value = partId;
+            document.getElementById('brEditPartSearchInput').value = part.name + (part.partNumber ? ' (' + part.partNumber + ')' : '');
+            document.getElementById('brEditPartDropdown').style.display = 'none';
+            checkBrEditPartStockWarning();
+        }
+
+        function checkBrEditPartStockWarning() {
+            var partId = document.getElementById('brEditPartSelect').value;
+            var qty = parseInt(document.getElementById('brEditPartQty').value) || 1;
+            var warning = document.getElementById('brEditPartStockWarning');
+            if (!warning) return;
+            if (!partId) { warning.style.display = 'none'; return; }
+            var part = partsData.find(function(p) { return p.id === partId; });
+            if (!part) { warning.style.display = 'none'; return; }
+            if (part.qty <= 0) {
+                warning.textContent = 'This part is out of stock!';
+                warning.style.color = 'var(--danger)';
+                warning.style.display = 'block';
+            } else if (part.qty < qty) {
+                warning.textContent = 'Only ' + part.qty + ' available — not enough for requested quantity!';
+                warning.style.color = 'var(--danger)';
+                warning.style.display = 'block';
+            } else if ((part.qty - qty) <= (part.minStock || 0)) {
+                warning.textContent = 'Stock will drop below minimum threshold after this usage.';
+                warning.style.color = 'var(--warning)';
+                warning.style.display = 'block';
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+
+        function addBrEditPartUsage() {
+            var partId = document.getElementById('brEditPartSelect').value;
+            var qty = parseInt(document.getElementById('brEditPartQty').value) || 1;
+            if (!partId) { showToast('Please select a part.', 'error'); return; }
+            if (qty < 1) { showToast('Quantity must be at least 1.', 'error'); return; }
+
+            var part = partsData.find(function(p) { return p.id === partId; });
+            if (!part) return;
+            if (part.qty < qty) {
+                showToast('Insufficient stock! Only ' + part.qty + ' available.', 'error');
+                return;
+            }
+
+            brEditPartsUsed.push({ partId: partId, partName: part.name, qty: qty });
+            document.getElementById('brEditPartSelect').value = '';
+            document.getElementById('brEditPartSearchInput').value = '';
+            document.getElementById('brEditPartQty').value = '1';
+            var stockWarn = document.getElementById('brEditPartStockWarning');
+            if (stockWarn) stockWarn.style.display = 'none';
+            renderBrEditPartsUsed();
+        }
+
+        function removeBrEditPartUsage(idx) {
+            brEditPartsUsed.splice(idx, 1);
+            renderBrEditPartsUsed();
+        }
+
+        function renderBrEditPartsUsed() {
+            var container = document.getElementById('brEditPartsUsedList');
+            if (!container) return;
+            if (brEditPartsUsed.length === 0) {
+                container.innerHTML = '<div style="color:var(--gray-500);font-size:0.85rem;font-style:italic;">No parts added yet.</div>';
+                return;
+            }
+            var html = '<div style="display:flex;flex-direction:column;gap:4px;">';
+            brEditPartsUsed.forEach(function(u, i) {
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--gray-100);border-radius:4px;font-size:0.85rem;">' +
+                    '<span>' + escHtml(u.partName) + ' x' + u.qty + '</span>' +
+                    '<button type="button" onclick="removeBrEditPartUsage(' + i + ')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1rem;padding:0 4px;">&times;</button>' +
+                    '</div>';
+            });
+            html += '</div>';
+            container.innerHTML = html;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -12002,11 +12275,39 @@
                 } else { mapped.totalJobHours = 0; }
                 mapped.linkedWoId = linkedWoId;
                 mapped.brId = 'BR-' + String(brCreated.id).padStart(6, '0');
+
+                // Deduct parts from inventory and save to breakdown
+                if (brPartsUsed.length > 0) {
+                    for (var pi = 0; pi < brPartsUsed.length; pi++) {
+                        var pu = brPartsUsed[pi];
+                        var puPart = partsData.find(function(p) { return p.id === pu.partId; });
+                        if (puPart) {
+                            var newQty = puPart.qty - pu.qty;
+                            await CraderoAPI.parts.update(pu.partId, { quantity_in_stock: newQty });
+                            puPart.qty = newQty;
+                            logAudit('update', 'part', pu.partId, { action: 'usage', quantityUsed: pu.qty, breakdownId: brCreated.id });
+                            if (newQty <= (puPart.minStock || 0) && newQty > 0) {
+                                showToast('Low stock warning: ' + puPart.name + ' (' + newQty + ' remaining)', 'warning');
+                            } else if (newQty <= 0) {
+                                showToast('Out of stock: ' + puPart.name + '!', 'error');
+                            }
+                        }
+                    }
+                    var partsUsedJson = brPartsUsed.map(function(pu) { return { partId: pu.partId, partName: pu.partName, qty: pu.qty }; });
+                    await CraderoAPI.breakdowns.update(brCreated.id, { parts_used: partsUsedJson });
+                    mapped.partsUsed = partsUsedJson;
+                } else {
+                    mapped.partsUsed = [];
+                }
+                brPartsUsed = [];
+
                 breakdownsData.unshift(mapped);
 
                 closeModal('logBreakdownModal');
                 document.getElementById('logBreakdownForm').reset();
+                renderBrPartsUsed();
                 renderBreakdowns();
+                renderParts();
                 populateEquipDropdown('brFilterMachine', true);
                 refreshDashboards();
                 showToast('Breakdown logged' + (linkedWoId ? ' \u2014 Work Order raised.' : '.'), 'success');
@@ -12035,6 +12336,18 @@
             document.getElementById('brEditStatus').value           = br.status;
             document.getElementById('brEditActionTaken').value      = br.actionTaken || '';
             calcBrEditTimes();
+            // Load existing parts used
+            brEditPartsUsed = (br.partsUsed && Array.isArray(br.partsUsed)) ? br.partsUsed.map(function(p) { return { partId: p.partId, partName: p.partName, qty: p.qty }; }) : [];
+            brEditPartsOriginal = JSON.parse(JSON.stringify(brEditPartsUsed));
+            renderBrEditPartsUsed();
+            // Reset search inputs
+            var brEditSearchInput = document.getElementById('brEditPartSearchInput');
+            if (brEditSearchInput) brEditSearchInput.value = '';
+            var brEditHidden = document.getElementById('brEditPartSelect');
+            if (brEditHidden) brEditHidden.value = '';
+            var brEditWarn = document.getElementById('brEditPartStockWarning');
+            if (brEditWarn) brEditWarn.style.display = 'none';
+
             var linkedDiv = document.getElementById('brDetailLinkedWo');
             linkedDiv.innerHTML = br.linkedWoId
                 ? '<div style="background:var(--gray-100);padding:0.6rem 0.75rem;border-radius:8px;font-size:0.85rem;">\u26A1 Linked Work Order: <strong>WO-2026-' + String(br.linkedWoId).padStart(3,'0') + '</strong></div>'
@@ -12072,6 +12385,63 @@
                 var editEqMatch = equipmentList.find(function(e) { return e.name === br.machine; });
                 var dbStatus = ({ 'pending': 'reported', 'in-progress': 'repair_in_progress', 'resolved': 'resolved' }[newStatus] || 'reported');
                 if (CRADERO_DEBUG) console.log('[DEBUG] saveBreakdownEdit - newStatus:', newStatus, '-> dbStatus:', dbStatus);
+                // Diff parts: find newly added and removed parts
+                var addedParts = [];
+                var removedParts = [];
+                // Find added parts (in brEditPartsUsed but not in brEditPartsOriginal)
+                brEditPartsUsed.forEach(function(ep) {
+                    var foundIdx = -1;
+                    for (var oi = 0; oi < brEditPartsOriginal.length; oi++) {
+                        if (brEditPartsOriginal[oi].partId === ep.partId && brEditPartsOriginal[oi].qty === ep.qty && !brEditPartsOriginal[oi]._matched) {
+                            foundIdx = oi; break;
+                        }
+                    }
+                    if (foundIdx >= 0) {
+                        brEditPartsOriginal[foundIdx]._matched = true;
+                    } else {
+                        addedParts.push(ep);
+                    }
+                });
+                // Find removed parts (in original but not matched)
+                brEditPartsOriginal.forEach(function(op) {
+                    if (!op._matched) removedParts.push(op);
+                });
+
+                // Deduct inventory for newly added parts
+                for (var ai = 0; ai < addedParts.length; ai++) {
+                    var ap = addedParts[ai];
+                    var aPart = partsData.find(function(p) { return p.id === ap.partId; });
+                    if (aPart) {
+                        if (aPart.qty < ap.qty) {
+                            showToast('Insufficient stock for ' + aPart.name + '! Only ' + aPart.qty + ' available.', 'error');
+                            return;
+                        }
+                        var aNewQty = aPart.qty - ap.qty;
+                        await CraderoAPI.parts.update(ap.partId, { quantity_in_stock: aNewQty });
+                        aPart.qty = aNewQty;
+                        logAudit('update', 'part', ap.partId, { action: 'usage', quantityUsed: ap.qty, breakdownId: br.id });
+                        if (aNewQty <= (aPart.minStock || 0) && aNewQty > 0) {
+                            showToast('Low stock warning: ' + aPart.name + ' (' + aNewQty + ' remaining)', 'warning');
+                        } else if (aNewQty <= 0) {
+                            showToast('Out of stock: ' + aPart.name + '!', 'error');
+                        }
+                    }
+                }
+
+                // Return inventory for removed parts
+                for (var ri = 0; ri < removedParts.length; ri++) {
+                    var rp = removedParts[ri];
+                    var rPart = partsData.find(function(p) { return p.id === rp.partId; });
+                    if (rPart) {
+                        var rNewQty = rPart.qty + rp.qty;
+                        await CraderoAPI.parts.update(rp.partId, { quantity_in_stock: rNewQty });
+                        rPart.qty = rNewQty;
+                        logAudit('update', 'part', rp.partId, { action: 'return_to_stores', quantityReturned: rp.qty, breakdownId: br.id });
+                    }
+                }
+
+                var partsUsedJson = brEditPartsUsed.map(function(pu) { return { partId: pu.partId, partName: pu.partName, qty: pu.qty }; });
+
                 await CraderoAPI.breakdowns.update(br.id, {
                     equipment_id: editEqMatch ? editEqMatch.id : undefined,
                     equipment_name: br.machine, title: br.faultDescription,
@@ -12082,8 +12452,10 @@
                     downtime_started: br.downtimeStart || null,
                     downtime_ended: br.downtimeEnd || null,
                     job_started: br.jobStart || null,
-                    job_finished: br.jobFinish || null
+                    job_finished: br.jobFinish || null,
+                    parts_used: partsUsedJson
                 });
+                br.partsUsed = partsUsedJson;
 
                 // If newly resolved and linked WO exists, mark WO completed
                 if (newStatus === 'resolved' && prevStatus !== 'resolved' && br.linkedWoId) {
@@ -12098,6 +12470,7 @@
 
                 closeModal('breakdownDetailModal');
                 renderBreakdowns();
+                renderParts();
                 refreshDashboards();
                 showToast('Breakdown updated.', 'success');
             } catch (err) {
@@ -12326,6 +12699,9 @@
             // Breakdowns
             submitBreakdown, filterBreakdowns, clearBreakdownFilter,
             openBreakdownDetail, saveBreakdownEdit, deleteBreakdown, toggleBrResolutionField,
+            // Breakdown Parts Usage
+            addBrPartUsage, removeBrPartUsage, filterBrPartsDropdown, selectBrPart, checkBrPartStockWarning,
+            addBrEditPartUsage, removeBrEditPartUsage, filterBrEditPartsDropdown, selectBrEditPart, checkBrEditPartStockWarning,
             // Calendar
             prevPeriod, nextPeriod, toggleCalendarView, submitAddCalendarEvent, showEventToast, deleteCalendarEvent,
             // Work Requests
