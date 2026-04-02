@@ -12942,7 +12942,9 @@
             // SOP Documents
             handleEquipSopFiles, removeEquipSopFile, removeExistingSop,
             // Manufacturer Manuals
-            handleEquipManualFiles, removeEquipManualFile, removeExistingManual
+            handleEquipManualFiles, removeEquipManualFile, removeExistingManual,
+            // Multi-Select Engineer Dropdowns
+            msOpen, msToggle, msRemove
         ];
         _expose.forEach(function(fn) { window[fn.name] = fn; });
 
