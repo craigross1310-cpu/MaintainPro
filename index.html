@@ -6537,8 +6537,27 @@
                     };
                 });
 
+                // Fetch breakdown usage
+                var brUsageEnriched = [];
+                breakdownsData.forEach(function(br) {
+                    var partsUsed = br.partsUsed || [];
+                    if (typeof partsUsed === 'string') { try { partsUsed = JSON.parse(partsUsed); } catch(e) { partsUsed = []; } }
+                    partsUsed.forEach(function(pu) {
+                        if (pu.partId === partId) {
+                            brUsageEnriched.push({
+                                type: 'Breakdown',
+                                refId: br.brId || 'BR-' + (br.id || '').substring(0, 8),
+                                equipment: br.machine || '',
+                                date: br.dateISO || br.date || '',
+                                qty: pu.qty || 1,
+                                usedBy: br.reportedBy || ''
+                            });
+                        }
+                    });
+                });
+
                 // Combine all usage
-                var allUsage = woUsageEnriched.concat(pmUsageEnriched);
+                var allUsage = woUsageEnriched.concat(pmUsageEnriched).concat(brUsageEnriched);
                 allUsage.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
 
                 // Build equipment trend analysis
@@ -12883,7 +12902,7 @@
             // Equipment
             submitEquipment, openEquipmentHistory, openEquipmentEdit, saveEquipmentEdit, deleteEquipment,
             // Parts
-            openAddPartModal, resetAndCloseAddPartModal, submitAddPart, openEditPart, saveEditPart, deletePart, orderPart,
+            openAddPartModal, resetAndCloseAddPartModal, submitAddPart, openEditPart, saveEditPart, deletePart, orderPart, openPartWhereUsed,
             addPartSupplier, removePartSupplier, submitPartOrder,
             openManageCategoriesModal, addPartCategory, deletePartCategory,
             // Purchase Orders
