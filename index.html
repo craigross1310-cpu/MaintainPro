@@ -5820,7 +5820,18 @@
             var isOpen = dd.classList.contains('show');
             // Close all other open dropdowns first
             document.querySelectorAll('.multi-select-dropdown.show').forEach(function(el) { el.classList.remove('show'); el.parentElement.querySelector('.multi-select-trigger').classList.remove('open'); });
-            if (!isOpen) { dd.classList.add('show'); trigger.classList.add('open'); }
+            if (!isOpen) {
+                // Use fixed positioning so the dropdown escapes overflow:auto clipping in scrollable modal containers
+                var rect = trigger.getBoundingClientRect();
+                dd.style.position = 'fixed';
+                dd.style.top = rect.bottom + 'px';
+                dd.style.left = rect.left + 'px';
+                dd.style.width = rect.width + 'px';
+                dd.style.right = 'auto';
+                dd.style.zIndex = '9999';
+                dd.classList.add('show');
+                trigger.classList.add('open');
+            }
         }
 
         function msToggle(containerId, checkbox) {
@@ -5879,6 +5890,13 @@
                 });
             }
         });
+        // Close multi-select dropdowns on scroll (fixed-position dropdown would drift otherwise)
+        document.addEventListener('scroll', function() {
+            document.querySelectorAll('.multi-select-dropdown.show').forEach(function(el) {
+                el.classList.remove('show');
+                el.parentElement.querySelector('.multi-select-trigger').classList.remove('open');
+            });
+        }, true);
 
         // Populate all static HTML engineer dropdowns after profiles load
         function populateEngineerDropdowns() {
