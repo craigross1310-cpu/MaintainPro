@@ -3667,10 +3667,10 @@
                                 <option value="">Select frequency...</option>
                                 <option value="daily">Daily</option>
                                 <option value="weekly">Weekly</option>
-                                <option value="bi-weekly">Bi-Weekly</option>
+                                <option value="biweekly">Bi-Weekly</option>
                                 <option value="monthly">Monthly</option>
                                 <option value="quarterly">Quarterly</option>
-                                <option value="semi-annual">Semi-Annual</option>
+                                <option value="semi_annual">Semi-Annual</option>
                                 <option value="annual">Annual</option>
                             </select>
                         </div>
@@ -11061,10 +11061,10 @@
             switch ((frequency || '').toLowerCase()) {
                 case 'daily': next.setDate(next.getDate() + 1); break;
                 case 'weekly': next.setDate(next.getDate() + 7); break;
-                case 'bi-weekly': next.setDate(next.getDate() + 14); break;
+                case 'biweekly': case 'bi-weekly': next.setDate(next.getDate() + 14); break;
                 case 'monthly': next.setMonth(next.getMonth() + 1); break;
                 case 'quarterly': next.setMonth(next.getMonth() + 3); break;
-                case 'semi-annual': next.setMonth(next.getMonth() + 6); break;
+                case 'semi_annual': case 'semi-annual': next.setMonth(next.getMonth() + 6); break;
                 case 'annual': next.setFullYear(next.getFullYear() + 1); break;
                 default: next.setMonth(next.getMonth() + 1); break;
             }
@@ -11335,10 +11335,10 @@
                     '<select class="form-select" id="editPMFrequency">' +
                         '<option value="daily"' + (pm.frequency === 'daily' ? ' selected' : '') + '>Daily</option>' +
                         '<option value="weekly"' + (pm.frequency === 'weekly' ? ' selected' : '') + '>Weekly</option>' +
-                        '<option value="bi-weekly"' + (pm.frequency === 'bi-weekly' ? ' selected' : '') + '>Bi-Weekly</option>' +
+                        '<option value="biweekly"' + (pm.frequency === 'biweekly' ? ' selected' : '') + '>Bi-Weekly</option>' +
                         '<option value="monthly"' + (pm.frequency === 'monthly' ? ' selected' : '') + '>Monthly</option>' +
                         '<option value="quarterly"' + (pm.frequency === 'quarterly' ? ' selected' : '') + '>Quarterly</option>' +
-                        '<option value="semi-annual"' + (pm.frequency === 'semi-annual' ? ' selected' : '') + '>Semi-Annual</option>' +
+                        '<option value="semi_annual"' + (pm.frequency === 'semi_annual' ? ' selected' : '') + '>Semi-Annual</option>' +
                         '<option value="annual"' + (pm.frequency === 'annual' ? ' selected' : '') + '>Annual</option>' +
                     '</select>' +
                 '</div>' +
@@ -11839,9 +11839,9 @@
                 if (csvImportState.type === 'pm') {
                     if (data.frequency) {
                         var fl = data.frequency.toLowerCase();
-                        var freqMap = { 'daily': 'Daily', 'weekly': 'Weekly', 'bi-weekly': 'Bi-weekly', 'biweekly': 'Bi-weekly',
-                            'monthly': 'Monthly', 'quarterly': 'Quarterly', 'semi-annual': 'Semi-annual', 'semiannual': 'Semi-annual',
-                            'annual': 'Annual', 'yearly': 'Annual' };
+                        var freqMap = { 'daily': 'daily', 'weekly': 'weekly', 'bi-weekly': 'biweekly', 'biweekly': 'biweekly',
+                            'monthly': 'monthly', 'quarterly': 'quarterly', 'semi-annual': 'semi_annual', 'semiannual': 'semi_annual', 'semi_annual': 'semi_annual',
+                            'annual': 'annual', 'yearly': 'annual' };
                         data.frequency = freqMap[fl] || data.frequency;
                     }
                 }
