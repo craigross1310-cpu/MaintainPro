@@ -6139,7 +6139,8 @@
                 lastCompleted: row.last_completed_at ? new Date(row.last_completed_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '',
                 lastCompletedRaw: row.last_completed_at || '',
                 scheduledDate: row.next_due_date || '',
-                checklist: row.checklist || [], description: row.description || ''
+                checklist: row.checklist || [], description: row.description || '',
+                comments: row.comments || []
             };
         }
 
@@ -11243,6 +11244,27 @@
                 html += '</div>';
             }
 
+            // Comments section (read-only)
+            var pmComments = pm.comments || [];
+            html += '<div style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:1rem;">' +
+                '<div style="font-weight:600;margin-bottom:0.75rem;">Comments</div>';
+            if (pmComments.length === 0) {
+                html += '<div style="color:var(--gray-600);font-style:italic;padding:0.5rem;">No comments yet.</div>';
+            } else {
+                html += '<div style="display:flex;flex-direction:column;gap:0.75rem;max-height:250px;overflow-y:auto;">';
+                pmComments.forEach(function(c) {
+                    html += '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;border-left:4px solid var(--primary);">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">' +
+                        '<div style="font-weight:600;font-size:0.9rem;">' + escHtml(c.author) + '</div>' +
+                        '<div style="font-size:0.8rem;color:var(--gray-600);">' + escHtml(c.timestamp) + '</div>' +
+                        '</div>' +
+                        '<div style="font-size:0.9rem;line-height:1.5;">' + escHtml(c.text) + '</div>' +
+                        '</div>';
+                });
+                html += '</div>';
+            }
+            html += '</div>';
+
             body.innerHTML = html;
             openModal('pmDetailModal');
         }
@@ -11316,10 +11338,19 @@
                     '<input type="text" class="form-input" id="editPMNewCheckItem" placeholder="New checklist item..." style="flex:1;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addEditPMCheckItem();}">' +
                     '<button type="button" class="btn btn-primary btn-small" onclick="addEditPMCheckItem()">+ Add</button>' +
                 '</div>' +
+            '</div>' +
+            '<div class="form-group" style="border-top:1px solid var(--gray-200);padding-top:1rem;">' +
+                '<label class="form-label">Comments</label>' +
+                '<div id="pmCommentsContainer" style="display:flex;flex-direction:column;gap:0.75rem;max-height:250px;overflow-y:auto;margin-bottom:0.75rem;"></div>' +
+                '<div style="display:flex;gap:0.5rem;">' +
+                    '<input type="text" class="form-input" id="pmNewComment" placeholder="Add a comment..." style="flex:1;" onkeydown="if(event.key===\'Enter\'){addPMComment();}">' +
+                    '<button type="button" class="btn btn-primary btn-small" onclick="addPMComment()">Post</button>' +
+                '</div>' +
             '</div>';
 
             body.innerHTML = html;
             renderEditPMChecklist();
+            renderPMComments(pm);
             openModal('editPMModal');
         }
 
@@ -11353,6 +11384,40 @@
         function removeEditPMCheckItem(idx) {
             editPMChecklist.splice(idx, 1);
             renderEditPMChecklist();
+        }
+
+        function renderPMComments(pm) {
+            var container = document.getElementById('pmCommentsContainer');
+            if (!container) return;
+            if (!pm.comments || pm.comments.length === 0) {
+                container.innerHTML = '<div style="color:var(--gray-600);font-style:italic;padding:0.5rem;">No comments yet.</div>';
+                return;
+            }
+            container.innerHTML = pm.comments.map(function(c) {
+                return '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;border-left:4px solid var(--primary);">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">' +
+                    '<div style="font-weight:600;font-size:0.9rem;">' + escHtml(c.author) + '</div>' +
+                    '<div style="font-size:0.8rem;color:var(--gray-600);">' + escHtml(c.timestamp) + '</div>' +
+                    '</div>' +
+                    '<div style="font-size:0.9rem;line-height:1.5;">' + escHtml(c.text) + '</div>' +
+                    '</div>';
+            }).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function addPMComment() {
+            var input = document.getElementById('pmNewComment');
+            var text = input.value.trim();
+            if (!text) return;
+            var pm = pmData.find(function(p) { return p.id === currentEditPMId; });
+            if (!pm) return;
+            if (!pm.comments) pm.comments = [];
+            var now = new Date();
+            var timestamp = now.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' }) + ' - ' + now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            pm.comments.push({ author: currentUserName || 'User', timestamp: timestamp, text: text });
+            renderPMComments(pm);
+            input.value = '';
+            try { await CraderoAPI.pm.update(pm.id, { comments: pm.comments }); } catch (e) { console.error('[Cradero] Failed to save PM comment:', e); }
         }
 
         async function submitEditPM() {
