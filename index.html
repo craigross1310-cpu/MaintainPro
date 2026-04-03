@@ -4352,6 +4352,19 @@
         </div>
     </div>
 
+    <!-- Calendar Event Detail Modal -->
+    <div id="calendarEventDetailModal" class="modal-overlay">
+        <div class="modal" style="max-width:520px;">
+            <div class="modal-header">
+                <h2 class="modal-title" id="calDetailTitle">Event Details</h2>
+            </div>
+            <div class="modal-body" id="calDetailBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('calendarEventDetailModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- CSV Import Modal -->
     <div id="csvImportModal" class="modal-overlay essential-only-feature">
         <div class="modal" style="max-width:900px;">
@@ -13006,22 +13019,131 @@
             currentCalYear = now.getFullYear();
             currentCalMonth = now.getMonth();
             currentCalDay = now.getDate();
+            currentCalView = 'month';
             renderCalendar();
         }
 
         function showEventToast(evId) {
-            var ev = calendarEvents.find(function(e) { return e.id === evId; });
-            // Also check PM-sourced events
-            if (!ev && String(evId).indexOf('pm-') === 0) {
+            // Find PM data if this is a PM-sourced event
+            var pm = null;
+            if (String(evId).indexOf('pm-') === 0) {
                 var pmId = evId.replace('pm-', '');
-                var pm = pmData.find(function(p) { return String(p.id) === pmId; });
-                if (pm) ev = { title: pm.title, date: pm.scheduledDate, assignedTo: pm.assignedTo, equipment: pm.equipment };
+                pm = pmData.find(function(p) { return String(p.id) === pmId; });
+            } else if (String(evId).indexOf('proj-') === 0) {
+                var pmId2 = evId.replace('proj-', '');
+                pm = pmData.find(function(p) { return String(p.id) === pmId2; });
             }
-            if (!ev) return;
-            var msg = ev.title + ' \u2014 ' + formatDateISO(ev.date);
-            if (ev.equipment) msg += ' \u2014 ' + ev.equipment;
-            if (ev.assignedTo) msg += ' (' + ev.assignedTo + ')';
-            showToast(msg, 'info');
+            // Also check if a calendar event has a PM tag in its description
+            var ev = calendarEvents.find(function(e) { return e.id === evId; });
+            if (ev && ev.description && !pm) {
+                var m = ev.description.match(/\[PM:([^\]]+)\]/);
+                if (m) pm = pmData.find(function(p) { return String(p.id) === m[1]; });
+            }
+
+            if (pm) {
+                showPMDetailModal(pm);
+            } else if (ev) {
+                showCalEventDetailModal(ev);
+            }
+        }
+
+        function showPMDetailModal(pm) {
+            var titleEl = document.getElementById('calDetailTitle');
+            var bodyEl = document.getElementById('calDetailBody');
+            if (!titleEl || !bodyEl) return;
+            titleEl.textContent = pm.title;
+
+            var statusColors = { 'overdue': '#EF4444', 'due-soon': '#F59E0B', 'upcoming': '#3B82F6', 'completed': '#22C55E' };
+            var statusLabels = { 'overdue': 'Overdue', 'due-soon': 'Due Soon', 'upcoming': 'Upcoming', 'completed': 'Completed' };
+            var statusColor = statusColors[pm.dueStatus] || '#6B7280';
+            var statusLabel = statusLabels[pm.dueStatus] || pm.dueStatus;
+
+            var html = '<div style="display:flex;flex-direction:column;gap:0.85rem;">';
+
+            // Status badge
+            html += '<div><span style="display:inline-block;padding:0.3rem 0.75rem;border-radius:20px;font-size:0.8rem;font-weight:700;color:white;background:' + statusColor + ';">' + statusLabel + '</span>';
+            if (pm.dueText) html += '<span style="margin-left:0.5rem;font-size:0.85rem;color:var(--gray-600);">' + escHtml(pm.dueText) + '</span>';
+            html += '</div>';
+
+            // Details grid
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem 1.5rem;">';
+            html += buildDetailRow('Equipment', pm.equipment);
+            html += buildDetailRow('Frequency', pm.frequency);
+            html += buildDetailRow('Scheduled Date', pm.scheduledDate ? new Date(pm.scheduledDate + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Not set');
+            html += buildDetailRow('Duration', pm.duration || 'Not set');
+            html += buildDetailRow('Assigned To', pm.assignedTo || 'Unassigned');
+            html += buildDetailRow('Last Completed', pm.lastCompleted || 'Never');
+            html += '</div>';
+
+            // Description
+            if (pm.description) {
+                html += '<div style="border-top:1px solid var(--gray-200);padding-top:0.6rem;">';
+                html += '<div style="font-weight:700;font-size:0.8rem;color:var(--gray-500);margin-bottom:0.25rem;">DESCRIPTION</div>';
+                html += '<div style="font-size:0.9rem;color:var(--dark);line-height:1.5;">' + escHtml(pm.description) + '</div>';
+                html += '</div>';
+            }
+
+            // Checklist
+            if (pm.checklist && pm.checklist.length > 0) {
+                html += '<div style="border-top:1px solid var(--gray-200);padding-top:0.6rem;">';
+                html += '<div style="font-weight:700;font-size:0.8rem;color:var(--gray-500);margin-bottom:0.4rem;">CHECKLIST (' + pm.checklist.length + ' items)</div>';
+                html += '<div style="display:flex;flex-direction:column;gap:0.25rem;">';
+                pm.checklist.forEach(function(item) {
+                    var text = typeof item === 'string' ? item : (item.text || item.label || JSON.stringify(item));
+                    var checked = (typeof item === 'object' && item.checked) ? true : false;
+                    html += '<div style="display:flex;align-items:center;gap:0.4rem;font-size:0.85rem;padding:0.2rem 0;">';
+                    html += '<span style="color:' + (checked ? '#22C55E' : 'var(--gray-400)') + ';font-size:1rem;">' + (checked ? '&#9745;' : '&#9744;') + '</span>';
+                    html += '<span' + (checked ? ' style="text-decoration:line-through;color:var(--gray-400);"' : '') + '>' + escHtml(text) + '</span>';
+                    html += '</div>';
+                });
+                html += '</div></div>';
+            }
+
+            // Comments
+            if (pm.comments && pm.comments.length > 0) {
+                html += '<div style="border-top:1px solid var(--gray-200);padding-top:0.6rem;">';
+                html += '<div style="font-weight:700;font-size:0.8rem;color:var(--gray-500);margin-bottom:0.4rem;">COMMENTS (' + pm.comments.length + ')</div>';
+                pm.comments.forEach(function(c) {
+                    var text = typeof c === 'string' ? c : (c.text || c.comment || JSON.stringify(c));
+                    var author = typeof c === 'object' ? (c.author || c.user || '') : '';
+                    var date = typeof c === 'object' && c.date ? c.date : '';
+                    html += '<div style="background:var(--gray-100);padding:0.5rem 0.6rem;border-radius:6px;margin-bottom:0.3rem;font-size:0.85rem;">';
+                    if (author || date) html += '<div style="font-weight:600;font-size:0.75rem;color:var(--gray-500);margin-bottom:0.15rem;">' + escHtml(author) + (date ? ' \u2014 ' + escHtml(date) : '') + '</div>';
+                    html += '<div>' + escHtml(text) + '</div></div>';
+                });
+                html += '</div>';
+            }
+
+            html += '</div>';
+            bodyEl.innerHTML = html;
+            openModal('calendarEventDetailModal');
+        }
+
+        function showCalEventDetailModal(ev) {
+            var titleEl = document.getElementById('calDetailTitle');
+            var bodyEl = document.getElementById('calDetailBody');
+            if (!titleEl || !bodyEl) return;
+            titleEl.textContent = ev.title || 'Event Details';
+
+            var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem 1.5rem;">';
+            html += buildDetailRow('Date', ev.date ? new Date(ev.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');
+            html += buildDetailRow('Type', (ev.type || '').replace(/-/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); }));
+            if (ev.duration) html += buildDetailRow('Duration', ev.duration);
+            if (ev.assignedTo) html += buildDetailRow('Assigned To', ev.assignedTo);
+            if (ev.equipment) html += buildDetailRow('Equipment', ev.equipment);
+            html += '</div>';
+            if (ev.notes || ev.description) {
+                html += '<div style="border-top:1px solid var(--gray-200);padding-top:0.6rem;margin-top:0.6rem;">';
+                html += '<div style="font-weight:700;font-size:0.8rem;color:var(--gray-500);margin-bottom:0.25rem;">NOTES</div>';
+                html += '<div style="font-size:0.9rem;color:var(--dark);line-height:1.5;">' + escHtml(ev.notes || ev.description) + '</div>';
+                html += '</div>';
+            }
+            bodyEl.innerHTML = html;
+            openModal('calendarEventDetailModal');
+        }
+
+        function buildDetailRow(label, value) {
+            return '<div style="margin-bottom:0.1rem;"><div style="font-weight:700;font-size:0.75rem;color:var(--gray-500);text-transform:uppercase;">' + label + '</div><div style="font-size:0.9rem;font-weight:500;color:var(--dark);">' + escHtml(value || '—') + '</div></div>';
         }
 
         async function submitAddCalendarEvent() {
