@@ -6,6 +6,9 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=(), payment=()">
     <title>Cradero - Complete Maintenance Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- SECURITY NOTE: 'unsafe-inline' is required because all JS/CSS is inline in this single-file SPA.
@@ -1708,11 +1711,11 @@
                 <form class="auth-form" onsubmit="handleLogin(event)">
                     <div class="form-group">
                         <label class="form-label">Email</label>
-                        <input type="email" class="form-input" id="loginEmail" required placeholder="you@company.com">
+                        <input type="email" class="form-input" id="loginEmail" required placeholder="you@company.com" autocomplete="email">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Password</label>
-                        <input type="password" class="form-input" id="loginPassword" required placeholder="Enter your password" minlength="6">
+                        <input type="password" class="form-input" id="loginPassword" required placeholder="Enter your password" minlength="6" autocomplete="current-password">
                     </div>
                     <button type="submit" class="btn-auth" id="loginBtn">Log In</button>
                 </form>
@@ -1735,11 +1738,12 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Password</label>
-                        <input type="password" class="form-input" id="signupPassword" required placeholder="Minimum 6 characters" minlength="6">
+                        <input type="password" class="form-input" id="signupPassword" required placeholder="Min 10 chars, upper, lower, number, symbol" minlength="10" autocomplete="new-password">
+                        <div style="font-size:0.75rem;color:var(--gray-500);margin-top:0.25rem;">At least 10 characters with uppercase, lowercase, number, and special character.</div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Confirm Password</label>
-                        <input type="password" class="form-input" id="signupPasswordConfirm" required placeholder="Re-enter your password" minlength="6">
+                        <input type="password" class="form-input" id="signupPasswordConfirm" required placeholder="Re-enter your password" minlength="10" autocomplete="new-password">
                     </div>
                     <button type="submit" class="btn-auth" id="signupBtn">Sign Up</button>
                 </form>
@@ -3854,14 +3858,10 @@
                     <div style="padding: 1rem; background: rgba(0, 102, 255, 0.05); border-left: 4px solid var(--primary); border-radius: 8px; margin-top: 1.5rem;">
                         <div style="font-weight: 600; margin-bottom: 0.5rem;">📋 What happens after ordering:</div>
                         <div style="font-size: 0.9rem; color: var(--gray-700); line-height: 1.6;">
-                            ✓ Purchase order sent to vendor electronically<br>
+                            ✓ Draft purchase order created internally<br>
                             ✓ PO number generated for tracking<br>
-                            ✓ Expected delivery date calculated<br>
-                            ✓ Inventory updated with "on order" status<br>
-                            ✓ Email notification sent to requester<br>
-                            ✓ Delivery tracking information provided<br>
-                            ✓ Automatic notification when parts arrive<br>
-                            ✓ Stock levels updated upon receipt
+                            ✓ Order added to Purchase Orders for review &amp; approval<br>
+                            ✓ Vendor must be contacted separately to place the order
                         </div>
                     </div>
                 </form>
@@ -5472,6 +5472,10 @@
             }
             if (CRADERO_DEBUG) console.log('[Cradero] showApp — tier:', currentUserTier, 'role:', role, 'name:', currentUserName);
             resetSessionTimer();
+            // Start absolute session timer if not already running
+            if (!absoluteSessionTimer) {
+                startAbsoluteSessionTimer();
+            }
             applyTierRestrictions();
             // Hide Add Equipment button for engineers
             if (role !== 'admin' && role !== 'manager') {
@@ -5535,6 +5539,11 @@
             document.getElementById('pendingScreen').style.display = 'none';
             document.getElementById('offlineAuthScreen').style.display = 'none';
             document.getElementById('userEmailDisplay').textContent = '';
+            // Clear all password fields to prevent credentials lingering in the DOM
+            ['loginPassword', 'signupPassword', 'signupPasswordConfirm'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.value = '';
+            });
         }
 
         async function handleSignUp(e) {
@@ -5547,6 +5556,28 @@
 
             if (password !== confirm) {
                 showAuthMessage('Passwords do not match.', 'error');
+                return;
+            }
+
+            // Enforce strong password policy
+            if (password.length < 10) {
+                showAuthMessage('Password must be at least 10 characters long.', 'error');
+                return;
+            }
+            if (!/[A-Z]/.test(password)) {
+                showAuthMessage('Password must contain at least one uppercase letter.', 'error');
+                return;
+            }
+            if (!/[a-z]/.test(password)) {
+                showAuthMessage('Password must contain at least one lowercase letter.', 'error');
+                return;
+            }
+            if (!/[0-9]/.test(password)) {
+                showAuthMessage('Password must contain at least one number.', 'error');
+                return;
+            }
+            if (!/[^A-Za-z0-9]/.test(password)) {
+                showAuthMessage('Password must contain at least one special character.', 'error');
                 return;
             }
 
@@ -5575,41 +5606,48 @@
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // RATE LIMITING — lock login after 5 failures for 30s
+        // RATE LIMITING — progressive lockout after failed login attempts
         // NOTE: This is client-side only. For robust protection against brute-force
         // attacks, configure server-side rate limiting via Supabase Auth settings
-        // or Edge Functions.
+        // or Edge Functions. Client-side lockout is a UX deterrent, not a security
+        // boundary — the real protection must come from the server.
         // ─────────────────────────────────────────────────────────────────────
         var LOGIN_MAX_ATTEMPTS = 5;
-        var LOGIN_LOCKOUT_MS = 30000;
+        var LOGIN_LOCKOUT_BASE_MS = 60000; // 1 minute base lockout
         var loginLockTimer = null;
 
         function getLoginState() {
             try {
-                var stored = JSON.parse(sessionStorage.getItem('_crl') || '{}');
-                return { attempts: stored.a || 0, lockUntil: stored.l || 0 };
-            } catch(e) { return { attempts: 0, lockUntil: 0 }; }
+                // Use localStorage so lockout persists across tabs and page refreshes
+                var stored = JSON.parse(localStorage.getItem('_crl') || '{}');
+                return { attempts: stored.a || 0, lockUntil: stored.l || 0, strikes: stored.s || 0 };
+            } catch(e) { return { attempts: 0, lockUntil: 0, strikes: 0 }; }
         }
 
-        function setLoginState(attempts, lockUntil) {
-            try { sessionStorage.setItem('_crl', JSON.stringify({ a: attempts, l: lockUntil })); } catch(e) {}
+        function setLoginState(attempts, lockUntil, strikes) {
+            try { localStorage.setItem('_crl', JSON.stringify({ a: attempts, l: lockUntil, s: strikes || 0 })); } catch(e) {}
         }
 
         function isLoginLocked() {
             var state = getLoginState();
             if (Date.now() < state.lockUntil) return true;
             if (state.lockUntil > 0 && Date.now() >= state.lockUntil) {
-                setLoginState(0, 0);
+                // Keep strikes count so repeated lockouts get progressively longer
+                setLoginState(0, 0, state.strikes);
             }
             return false;
         }
 
         function startLoginLockout() {
-            var lockUntil = Date.now() + LOGIN_LOCKOUT_MS;
-            setLoginState(LOGIN_MAX_ATTEMPTS, lockUntil);
+            var state = getLoginState();
+            var strikes = (state.strikes || 0) + 1;
+            // Progressive lockout: 1 min, 2 min, 4 min, 8 min, max 15 min
+            var lockoutMs = Math.min(LOGIN_LOCKOUT_BASE_MS * Math.pow(2, strikes - 1), 15 * 60 * 1000);
+            var lockUntil = Date.now() + lockoutMs;
+            setLoginState(LOGIN_MAX_ATTEMPTS, lockUntil, strikes);
             var btn = document.getElementById('loginBtn');
             btn.disabled = true;
-            var remaining = Math.ceil(LOGIN_LOCKOUT_MS / 1000);
+            var remaining = Math.ceil(lockoutMs / 1000);
             btn.textContent = 'Locked (' + remaining + 's)';
             if (loginLockTimer) clearInterval(loginLockTimer);
             loginLockTimer = setInterval(function() {
@@ -5617,7 +5655,8 @@
                 if (remaining <= 0) {
                     clearInterval(loginLockTimer);
                     loginLockTimer = null;
-                    setLoginState(0, 0);
+                    var st = getLoginState();
+                    setLoginState(0, 0, st.strikes);
                     btn.disabled = false;
                     btn.textContent = 'Log In';
                 } else {
@@ -5646,7 +5685,7 @@
             if (result.error) {
                 var state = getLoginState();
                 state.attempts++;
-                setLoginState(state.attempts, state.lockUntil);
+                setLoginState(state.attempts, state.lockUntil, state.strikes);
                 btn.disabled = false;
                 btn.textContent = 'Log In';
                 if (state.attempts >= LOGIN_MAX_ATTEMPTS) {
@@ -5660,7 +5699,7 @@
                 return;
             }
 
-            setLoginState(0, 0);
+            setLoginState(0, 0, 0);
             btn.disabled = false;
             btn.textContent = 'Log In';
 
@@ -5671,12 +5710,45 @@
 
         // ─────────────────────────────────────────────────────────────────────
         // SESSION TIMEOUT — auto-logout after 30 minutes of inactivity
+        // ABSOLUTE SESSION — hard logout after 4 hours regardless of activity
         // ─────────────────────────────────────────────────────────────────────
         var SESSION_TIMEOUT_MS = 30 * 60 * 1000;
         var SESSION_WARNING_MS = 25 * 60 * 1000;
+        var ABSOLUTE_SESSION_MS = 4 * 60 * 60 * 1000; // 4 hour hard limit
+        var ABSOLUTE_WARNING_MS = ABSOLUTE_SESSION_MS - (5 * 60 * 1000); // warn 5 min before
         var sessionTimer = null;
         var sessionWarningTimer = null;
+        var absoluteSessionTimer = null;
+        var absoluteWarningTimer = null;
         var lastActivityReset = 0;
+        var SESSION_START_KEY = 'cradero_session_start';
+
+        function startAbsoluteSessionTimer() {
+            var startTime = Date.now();
+            try { sessionStorage.setItem(SESSION_START_KEY, String(startTime)); } catch(e) {}
+            if (absoluteSessionTimer) clearTimeout(absoluteSessionTimer);
+            if (absoluteWarningTimer) clearTimeout(absoluteWarningTimer);
+            absoluteWarningTimer = setTimeout(function() {
+                showToast('Your session will expire in 5 minutes. Please save your work and log in again.', 'error');
+            }, ABSOLUTE_WARNING_MS);
+            absoluteSessionTimer = setTimeout(function() {
+                showToast('Session expired (maximum duration reached). Please log in again.', 'error');
+                handleLogout();
+            }, ABSOLUTE_SESSION_MS);
+        }
+
+        // On tab focus, check if absolute session has already expired (timer may have drifted)
+        function checkAbsoluteSessionExpiry() {
+            try {
+                var start = parseInt(sessionStorage.getItem(SESSION_START_KEY) || '0', 10);
+                if (start > 0 && (Date.now() - start) >= ABSOLUTE_SESSION_MS) {
+                    showToast('Session expired (maximum duration reached). Please log in again.', 'error');
+                    handleLogout();
+                    return true;
+                }
+            } catch(e) {}
+            return false;
+        }
 
         function resetSessionTimer() {
             if (!appInitialized) return;
@@ -5696,9 +5768,11 @@
             }, SESSION_TIMEOUT_MS);
         }
 
-        // Re-check timer when tab becomes visible (setTimeout may drift while hidden)
+        // Re-check timers when tab becomes visible (setTimeout may drift while hidden)
         document.addEventListener('visibilitychange', function() {
             if (document.visibilityState === 'visible' && appInitialized) {
+                // Check absolute expiry first
+                if (checkAbsoluteSessionExpiry()) return;
                 lastActivityReset = 0;
                 resetSessionTimer();
             }
@@ -5709,15 +5783,60 @@
             document.addEventListener(evt, resetSessionTimer, { passive: true });
         });
 
+        // ─────────────────────────────────────────────────────────────────────
+        // CROSS-TAB LOGOUT — listen for logout in other tabs via storage event
+        // ─────────────────────────────────────────────────────────────────────
+        var LOGOUT_SIGNAL_KEY = 'cradero_logout_signal';
+        window.addEventListener('storage', function(e) {
+            if (e.key === LOGOUT_SIGNAL_KEY && e.newValue) {
+                // Another tab triggered logout
+                if (appInitialized) {
+                    appInitialized = false;
+                    if (sessionTimer) { clearTimeout(sessionTimer); sessionTimer = null; }
+                    if (sessionWarningTimer) { clearTimeout(sessionWarningTimer); sessionWarningTimer = null; }
+                    if (absoluteSessionTimer) { clearTimeout(absoluteSessionTimer); absoluteSessionTimer = null; }
+                    if (absoluteWarningTimer) { clearTimeout(absoluteWarningTimer); absoluteWarningTimer = null; }
+                    try { supabaseClient.auth.signOut(); } catch(e2) {}
+                    showAuthScreen();
+                }
+            }
+        });
+
         async function handleLogout() {
             if (sessionTimer) { clearTimeout(sessionTimer); sessionTimer = null; }
             if (sessionWarningTimer) { clearTimeout(sessionWarningTimer); sessionWarningTimer = null; }
+            if (absoluteSessionTimer) { clearTimeout(absoluteSessionTimer); absoluteSessionTimer = null; }
+            if (absoluteWarningTimer) { clearTimeout(absoluteWarningTimer); absoluteWarningTimer = null; }
             try { await supabaseClient.auth.signOut(); } catch(e) {}
+            // Signal other tabs to log out
+            try {
+                localStorage.setItem(LOGOUT_SIGNAL_KEY, String(Date.now()));
+                localStorage.removeItem(LOGOUT_SIGNAL_KEY);
+            } catch(e) {}
             // Clear caches via service worker
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage('LOGOUT');
             }
-            saveData('cachedUser', null);
+            // Clear ALL application data from localStorage and sessionStorage
+            clearAllData();
+            try { localStorage.removeItem('_crl'); } catch(e) {}
+            try { sessionStorage.removeItem(SESSION_START_KEY); } catch(e) {}
+            // Clear in-memory data arrays to prevent stale data leaking between sessions
+            workOrdersData = [];
+            workRequestsData = [];
+            equipmentList = [];
+            partsData = [];
+            partsCategoriesData = [];
+            purchaseOrdersData = [];
+            hotWorkPermits = [];
+            contractorPermits = [];
+            if (typeof contractorHotWorkPermits !== 'undefined') contractorHotWorkPermits = [];
+            if (typeof pmData !== 'undefined') pmData = [];
+            if (typeof breakdownsData !== 'undefined') breakdownsData = [];
+            if (typeof staffProfiles !== 'undefined') staffProfiles = [];
+            currentUserRole = null;
+            currentUserTier = 'basic';
+            currentUserName = '';
             appInitialized = false;
             showAuthScreen();
         }
@@ -5730,9 +5849,24 @@
         }
 
         async function checkAuthOnLoad() {
+            // Check if absolute session has already expired before trusting cached session
+            if (checkAbsoluteSessionExpiry()) return false;
             try {
                 var result = await supabaseClient.auth.getSession();
                 if (result.data.session) {
+                    // Validate token expiry — reject sessions with expired JWTs
+                    var token = result.data.session.access_token;
+                    if (token) {
+                        try {
+                            var payload = JSON.parse(atob(token.split('.')[1]));
+                            if (payload.exp && payload.exp * 1000 < Date.now()) {
+                                // Token expired — force re-auth
+                                await supabaseClient.auth.signOut();
+                                showAuthScreen();
+                                return false;
+                            }
+                        } catch(pe) { /* non-JWT token, let Supabase handle */ }
+                    }
                     await showApp(result.data.session.user);
                     return true;
                 }
@@ -5745,7 +5879,7 @@
             return false;
         }
 
-        // Listen for auth state changes (e.g. session expiry, tab focus)
+        // Listen for auth state changes (e.g. session expiry, tab focus, token refresh)
         var showAppInProgress = false;
         supabaseClient.auth.onAuthStateChange(function(event, session) {
             if (event === 'SIGNED_IN' && session) {
@@ -5757,6 +5891,14 @@
                 appInitialized = false;
                 showAppInProgress = false;
                 showAuthScreen();
+            } else if (event === 'TOKEN_REFRESHED') {
+                // Token was refreshed successfully — no action needed
+                if (CRADERO_DEBUG) console.log('[Cradero] Token refreshed successfully');
+            }
+            // If session becomes null unexpectedly while app is running, force logout
+            if (!session && appInitialized && event !== 'SIGNED_OUT') {
+                showToast('Your session has ended. Please log in again.', 'error');
+                handleLogout();
             }
         });
 
@@ -7461,6 +7603,18 @@
             return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
         }
 
+        // Validate that a string is a safe UUID (for use in onclick handlers, etc.)
+        // Returns the string if valid, empty string if not. Prevents injection via malformed IDs.
+        function safeId(id) {
+            if (!id) return '';
+            var s = String(id);
+            // Allow UUID format and simple alphanumeric/dash/underscore IDs
+            if (/^[a-zA-Z0-9_-]{1,64}$/.test(s)) return s;
+            // Full UUID with hyphens
+            if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) return s;
+            return '';
+        }
+
         // ─────────────────────────────────────────────────────────────────────
         // DYNAMIC NOTIFICATIONS (from real data)
         // ─────────────────────────────────────────────────────────────────────
@@ -7514,7 +7668,10 @@
                 container.innerHTML = '<div style="padding:1rem;color:var(--gray-500);text-align:center;">No notifications</div>';
             } else {
                 container.innerHTML = items.slice(0, 10).map(function(n) {
-                    var onclick = 'handleNotificationClick(this,\'' + n.tab + '\',' + (n.id ? '\'' + n.id + '\'' : 'null') + ')';
+                    // Sanitize tab and id to prevent injection via malformed data
+                    var safeTab = escHtml(String(n.tab || '').replace(/[^a-zA-Z0-9_-]/g, ''));
+                    var safeId = n.id ? escHtml(String(n.id).replace(/[^a-zA-Z0-9_-]/g, '')) : '';
+                    var onclick = 'handleNotificationClick(this,\'' + safeTab + '\',' + (safeId ? '\'' + safeId + '\'' : 'null') + ')';
                     return '<div class="notification-item' + (n.unread ? ' unread' : '') + '" onclick="' + onclick + '">' +
                         '<div class="notification-title">' + n.icon + ' ' + n.title + '</div>' +
                         '<div class="notification-text">' + n.text + '</div>' +
@@ -7978,7 +8135,7 @@
             if (wo.photoUrls && wo.photoUrls.length > 0) {
                 photosHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
                 wo.photoUrls.forEach(function(url) {
-                    photosHtml += '<a href="' + escHtml(url) + '" target="_blank" style="display:block;">' +
+                    photosHtml += '<a href="' + escHtml(url) + '" target="_blank" rel="noopener noreferrer" style="display:block;">' +
                         '<img src="' + escHtml(url) + '" style="width:150px;height:150px;object-fit:cover;border-radius:8px;border:2px solid var(--gray-300);cursor:pointer;" loading="lazy">' +
                         '</a>';
                 });
@@ -8652,7 +8809,7 @@
                 // Refresh photos display
                 var photosHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
                 photoUrls.forEach(function(url) {
-                    photosHtml += '<a href="' + escHtml(url) + '" target="_blank" style="display:block;">' +
+                    photosHtml += '<a href="' + escHtml(url) + '" target="_blank" rel="noopener noreferrer" style="display:block;">' +
                         '<img src="' + escHtml(url) + '" style="width:150px;height:150px;object-fit:cover;border-radius:8px;border:2px solid var(--gray-300);cursor:pointer;" loading="lazy">' +
                         '</a>';
                 });
@@ -9113,7 +9270,7 @@
                       sopList.map(function(sop) {
                           return '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">' +
                               '<span style="font-weight:600;">📄 ' + escHtml(sop.name) + '</span>' +
-                              '<a href="' + escHtml(sop.url) + '" target="_blank" class="btn btn-primary btn-small" style="min-height:28px;">View / Download</a>' +
+                              '<a href="' + escHtml(sop.url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-small" style="min-height:28px;">View / Download</a>' +
                               '</div>';
                       }).join('') + '</div>'
                     : '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;color:var(--gray-600);font-style:italic;">No SOPs attached to this equipment.</div>';
@@ -9128,7 +9285,7 @@
                       manualList.map(function(m) {
                           return '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">' +
                               '<span style="font-weight:600;">📘 ' + escHtml(m.name) + '</span>' +
-                              '<a href="' + escHtml(m.url) + '" target="_blank" class="btn btn-primary btn-small" style="min-height:28px;">View / Download</a>' +
+                              '<a href="' + escHtml(m.url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-small" style="min-height:28px;">View / Download</a>' +
                               '</div>';
                       }).join('') + '</div>'
                     : '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;color:var(--gray-600);font-style:italic;">No manufacturer manuals attached to this equipment.</div>';
@@ -9175,7 +9332,7 @@
             container.innerHTML = sopUrls.map(function(sop, i) {
                 return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;margin-bottom:0.25rem;">' +
                     '<span style="flex:1;font-size:0.85rem;">📄 ' + escHtml(sop.name) + '</span>' +
-                    '<a href="' + escHtml(sop.url) + '" target="_blank" class="btn btn-secondary btn-small" style="min-height:28px;padding:0 0.5rem;">View</a>' +
+                    '<a href="' + escHtml(sop.url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-small" style="min-height:28px;padding:0 0.5rem;">View</a>' +
                     '<button type="button" class="btn btn-danger btn-small" style="min-height:28px;padding:0 0.5rem;" onclick="removeExistingSop(' + i + ')">&times;</button>' +
                     '</div>';
             }).join('');
@@ -9231,7 +9388,7 @@
             container.innerHTML = manualUrls.map(function(m, i) {
                 return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--gray-100);border-radius:6px;margin-bottom:0.25rem;">' +
                     '<span style="flex:1;font-size:0.85rem;">📘 ' + escHtml(m.name) + '</span>' +
-                    '<a href="' + escHtml(m.url) + '" target="_blank" class="btn btn-secondary btn-small" style="min-height:28px;padding:0 0.5rem;">View</a>' +
+                    '<a href="' + escHtml(m.url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-small" style="min-height:28px;padding:0 0.5rem;">View</a>' +
                     '<button type="button" class="btn btn-danger btn-small" style="min-height:28px;padding:0 0.5rem;" onclick="removeExistingManual(' + i + ')">&times;</button>' +
                     '</div>';
             }).join('');
@@ -12254,6 +12411,32 @@
                 if (!navigator.onLine) offlineEl.style.display = 'inline-block';
                 window.addEventListener('online', function() { offlineEl.style.display = 'none'; });
                 window.addEventListener('offline', function() { offlineEl.style.display = 'inline-block'; });
+            }
+
+            // Restore lockout state on page load (survives refresh via localStorage)
+            if (isLoginLocked()) {
+                var state = getLoginState();
+                var remainingMs = state.lockUntil - Date.now();
+                if (remainingMs > 0) {
+                    var btn = document.getElementById('loginBtn');
+                    if (btn) {
+                        btn.disabled = true;
+                        var remaining = Math.ceil(remainingMs / 1000);
+                        btn.textContent = 'Locked (' + remaining + 's)';
+                        var resumeTimer = setInterval(function() {
+                            remaining--;
+                            if (remaining <= 0) {
+                                clearInterval(resumeTimer);
+                                var st = getLoginState();
+                                setLoginState(0, 0, st.strikes);
+                                btn.disabled = false;
+                                btn.textContent = 'Log In';
+                            } else {
+                                btn.textContent = 'Locked (' + remaining + 's)';
+                            }
+                        }, 1000);
+                    }
+                }
             }
 
             await checkAuthOnLoad();
