@@ -9836,7 +9836,7 @@
                 var dbRow = {
                     po_number: poNum,
                     supplier: vendor,
-                    status: 'draft',
+                    status: 'pending',
                     priority: order.isEmergency ? 'high' : 'medium',
                     title: (order.isEmergency ? 'Emergency Order - ' : 'Parts Order - ') + order.partName,
                     total_cost: 0,
@@ -9943,7 +9943,7 @@
                 var dbRow = {
                     po_number: poNumber,
                     supplier: vendorLabels[vendor] || vendor,
-                    status: 'draft',
+                    status: 'pending',
                     title: 'New Purchase Order',
                     priority: poType === 'emergency' ? 'high' : 'medium',
                     total_cost: totals.total,
@@ -10003,15 +10003,17 @@
         }
 
         async function approvePO(poNumber) {
-            if (!confirm(`Approve Purchase Order ${poNumber}?\n\nThis will commit budget funds and send the PO to the vendor.`)) return;
+            if (!confirm(`Approve Purchase Order ${poNumber}?\n\nThis will commit budget funds and mark the PO as ordered.`)) return;
             const po = purchaseOrdersData.find(p => p.poNumber === poNumber);
             if (po) {
                 try {
-                    await CraderoAPI.purchaseOrders.update(po.id, { status: 'ordered', approved_by: currentUserName || 'User' });
+                    var sessionRes = await supabaseClient.auth.getSession();
+                    var uid = sessionRes.data && sessionRes.data.session ? sessionRes.data.session.user.id : null;
+                    await CraderoAPI.purchaseOrders.update(po.id, { status: 'ordered', approved_by: uid });
                     po.status = 'ordered';
                     renderPurchaseOrders();
                     refreshDashboards();
-                    showToast(poNumber + ' approved and sent to vendor!', 'success');
+                    showToast(poNumber + ' approved!', 'success');
                 } catch (err) {
                     showToast('Failed to approve PO: ' + err.message, 'error');
                 }
