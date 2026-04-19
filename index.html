@@ -1866,11 +1866,10 @@
             <button class="nav-tab" onclick="switchTab('purchaseOrders')">Purchase Orders</button>
             <button class="nav-tab" onclick="switchTab('permits')">Permits</button>
             <button class="nav-tab" onclick="switchTab('pm')">Preventive Maintenance</button>
-            <button class="nav-tab" onclick="switchTab('dailyLog')">Daily Activity</button>
             <button class="nav-tab" onclick="switchTab('analytics')">Analytics & Reports</button>
             <button class="nav-tab" onclick="switchTab('reactive')">Reactive Maintenance</button>
             <button class="nav-tab" onclick="switchTab('calendar')">Maintenance Calendar</button>
-            <button class="nav-tab" onclick="switchTab('myTasks')" id="myTasksTab">My Tasks</button>
+            <button class="nav-tab" onclick="switchTab('myTasks')" id="myTasksTab">My Tasks & Activity</button>
             <button class="nav-tab" onclick="switchTab('workRequests')" id="workRequestsTab">Work Requests</button>
             <button class="nav-tab" onclick="switchTab('auditTrail')">Audit Trail</button>
             <button class="nav-tab" onclick="switchTab('userManagement')" id="userMgmtTab">User Management</button>
@@ -2251,25 +2250,6 @@
             </div>
         </div>
 
-        <!-- Daily Activity Log Tab -->
-        <div id="dailyLog" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Today's Activity Log</h2>
-                    <input type="date" class="form-input" style="width: 200px;" id="activityDateInput" onchange="renderActivityLog(); renderDailySummary()">
-                </div>
-
-                <div class="activity-timeline" id="activityTimeline"></div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Daily Summary</h2>
-                </div>
-                <div class="stats-grid" id="dailySummaryStats"></div>
-            </div>
-        </div>
-
         <!-- Analytics & Reports Tab -->
         <div id="analytics" class="tab-content">
             <div class="card">
@@ -2531,12 +2511,12 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title" id="myTasksTitle">My Assigned Tasks</h2>
-                </div>
-                <div style="margin-bottom:1rem;">
-                    <label style="font-weight:600;margin-right:0.5rem;">Viewing tasks for:</label>
-                    <select class="form-select" id="myTasksEngineerSelect" onchange="renderEngineerDashboard()" style="display:inline-block;width:auto;min-width:180px;">
-                        <option value="">Select engineer...</option>
-                    </select>
+                    <div style="display:flex;align-items:center;gap:0.75rem;">
+                        <label style="font-weight:600;white-space:nowrap;">Viewing for:</label>
+                        <select class="form-select" id="myTasksEngineerSelect" onchange="renderEngineerDashboard()" style="display:inline-block;width:auto;min-width:180px;">
+                            <option value="">Select engineer...</option>
+                        </select>
+                    </div>
                 </div>
 
                 <!-- Today's Summary -->
@@ -2557,6 +2537,21 @@
                 <div>
                     <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.75rem;color:var(--primary);">Preventive Maintenance</h3>
                     <div id="myTasksPMList"></div>
+                </div>
+            </div>
+
+            <!-- Daily Activity Feed (from audit log) -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Today's Activity</h2>
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <input type="date" class="form-input" style="width:170px;" id="activityDateInput" onchange="loadDailyActivity()">
+                        <button class="btn btn-secondary btn-small" onclick="loadDailyActivity()" title="Refresh">Refresh</button>
+                    </div>
+                </div>
+                <div class="stats-grid" id="dailySummaryStats" style="margin-bottom:1rem;"></div>
+                <div class="activity-timeline" id="activityTimeline">
+                    <div style="padding:1rem;color:var(--gray-500);text-align:center;">Loading activity...</div>
                 </div>
             </div>
         </div>
@@ -4498,7 +4493,7 @@
         // TIER ACCESS CONFIGURATION
         // ─────────────────────────────────────────────────────────────────────
         var PRO_ONLY_TABS = ['parts', 'purchaseOrders', 'analytics', 'calendar'];
-        var ESSENTIAL_ONLY_TABS = ['dailyLog', 'myTasks', 'auditTrail', 'permits'];
+        var ESSENTIAL_ONLY_TABS = ['myTasks', 'auditTrail', 'permits'];
         var BASIC_TABS = ['workOrders', 'equipment', 'pm', 'reactive', 'workRequests', 'userManagement'];
         var currentUserTier = 'basic';
 
@@ -7127,7 +7122,19 @@
             if (summaryEl) {
                 if (engineer) {
                     summaryEl.style.display = 'block';
-                    var completedToday = workOrdersData.filter(function(wo) { return isEngineerAssigned(wo.assignedTo, engineer) && wo.status === 'completed' && wo.created && wo.created.indexOf(new Date().toLocaleDateString('en-GB', { month:'short', day:'numeric', year:'numeric' }).split(',')[0]) !== -1; }).length;
+                    var todayISO = new Date().toISOString().slice(0, 10);
+                    var completedToday = workOrdersData.filter(function(wo) {
+                        if (!isEngineerAssigned(wo.assignedTo, engineer) || wo.status !== 'completed') return false;
+                        var doneDate = wo.jobFinish || wo.finishTime || wo.createdRaw || '';
+                        return doneDate.slice(0, 10) === todayISO;
+                    }).length;
+                    // Also count PMs completed today by this engineer
+                    var pmCompletedToday = pmData.filter(function(pm) {
+                        if (pm._projected || !isEngineerAssigned(pm.assignedTo, engineer)) return false;
+                        var raw = pm.lastCompletedRaw || '';
+                        return raw && raw.slice(0, 10) === todayISO;
+                    }).length;
+                    completedToday += pmCompletedToday;
                     var allMyWOs = workOrdersData.filter(function(wo) { return isEngineerAssigned(wo.assignedTo, engineer) && wo.status !== 'completed'; });
                     var overduePMs = pmData.filter(function(pm) { return isEngineerAssigned(pm.assignedTo, engineer) && pm.dueStatus === 'overdue'; }).length;
                     var dueSoonPMs = pmData.filter(function(pm) { return isEngineerAssigned(pm.assignedTo, engineer) && (pm.dueStatus === 'overdue' || pm.dueStatus === 'due-soon'); }).length;
@@ -7328,8 +7335,7 @@
         function refreshDashboards() {
             updateKPIs();
             renderNotifications();
-            renderActivityLog();
-            renderDailySummary();
+            loadDailyActivity();
             renderTop5Equipment();
             renderPOStats();
             renderPMCompletionStats();
@@ -7340,6 +7346,7 @@
 
         function renderProAnalytics() {
             if (!hasAccess('analytics')) return;
+            var analyticsCutoff = getAnalyticsCutoff();
 
             // P2: Parts at Risk
             var riskEl = document.getElementById('partsAtRiskList');
@@ -7363,6 +7370,8 @@
             if (mttrEl) {
                 var machineBreakdowns = {};
                 breakdownsData.forEach(function(b) {
+                    var bDate = b.downtimeStart || b.created || b.dateISO || '';
+                    if (bDate && new Date(bDate) < analyticsCutoff) return;
                     if (!machineBreakdowns[b.machine]) machineBreakdowns[b.machine] = [];
                     machineBreakdowns[b.machine].push(b);
                 });
@@ -7393,14 +7402,18 @@
             var faultCauseEl = document.getElementById('faultCauseAnalysisList');
             if (faultCauseEl) {
                 var causeCounts = {};
-                breakdownsData.forEach(function(b) {
+                var filteredBreakdowns = breakdownsData.filter(function(b) {
+                    var bDate = b.downtimeStart || b.created || b.dateISO || '';
+                    return !bDate || new Date(bDate) >= analyticsCutoff;
+                });
+                filteredBreakdowns.forEach(function(b) {
                     var cause = b.faultCause || 'Unclassified';
                     if (!causeCounts[cause]) causeCounts[cause] = 0;
                     causeCounts[cause]++;
                 });
                 var causeArr = Object.keys(causeCounts).map(function(k) { return { cause: k, count: causeCounts[k] }; })
                     .sort(function(a, b) { return b.count - a.count; });
-                var totalBr = breakdownsData.length || 1;
+                var totalBr = filteredBreakdowns.length || 1;
                 var fcHtml = causeArr.map(function(c) {
                     var pct = Math.round(c.count / totalBr * 100);
                     var barColor = pct >= 30 ? 'var(--danger)' : pct >= 15 ? 'var(--warning)' : 'var(--success)';
@@ -7736,192 +7749,126 @@
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // DYNAMIC ACTIVITY LOG (from real work orders & PM)
+        // DAILY ACTIVITY — pulls live data from audit_log table
         // ─────────────────────────────────────────────────────────────────────
-        function renderActivityLog() {
+        async function loadDailyActivity() {
             var container = document.getElementById('activityTimeline');
-            if (!container) return;
+            var summaryContainer = document.getElementById('dailySummaryStats');
             var dateInput = document.getElementById('activityDateInput');
             if (dateInput && !dateInput.value) {
                 dateInput.value = new Date().toISOString().slice(0, 10);
             }
             var selectedDate = dateInput ? dateInput.value : new Date().toISOString().slice(0, 10);
 
-            var activities = [];
+            if (container) container.innerHTML = '<div style="padding:1rem;color:var(--gray-500);text-align:center;">Loading activity...</div>';
 
-            // Build activities from work orders
-            workOrdersData.forEach(function(wo) {
-                var woDesc = escHtml(wo.title) + ' — ' + escHtml(wo.equipment);
-                var woMeta = wo.assignedTo ? '👤 ' + escHtml(wo.assignedTo) : '👤 Unassigned';
+            try {
+                // Fetch audit log entries for the selected date from Supabase
+                var r = await supabaseClient.from('audit_log').select('*')
+                    .gte('created_at', selectedDate + 'T00:00:00')
+                    .lte('created_at', selectedDate + 'T23:59:59')
+                    .order('created_at', { ascending: false })
+                    .limit(100);
+                var entries = (r.data || []);
 
-                // Activity: WO created on this date
-                if (wo.createdRaw && wo.createdRaw.slice(0, 10) === selectedDate) {
-                    activities.push({
-                        date: new Date(wo.createdRaw),
-                        dotClass: 'created',
-                        icon: '📋',
-                        title: 'Work Order Created',
-                        desc: woDesc,
-                        meta: woMeta
-                    });
-                }
-
-                // Activity: WO completed on this date
-                if (wo.status === 'completed') {
-                    var completedDate = wo.jobFinish || wo.finishTime || wo.createdRaw || '';
-                    var completedDay = completedDate ? completedDate.slice(0, 10) : '';
-                    if (completedDay === selectedDate) {
-                        var createdDay = wo.createdRaw ? wo.createdRaw.slice(0, 10) : '';
-                        if (createdDay === selectedDate) {
-                            // Same day create+complete: upgrade the created entry
-                            var lastEntry = activities[activities.length - 1];
-                            if (lastEntry && lastEntry.title === 'Work Order Created') {
-                                lastEntry.dotClass = 'completed';
-                                lastEntry.icon = '✅';
-                                lastEntry.title = 'Work Order Completed';
-                                lastEntry.date = new Date(completedDate);
-                            }
-                        } else {
-                            // Completed on a different day than created
-                            activities.push({
-                                date: new Date(completedDate),
-                                dotClass: 'completed',
-                                icon: '✅',
-                                title: 'Work Order Completed',
-                                desc: woDesc,
-                                meta: woMeta
-                            });
-                        }
-                    }
-                }
-
-                // Activity: WO moved to in-progress on this date
-                if (wo.status === 'in-progress') {
-                    var startDate = wo.jobStart || wo.startTime || '';
-                    var startDay = startDate ? startDate.slice(0, 10) : '';
-                    var woCreatedDay = wo.createdRaw ? wo.createdRaw.slice(0, 10) : '';
-                    if (startDay === selectedDate && woCreatedDay !== selectedDate) {
-                        activities.push({
-                            date: new Date(startDate),
-                            dotClass: 'in-progress',
-                            icon: '🔧',
-                            title: 'Work Order In Progress',
-                            desc: woDesc,
-                            meta: woMeta
-                        });
-                    }
-                }
-            });
-
-            // Build activities from PM tasks
-            pmData.forEach(function(pm) {
-                if (pm._projected) return;
-                var pmDateRaw = pm.lastCompletedRaw || '';
-                if (!pmDateRaw) return;
-                var pmDate = pmDateRaw.slice(0, 10);
-                if (pmDate !== selectedDate) return;
-                activities.push({
-                    date: new Date(pmDateRaw),
-                    dotClass: 'completed',
-                    icon: '✅',
-                    title: 'PM Task Completed',
-                    desc: escHtml(pm.title) + ' — ' + escHtml(pm.equipment),
-                    meta: pm.assignedTo ? '👤 ' + escHtml(pm.assignedTo) : ''
+                // Build summary counts from audit data
+                var woCreated = 0, woCompleted = 0, pmCompleted = 0, bdReported = 0, bdResolved = 0;
+                entries.forEach(function(e) {
+                    var d = typeof e.details === 'string' ? JSON.parse(e.details) : (e.details || {});
+                    if (e.entity_type === 'work_order' && e.action === 'create') woCreated++;
+                    if (e.entity_type === 'work_order' && (e.action === 'complete' || (e.action === 'update' && d.status === 'completed'))) woCompleted++;
+                    if (e.entity_type === 'pm_task' && e.action === 'complete') pmCompleted++;
+                    if (e.entity_type === 'breakdown' && e.action === 'create') bdReported++;
+                    if (e.entity_type === 'breakdown' && (e.action === 'complete' || (e.action === 'update' && d.status === 'resolved'))) bdResolved++;
                 });
-            });
 
-            // Build activities from breakdowns
-            breakdownsData.forEach(function(br) {
-                var brDesc = escHtml(br.description || br.faultDescription || br.machine || '');
-                var brMeta = br.machine ? '🏭 ' + escHtml(br.machine) : '';
-
-                // Activity: Breakdown reported/occurred on this date
-                if (br.dateISO && br.dateISO.slice(0, 10) === selectedDate) {
-                    var dotClass = br.status === 'resolved' ? 'completed' : br.status === 'in-progress' ? 'in-progress' : 'created';
-                    var icon = br.status === 'resolved' ? '✅' : '⚠️';
-                    activities.push({
-                        date: new Date(br.dateISO + (br.time ? 'T' + br.time : '')),
-                        dotClass: dotClass,
-                        icon: icon,
-                        title: 'Breakdown Reported',
-                        desc: brDesc,
-                        meta: brMeta
-                    });
+                // Render summary cards
+                if (summaryContainer) {
+                    var downEquip = equipmentList.filter(function(eq) { return eq.status === 'down'; }).length;
+                    summaryContainer.innerHTML =
+                        '<div class="stat-card"><div class="stat-label">WOs Created</div><div class="stat-value">' + woCreated + '</div></div>' +
+                        '<div class="stat-card"><div class="stat-label">WOs Completed</div><div class="stat-value">' + woCompleted + '</div></div>' +
+                        '<div class="stat-card"><div class="stat-label">PMs Completed</div><div class="stat-value">' + pmCompleted + '</div></div>' +
+                        '<div class="stat-card"><div class="stat-label">Breakdowns</div><div class="stat-value">' + bdReported + '</div></div>' +
+                        '<div class="stat-card"><div class="stat-label">Equipment Down</div><div class="stat-value">' + downEquip + '</div></div>';
                 }
 
-                // Activity: Breakdown resolved on this date (using job finish or downtime end)
-                var resolvedDate = br.jobFinish || br.downtimeEnd || '';
-                if (br.status === 'resolved' && resolvedDate && resolvedDate.slice(0, 10) === selectedDate) {
-                    // Avoid duplicate if reported and resolved same day
-                    if (!br.dateISO || br.dateISO.slice(0, 10) !== selectedDate) {
-                        activities.push({
-                            date: new Date(resolvedDate),
-                            dotClass: 'completed',
-                            icon: '✅',
-                            title: 'Breakdown Resolved',
-                            desc: brDesc,
-                            meta: brMeta
-                        });
+                // Render activity timeline from audit entries
+                if (container) {
+                    if (entries.length === 0) {
+                        container.innerHTML = '<div style="padding:1rem;color:var(--gray-500);text-align:center;">No activity recorded for ' + selectedDate + '</div>';
+                        return;
                     }
+                    container.innerHTML = entries.map(function(e) {
+                        var d = typeof e.details === 'string' ? JSON.parse(e.details) : (e.details || {});
+                        var timeStr = new Date(e.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        var userName = d.user_name || 'System';
+                        var icon = '📋', dotClass = 'created', title = '', desc = '';
+
+                        // Determine display based on action + entity type
+                        if (e.action === 'create') {
+                            icon = '📋'; dotClass = 'created';
+                            title = capitalizeEntity(e.entity_type) + ' Created';
+                        } else if (e.action === 'complete') {
+                            icon = '✅'; dotClass = 'completed';
+                            title = capitalizeEntity(e.entity_type) + ' Completed';
+                        } else if (e.action === 'update') {
+                            if (d.status === 'completed' || d.status === 'resolved') {
+                                icon = '✅'; dotClass = 'completed';
+                                title = capitalizeEntity(e.entity_type) + ' Completed';
+                            } else if (d.status === 'in-progress' || d.status === 'in_progress') {
+                                icon = '🔧'; dotClass = 'in-progress';
+                                title = capitalizeEntity(e.entity_type) + ' Started';
+                            } else if (d.action === 'quick_start') {
+                                icon = '🔧'; dotClass = 'in-progress';
+                                title = 'Work Started';
+                            } else {
+                                icon = '✏️'; dotClass = 'created';
+                                title = capitalizeEntity(e.entity_type) + ' Updated';
+                            }
+                        } else if (e.action === 'delete') {
+                            icon = '🗑️'; dotClass = 'created';
+                            title = capitalizeEntity(e.entity_type) + ' Deleted';
+                        } else {
+                            icon = '📝'; dotClass = 'created';
+                            title = escHtml(e.action) + ' — ' + capitalizeEntity(e.entity_type);
+                        }
+
+                        // Build description from details
+                        var descParts = [];
+                        if (d.title) descParts.push(escHtml(d.title));
+                        if (d.equipment) descParts.push(escHtml(d.equipment));
+                        if (d.assignedTo) descParts.push('Assigned: ' + escHtml(d.assignedTo));
+                        if (d.status && e.action === 'update') descParts.push('Status: ' + escHtml(d.status));
+                        desc = descParts.join(' — ') || ('ID: ' + escHtml(e.entity_id));
+
+                        return '<div class="activity-item">' +
+                            '<div class="activity-dot ' + dotClass + '"></div>' +
+                            '<div class="activity-content">' +
+                                '<div class="activity-header">' +
+                                    '<div class="activity-title">' + icon + ' ' + title + '</div>' +
+                                    '<div class="activity-time">' + timeStr + '</div>' +
+                                '</div>' +
+                                '<div class="activity-description">' + desc + '</div>' +
+                                '<div class="activity-meta"><span>👤 ' + escHtml(userName) + '</span></div>' +
+                            '</div>' +
+                        '</div>';
+                    }).join('');
                 }
-            });
-
-            // Sort by date descending
-            activities.sort(function(a, b) { return b.date - a.date; });
-
-            if (activities.length === 0) {
-                container.innerHTML = '<div style="padding:1rem;color:var(--gray-500);text-align:center;">No activity found for ' + selectedDate + '</div>';
-                return;
+            } catch (err) {
+                console.error('[Cradero] Failed to load daily activity:', err);
+                if (container) container.innerHTML = '<div style="padding:1rem;color:var(--danger);text-align:center;">Failed to load activity: ' + escHtml(err.message) + '</div>';
             }
-
-            container.innerHTML = activities.map(function(a) {
-                var timeStr = a.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                return '<div class="activity-item">' +
-                    '<div class="activity-dot ' + a.dotClass + '"></div>' +
-                    '<div class="activity-content">' +
-                        '<div class="activity-header">' +
-                            '<div class="activity-title">' + a.icon + ' ' + a.title + '</div>' +
-                            '<div class="activity-time">' + timeStr + '</div>' +
-                        '</div>' +
-                        '<div class="activity-description">' + a.desc + '</div>' +
-                        (a.meta ? '<div class="activity-meta"><span>' + a.meta + '</span></div>' : '') +
-                    '</div>' +
-                '</div>';
-            }).join('');
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // DYNAMIC DAILY SUMMARY (from real data)
-        // ─────────────────────────────────────────────────────────────────────
-        function renderDailySummary() {
-            var container = document.getElementById('dailySummaryStats');
-            if (!container) return;
-            var dateInput = document.getElementById('activityDateInput');
-            var today = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().slice(0, 10);
-            var woCreated = workOrdersData.filter(function(wo) { return wo.createdRaw && wo.createdRaw.slice(0, 10) === today; }).length;
-            var woCompleted = workOrdersData.filter(function(wo) {
-                if (wo.status !== 'completed') return false;
-                var dateStr = wo.jobFinish || wo.finishTime || wo.createdRaw || '';
-                return dateStr.slice(0, 10) === today;
-            }).length;
-            var pmCompleted = pmData.filter(function(pm) {
-                if (pm._projected) return false;
-                var raw = pm.lastCompletedRaw || '';
-                return raw && raw.slice(0, 10) === today;
-            }).length;
-            var breakdownsResolved = breakdownsData.filter(function(br) {
-                if (br.status !== 'resolved') return false;
-                var resolvedDate = br.jobFinish || br.downtimeEnd || '';
-                return resolvedDate && resolvedDate.slice(0, 10) === today;
-            }).length;
-            var downEquip = equipmentList.filter(function(eq) { return eq.status === 'down'; }).length;
-            container.innerHTML =
-                '<div class="stat-card"><div class="stat-label">Work Orders Created</div><div class="stat-value">' + woCreated + '</div></div>' +
-                '<div class="stat-card"><div class="stat-label">Work Orders Completed</div><div class="stat-value">' + woCompleted + '</div></div>' +
-                '<div class="stat-card"><div class="stat-label">PM Tasks Completed</div><div class="stat-value">' + pmCompleted + '</div></div>' +
-                '<div class="stat-card"><div class="stat-label">Breakdowns Resolved</div><div class="stat-value">' + breakdownsResolved + '</div></div>' +
-                '<div class="stat-card"><div class="stat-label">Equipment Down</div><div class="stat-value">' + downEquip + '</div></div>';
+        function capitalizeEntity(str) {
+            var map = { work_order: 'Work Order', pm_task: 'PM Task', breakdown: 'Breakdown', equipment: 'Equipment', part: 'Part', purchase_order: 'Purchase Order', permit: 'Permit', calendar_event: 'Calendar Event' };
+            return map[str] || str.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
         }
+
+        // Legacy wrappers — called by refreshDashboards
+        function renderActivityLog() { loadDailyActivity(); }
+        function renderDailySummary() { /* summary now rendered inside loadDailyActivity */ }
 
         // ─────────────────────────────────────────────────────────────────────
         // DYNAMIC TOP 5 PROBLEM EQUIPMENT (from real data)
@@ -13729,7 +13676,7 @@
             // Engineer Dashboard
             renderEngineerDashboard, quickStartWork,
             // Daily Activity
-            renderActivityLog, renderDailySummary,
+            renderActivityLog, renderDailySummary, loadDailyActivity, capitalizeEntity,
             // Files
             removeFile,
             // Dark Mode
