@@ -2209,6 +2209,7 @@
                 <div class="card-header">
                     <h2 class="card-title">Preventive Maintenance Schedule</h2>
                     <div style="display:flex;gap:0.5rem;">
+                        <button class="btn btn-secondary" onclick="togglePmFilter()">Filter & Sort</button>
                         <button class="btn btn-secondary essential-only-feature" id="importPMBtn" onclick="openCsvImport('pm')" style="display:none;">Import CSV</button>
                         <button class="btn btn-primary" onclick="openModal('addPMModal')">+ Schedule PM</button>
                     </div>
@@ -2219,31 +2220,42 @@
                     <input type="text" class="search-input" id="pmSearchInput" placeholder="Search PM tasks by equipment or description..." oninput="searchPMs()">
                 </div>
 
-                <div class="filter-bar">
-                    <div class="form-group">
-                        <label class="form-label">Status</label>
-                        <select class="form-select" id="pmFilterStatus" style="min-width:160px;">
-                            <option value="">All</option>
-                            <option value="completed">Completed</option>
-                            <option value="overdue">Overdue</option>
-                            <option value="scheduled">Scheduled</option>
-                            <option value="unscheduled">Unscheduled</option>
-                        </select>
+                <div id="pmFilterPanel" style="display:none;padding:1rem;background:var(--gray-100);border-radius:8px;margin-bottom:1rem;">
+                    <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="pmFilterStatus" style="min-width:140px;">
+                                <option value="">All Statuses</option>
+                                <option value="completed">Completed</option>
+                                <option value="overdue">Overdue</option>
+                                <option value="scheduled">Scheduled</option>
+                                <option value="unscheduled">Unscheduled</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Equipment</label>
+                            <select class="form-select" id="pmFilterEquipment" style="min-width:180px;"></select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">From</label>
+                            <input type="date" class="form-input" id="pmFilterFrom" style="min-width:140px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">To</label>
+                            <input type="date" class="form-input" id="pmFilterTo" style="min-width:140px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Sort By</label>
+                            <select class="form-select" id="pmSortBy" style="min-width:160px;">
+                                <option value="due-asc">Due Date (Soonest)</option>
+                                <option value="due-desc">Due Date (Latest)</option>
+                                <option value="equipment">Equipment (A→Z)</option>
+                                <option value="title">Title (A→Z)</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary btn-small" onclick="applyPmFilter()" style="align-self:flex-end;">Apply</button>
+                        <button class="btn btn-secondary btn-small" onclick="clearPmFilter()" style="align-self:flex-end;">Clear</button>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Equipment</label>
-                        <select class="form-select" id="pmFilterEquipment" style="min-width:180px;"></select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">From</label>
-                        <input type="date" class="form-input" id="pmFilterFrom" style="min-width:140px;">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">To</label>
-                        <input type="date" class="form-input" id="pmFilterTo" style="min-width:140px;">
-                    </div>
-                    <button class="btn btn-secondary" onclick="filterPMs()" style="align-self:flex-end;">Apply Filter</button>
-                    <button class="btn btn-secondary" onclick="clearPMFilter()" style="align-self:flex-end;">Clear</button>
                 </div>
 
                 <div class="pm-list" id="pmList"></div>
@@ -2430,49 +2442,70 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Reactive Maintenance Log</h2>
-                    <button class="btn btn-primary" onclick="openModal('logBreakdownModal')">+ Log Breakdown</button>
+                    <div style="display:flex;gap:0.5rem;">
+                        <button class="btn btn-secondary" onclick="toggleBrFilter()">Filter & Sort</button>
+                        <button class="btn btn-primary" onclick="openModal('logBreakdownModal')">+ Log Breakdown</button>
+                    </div>
                 </div>
-                <div class="filter-bar">
-                    <div class="form-group">
-                        <label class="form-label">Machine</label>
-                        <select class="form-select" id="brFilterMachine" style="min-width:180px;"></select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Status</label>
-                        <select class="form-select" id="brFilterStatus" style="min-width:140px;">
-                            <option value="">All Statuses</option>
-                            <option value="resolved">Resolved</option>
-                            <option value="in-progress">In Progress</option>
-                            <option value="pending">Pending</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Fault Cause</label>
-                        <select class="form-select" id="brFilterCause" style="min-width:140px;">
-                            <option value="">All Causes</option>
-                            <option value="Electrical">Electrical</option>
-                            <option value="Mechanical">Mechanical</option>
-                            <option value="Hydraulic">Hydraulic</option>
-                            <option value="Pneumatic">Pneumatic</option>
-                            <option value="Software/PLC">Software / PLC</option>
-                            <option value="Operator Error">Operator Error</option>
-                            <option value="Wear & Tear">Wear & Tear</option>
-                            <option value="Contamination">Contamination</option>
-                            <option value="Calibration">Calibration</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">From</label>
-                        <input type="date" class="form-input" id="brFilterFrom" style="min-width:140px;">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">To</label>
-                        <input type="date" class="form-input" id="brFilterTo" style="min-width:140px;">
-                    </div>
-                    <button class="btn btn-secondary" onclick="filterBreakdowns()" style="align-self:flex-end;">Apply Filter</button>
-                    <button class="btn btn-secondary" onclick="clearBreakdownFilter()" style="align-self:flex-end;">Clear</button>
+
+                <div class="search-bar">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" id="brSearchInput" placeholder="Search breakdowns by machine, fault, or engineer..." oninput="searchBreakdowns()">
                 </div>
+
+                <div id="brFilterPanel" style="display:none;padding:1rem;background:var(--gray-100);border-radius:8px;margin-bottom:1rem;">
+                    <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Machine</label>
+                            <select class="form-select" id="brFilterMachine" style="min-width:180px;"></select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="brFilterStatus" style="min-width:140px;">
+                                <option value="">All Statuses</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="pending">Pending</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Fault Cause</label>
+                            <select class="form-select" id="brFilterCause" style="min-width:140px;">
+                                <option value="">All Causes</option>
+                                <option value="Electrical">Electrical</option>
+                                <option value="Mechanical">Mechanical</option>
+                                <option value="Hydraulic">Hydraulic</option>
+                                <option value="Pneumatic">Pneumatic</option>
+                                <option value="Software/PLC">Software / PLC</option>
+                                <option value="Operator Error">Operator Error</option>
+                                <option value="Wear & Tear">Wear &amp; Tear</option>
+                                <option value="Contamination">Contamination</option>
+                                <option value="Calibration">Calibration</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">From</label>
+                            <input type="date" class="form-input" id="brFilterFrom" style="min-width:140px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">To</label>
+                            <input type="date" class="form-input" id="brFilterTo" style="min-width:140px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Sort By</label>
+                            <select class="form-select" id="brSortBy" style="min-width:160px;">
+                                <option value="newest">Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="machine">Machine (A→Z)</option>
+                                <option value="status">Status</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary btn-small" onclick="applyBrFilter()" style="align-self:flex-end;">Apply</button>
+                        <button class="btn btn-secondary btn-small" onclick="clearBrFilter()" style="align-self:flex-end;">Clear</button>
+                    </div>
+                </div>
+
                 <div id="breakdownsList"></div>
             </div>
         </div>
@@ -12912,35 +12945,63 @@
             }).join('');
         }
 
-        function filterBreakdowns() {
+        function toggleBrFilter() {
+            var panel = document.getElementById('brFilterPanel');
+            if (panel) panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        }
+
+        function searchBreakdowns() {
+            var term = (document.getElementById('brSearchInput').value || '').trim().toLowerCase();
+            if (!term) { renderBreakdowns(); return; }
+            var filtered = breakdownsData.filter(function(b) {
+                var searchable = ((b.machine || '') + ' ' + (b.faultDescription || '') + ' ' + (b.faultCause || '') + ' ' + (b.resolvedBy || '') + ' ' + (b.rootCause || '') + ' ' + (b.actionTaken || '')).toLowerCase();
+                return searchable.indexOf(term) !== -1;
+            });
+            renderBreakdowns(filtered);
+        }
+
+        function applyBrFilter() {
             var machine = document.getElementById('brFilterMachine').value;
             var status  = document.getElementById('brFilterStatus').value;
             var cause   = document.getElementById('brFilterCause').value;
             var from    = document.getElementById('brFilterFrom').value;
             var to      = document.getElementById('brFilterTo').value;
+            var sortBy  = document.getElementById('brSortBy').value;
             var filtered = breakdownsData.slice();
             if (machine) filtered = filtered.filter(function(b) { return b.machine === machine; });
             if (status)  filtered = filtered.filter(function(b) { return b.status  === status;  });
             if (cause)   filtered = filtered.filter(function(b) { return b.faultCause === cause; });
             if (from)    filtered = filtered.filter(function(b) { return b.dateISO >= from; });
             if (to)      filtered = filtered.filter(function(b) { return b.dateISO <= to;   });
+            if (sortBy === 'newest') filtered.sort(function(a, b) { return (b.dateISO || '').localeCompare(a.dateISO || ''); });
+            else if (sortBy === 'oldest') filtered.sort(function(a, b) { return (a.dateISO || '').localeCompare(b.dateISO || ''); });
+            else if (sortBy === 'machine') filtered.sort(function(a, b) { return (a.machine || '').localeCompare(b.machine || ''); });
+            else if (sortBy === 'status') filtered.sort(function(a, b) { return (a.status || '').localeCompare(b.status || ''); });
             renderBreakdowns(filtered);
         }
 
-        function clearBreakdownFilter() {
+        function clearBrFilter() {
             document.getElementById('brFilterMachine').value = '';
             document.getElementById('brFilterStatus').value  = '';
             document.getElementById('brFilterCause').value   = '';
             document.getElementById('brFilterFrom').value    = '';
             document.getElementById('brFilterTo').value      = '';
+            document.getElementById('brSortBy').value        = 'newest';
+            document.getElementById('brSearchInput').value   = '';
             renderBreakdowns();
         }
 
-        function filterPMs() {
+        function togglePmFilter() {
+            var panel = document.getElementById('pmFilterPanel');
+            if (panel) panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        }
+
+        function applyPmFilter() {
             var status    = document.getElementById('pmFilterStatus').value;
             var equipment = document.getElementById('pmFilterEquipment').value;
             var from      = document.getElementById('pmFilterFrom').value;
             var to        = document.getElementById('pmFilterTo').value;
+            var sortBy    = document.getElementById('pmSortBy').value;
             var filtered  = pmData.slice();
             if (status === 'completed') {
                 filtered = filtered.filter(function(pm) { return pm.lastCompleted && pm.lastCompleted !== '' && pm.lastCompleted !== '—'; });
@@ -12954,14 +13015,20 @@
             if (equipment) filtered = filtered.filter(function(pm) { return pm.equipment === equipment; });
             if (from) filtered = filtered.filter(function(pm) { return pm.scheduledDate && pm.scheduledDate >= from; });
             if (to)   filtered = filtered.filter(function(pm) { return pm.scheduledDate && pm.scheduledDate <= to; });
+            if (sortBy === 'due-asc') filtered.sort(function(a, b) { return (a.scheduledDate || '9999').localeCompare(b.scheduledDate || '9999'); });
+            else if (sortBy === 'due-desc') filtered.sort(function(a, b) { return (b.scheduledDate || '').localeCompare(a.scheduledDate || ''); });
+            else if (sortBy === 'equipment') filtered.sort(function(a, b) { return (a.equipment || '').localeCompare(b.equipment || ''); });
+            else if (sortBy === 'title') filtered.sort(function(a, b) { return (a.title || '').localeCompare(b.title || ''); });
             renderPM(filtered);
         }
 
-        function clearPMFilter() {
+        function clearPmFilter() {
             document.getElementById('pmFilterStatus').value    = '';
             document.getElementById('pmFilterEquipment').value = '';
             document.getElementById('pmFilterFrom').value      = '';
             document.getElementById('pmFilterTo').value        = '';
+            document.getElementById('pmSortBy').value          = 'due-asc';
+            document.getElementById('pmSearchInput').value     = '';
             renderPM();
         }
 
@@ -13679,7 +13746,7 @@
             submitHotWorkPermit, submitContractorPermit, submitContractorHotWorkPermit,
             closeContractorHotWorkPermit, revokePermitFromModal,
             // Preventive Maintenance
-            filterPMs, clearPMFilter, completePM, schedulePM, openPMDetail, deletePM,
+            togglePmFilter, applyPmFilter, clearPmFilter, completePM, schedulePM, openPMDetail, deletePM,
             addPMChecklistItem, removePMChecklistItem, submitAddPM, submitCompletePM,
             reassignPM, togglePMCheck, updatePMCheckNote,
             // Analytics
@@ -13690,7 +13757,7 @@
             openCsvImport, closeCsvImport, csvFileSelected, csvNextStep, csvPrevStep,
             csvExecuteImport, csvResetAfterTypeChange,
             // Breakdowns
-            submitBreakdown, filterBreakdowns, clearBreakdownFilter,
+            submitBreakdown, toggleBrFilter, searchBreakdowns, applyBrFilter, clearBrFilter,
             openBreakdownDetail, saveBreakdownEdit, deleteBreakdown, toggleBrResolutionField,
             // Breakdown Parts Usage
             addBrPartUsage, removeBrPartUsage, filterBrPartsDropdown, selectBrPart, checkBrPartStockWarning,
