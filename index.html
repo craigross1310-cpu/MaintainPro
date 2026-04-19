@@ -2924,6 +2924,18 @@
 
                     <div class="form-row">
                         <div class="form-group">
+                            <label class="form-label">Start Date *</label>
+                            <input type="date" class="form-input" id="hwStartDate" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">End Date *</label>
+                            <input type="date" class="form-input" id="hwEndDate" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
                             <label class="form-label">Start Time *</label>
                             <input type="time" class="form-input" id="hwStartTime" required>
                         </div>
@@ -6264,8 +6276,10 @@
                 p.fireWatch = row.fire_watch || '';
                 p.startTime = row.start_time_of_day || '';
                 p.endTime = row.end_time_of_day || '';
-                p.validText = row.valid_from ? 'Valid from: ' + new Date(row.valid_from).toLocaleTimeString() : '';
-                p.expiryText = row.valid_until ? 'Expires: ' + new Date(row.valid_until).toLocaleString() : '';
+                p.startDate = row.valid_from ? new Date(row.valid_from).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '';
+                p.endDate = row.valid_until ? new Date(row.valid_until).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '';
+                p.validText = row.valid_from ? 'Valid: ' + new Date(row.valid_from).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) + ' ' + new Date(row.valid_from).toLocaleTimeString() : '';
+                p.expiryText = row.status === 'closed' ? 'Closed' : (row.valid_until ? 'Expires: ' + new Date(row.valid_until).toLocaleString() : '');
             } else if (row.permit_type === 'contractor_hot_work') {
                 p.company = row.contractor_company || '';
                 p.supervisor = row.contractor_name || '';
@@ -6902,7 +6916,8 @@
                     <div class="wo-meta">
                         <div class="wo-meta-item"><span>🏭</span><span>${escHtml(p.location)}</span></div>
                         <div class="wo-meta-item"><span>👤</span><span>${escHtml(p.engineer)}</span></div>
-                        <div class="wo-meta-item"><span>📅</span><span>${escHtml(p.validText)}</span></div>
+                        <div class="wo-meta-item"><span>📅</span><span>Valid: ${escHtml(p.startDate)} – ${escHtml(p.endDate)}</span></div>
+                        <div class="wo-meta-item"><span>🕐</span><span>${escHtml(p.startTime)} – ${escHtml(p.endTime)}</span></div>
                         <div class="wo-meta-item"><span>⏱️</span><span style="color:var(--danger);font-weight:600;">${escHtml(p.expiryText)}</span></div>
                     </div>
                     <div class="wo-meta" style="margin-top:0.5rem;">
@@ -10220,10 +10235,12 @@
             const location  = document.getElementById('hwLocation').value.trim();
             const engineer  = document.getElementById('hwEngineer').value;
             const fireWatch = document.getElementById('hwFireWatch').value.trim();
+            const startDate = document.getElementById('hwStartDate').value;
+            const endDate   = document.getElementById('hwEndDate').value;
             const startTime = document.getElementById('hwStartTime').value;
             const endTime   = document.getElementById('hwEndTime').value;
 
-            if (!desc || !location || !engineer || !fireWatch || !startTime || !endTime) {
+            if (!desc || !location || !engineer || !fireWatch || !startDate || !endDate || !startTime || !endTime) {
                 showToast('Please fill in all required fields.', 'error');
                 return;
             }
@@ -10231,11 +10248,14 @@
             try {
                 var sessionResult = await supabaseClient.auth.getSession();
                 var userId = sessionResult.data && sessionResult.data.session ? sessionResult.data.session.user.id : null;
+                var validFrom = new Date(startDate + 'T' + startTime).toISOString();
+                var validUntil = new Date(endDate + 'T' + endTime).toISOString();
                 var dbRow = {
                     permit_type: 'hot_work', title: desc,
                     work_location: location, requested_by: userId,
                     engineer: engineer, fire_watch: fireWatch,
                     start_time_of_day: startTime, end_time_of_day: endTime,
+                    valid_from: validFrom, valid_until: validUntil,
                     status: 'active', description: desc
                 };
                 var created = await CraderoAPI.permits.create(dbRow);
@@ -10666,7 +10686,8 @@
                                 '<div class="wo-meta-item"><span>🏭</span><span>' + escHtml(p.location) + '</span></div>' +
                                 '<div class="wo-meta-item"><span>👤</span><span>' + escHtml(p.engineer) + '</span></div>' +
                                 '<div class="wo-meta-item"><span>🔥</span><span>Fire Watch: ' + escHtml(p.fireWatch) + '</span></div>' +
-                                '<div class="wo-meta-item"><span>⏱️</span><span>' + escHtml(p.startTime) + ' – ' + escHtml(p.endTime) + '</span></div>' +
+                                '<div class="wo-meta-item"><span>📅</span><span>' + escHtml(p.startDate || '') + ' – ' + escHtml(p.endDate || '') + '</span></div>' +
+                                '<div class="wo-meta-item"><span>🕐</span><span>' + escHtml(p.startTime) + ' – ' + escHtml(p.endTime) + '</span></div>' +
                             '</div>' +
                             '<div class="wo-meta" style="margin-top: 0.5rem;">' +
                                 '<div class="wo-meta-item"><span>📅</span><span>Closed: ' + escHtml(p.closedDate) + '</span></div>' +
@@ -11125,13 +11146,24 @@
                             '<input type="checkbox" onchange="togglePMCheck(' + i + ')" style="width:18px;height:18px;cursor:pointer;">' +
                             '<span>' + escHtml(item.text) + '</span>' +
                         '</label>' +
-                        '<input type="text" placeholder="Add a note (optional)..." ' +
+                        '<div style="margin-top:0.5rem;"><span style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Comment</span>' +
+                        '<input type="text" placeholder="Add a comment (optional)..." ' +
                             'onchange="updatePMCheckNote(' + i + ', this.value)" ' +
-                            'style="margin-top:0.5rem;width:100%;padding:0.4rem 0.6rem;border:1px solid var(--gray-300);border-radius:6px;font-size:0.85rem;">' +
+                            'style="margin-top:0.25rem;width:100%;padding:0.4rem 0.6rem;border:1px solid var(--gray-300);border-radius:6px;font-size:0.85rem;"></div>' +
                     '</div>';
                 });
                 html += '</div>';
             }
+
+            // Overall comments section
+            html += '<div style="border-top:1px solid var(--gray-200);padding-top:1rem;margin-top:1.5rem;">' +
+                '<label class="form-label">Comments</label>' +
+                '<div id="pmCompleteCommentsContainer" style="display:flex;flex-direction:column;gap:0.75rem;max-height:250px;overflow-y:auto;margin-bottom:0.75rem;"></div>' +
+                '<div style="display:flex;gap:0.5rem;">' +
+                    '<input type="text" class="form-input" id="pmCompleteNewComment" placeholder="Add a comment..." style="flex:1;" onkeydown="if(event.key===\'Enter\'){addPMCompleteComment();}">' +
+                    '<button type="button" class="btn btn-primary btn-small" onclick="addPMCompleteComment()">Post</button>' +
+                '</div>' +
+            '</div>';
 
             // Parts usage section (Pro only)
             if (hasAccess('parts')) {
@@ -11185,6 +11217,7 @@
             }
 
             body.innerHTML = html;
+            renderPMCompleteComments(pm);
             pmPartsUsed = [];
             populatePMPartsDropdown();
             pmUploadedFiles = [];
@@ -11213,6 +11246,40 @@
             var pm = pmData.find(function(p) { return p.id === currentCompletePMId; });
             if (!pm || !pm.checklist) return;
             pm.checklist[idx].note = note;
+        }
+
+        function renderPMCompleteComments(pm) {
+            var container = document.getElementById('pmCompleteCommentsContainer');
+            if (!container) return;
+            if (!pm.comments || pm.comments.length === 0) {
+                container.innerHTML = '<div style="color:var(--gray-600);font-style:italic;padding:0.5rem;">No comments yet.</div>';
+                return;
+            }
+            container.innerHTML = pm.comments.map(function(c) {
+                return '<div style="padding:0.75rem;background:var(--gray-100);border-radius:8px;border-left:4px solid var(--primary);">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">' +
+                    '<div style="font-weight:600;font-size:0.9rem;">' + escHtml(c.author) + '</div>' +
+                    '<div style="font-size:0.8rem;color:var(--gray-600);">' + escHtml(c.timestamp) + '</div>' +
+                    '</div>' +
+                    '<div style="font-size:0.9rem;line-height:1.5;">' + escHtml(c.text) + '</div>' +
+                    '</div>';
+            }).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function addPMCompleteComment() {
+            var input = document.getElementById('pmCompleteNewComment');
+            var text = input.value.trim();
+            if (!text) return;
+            var pm = pmData.find(function(p) { return p.id === currentCompletePMId; });
+            if (!pm) return;
+            if (!pm.comments) pm.comments = [];
+            var now = new Date();
+            var timestamp = now.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' }) + ' - ' + now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            pm.comments.push({ author: currentUserName || 'User', timestamp: timestamp, text: text });
+            renderPMCompleteComments(pm);
+            input.value = '';
+            try { await CraderoAPI.pm.update(pm.id, { comments: pm.comments }); } catch (e) { console.error('[Cradero] Failed to save PM comment:', e); }
         }
 
         function calcNextDueDate(fromDate, frequency) {
