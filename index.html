@@ -2276,11 +2276,11 @@
                 <div class="card-header">
                     <h2 class="card-title">Analytics & Reports</h2>
                     <div style="display: flex; gap: 1rem;">
-                        <select class="form-select" style="width: 200px;">
-                            <option>Last 7 Days</option>
-                            <option>Last 30 Days</option>
-                            <option>Last 90 Days</option>
-                            <option>This Year</option>
+                        <select class="form-select" style="width: 200px;" id="analyticsTimePeriod" onchange="refreshDashboards()">
+                            <option value="7">Last 7 Days</option>
+                            <option value="30" selected>Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                            <option value="365">This Year</option>
                         </select>
                         <div style="position:relative;display:inline-block;">
                             <button class="btn btn-secondary" onclick="toggleExportMenu()">Export Report ▾</button>
@@ -2305,7 +2305,7 @@
                     <div class="chart-card">
                         <div class="chart-header">
                             <div class="chart-title">Equipment Downtime by Line</div>
-                            <div class="chart-subtitle">Total hours this month</div>
+                            <div class="chart-subtitle" id="downtimeChartSubtitle">Total hours</div>
                         </div>
                         <canvas id="downtimeChart" style="max-height: 250px;"></canvas>
                     </div>
@@ -2313,7 +2313,7 @@
                     <div class="chart-card">
                         <div class="chart-header">
                             <div class="chart-title">Work Order Status</div>
-                            <div class="chart-subtitle">Current distribution</div>
+                            <div class="chart-subtitle" id="woChartSubtitle">Distribution</div>
                         </div>
                         <canvas id="workOrderChart" style="max-height: 250px;"></canvas>
                     </div>
@@ -2329,7 +2329,7 @@
                     <div class="chart-card">
                         <div class="chart-header">
                             <div class="chart-title">Top 5 Problem Equipment</div>
-                            <div class="chart-subtitle">By work order count (30 days)</div>
+                            <div class="chart-subtitle" id="top5Subtitle">By work order count</div>
                         </div>
                         <div class="metric-list" id="top5EquipmentList"></div>
                     </div>
@@ -2337,7 +2337,7 @@
                     <div class="chart-card">
                         <div class="chart-header">
                             <div class="chart-title">Maintenance Cost Breakdown</div>
-                            <div class="chart-subtitle">This month</div>
+                            <div class="chart-subtitle" id="costSubtitle">Cost summary</div>
                         </div>
                         <div class="metric-list" id="costBreakdownList"></div>
                     </div>
@@ -2345,7 +2345,7 @@
                     <div class="chart-card">
                         <div class="chart-header">
                             <div class="chart-title">PM Completion Rate</div>
-                            <div class="chart-subtitle">This month</div>
+                            <div class="chart-subtitle">Current status</div>
                         </div>
                         <div class="metric-list" id="pmCompletionList"></div>
                     </div>
@@ -6260,6 +6260,7 @@
                 vendor: row.supplier || '', status: row.status || 'pending',
                 priority: row.priority || 'medium', total: row.total_cost || '0.00',
                 created: row.created_at ? new Date(row.created_at).toLocaleString('en-GB', { month:'short', day:'numeric', year:'numeric' }) : '',
+                createdRaw: row.created_at || '',
                 items: items.length, lineItems: items,
                 expectedDelivery: row.expected_delivery || '',
                 tags: items.map(function(li) { return li.description; }),
@@ -7728,36 +7729,43 @@
                     });
                 }
 
-                // Activity: WO completed on this date (separate from creation)
-                var completedDate = wo.jobFinish || wo.finishTime || '';
-                if (wo.status === 'completed' && completedDate && completedDate.slice(0, 10) === selectedDate) {
-                    // Avoid duplicate if created and completed same day
-                    if (!wo.createdRaw || wo.createdRaw.slice(0, 10) !== selectedDate || completedDate !== wo.createdRaw) {
-                        activities.push({
-                            date: new Date(completedDate),
-                            dotClass: 'completed',
-                            icon: '✅',
-                            title: 'Work Order Completed',
-                            desc: woDesc,
-                            meta: woMeta
-                        });
-                    } else {
-                        // Same day: upgrade the created entry to completed
-                        var lastEntry = activities[activities.length - 1];
-                        if (lastEntry && lastEntry.title === 'Work Order Created') {
-                            lastEntry.dotClass = 'completed';
-                            lastEntry.icon = '✅';
-                            lastEntry.title = 'Work Order Completed';
-                            lastEntry.date = new Date(completedDate);
+                // Activity: WO completed on this date
+                if (wo.status === 'completed') {
+                    var completedDate = wo.jobFinish || wo.finishTime || wo.createdRaw || '';
+                    var completedDay = completedDate ? completedDate.slice(0, 10) : '';
+                    if (completedDay === selectedDate) {
+                        var createdDay = wo.createdRaw ? wo.createdRaw.slice(0, 10) : '';
+                        if (createdDay === selectedDate) {
+                            // Same day create+complete: upgrade the created entry
+                            var lastEntry = activities[activities.length - 1];
+                            if (lastEntry && lastEntry.title === 'Work Order Created') {
+                                lastEntry.dotClass = 'completed';
+                                lastEntry.icon = '✅';
+                                lastEntry.title = 'Work Order Completed';
+                                lastEntry.date = new Date(completedDate);
+                            }
+                        } else {
+                            // Completed on a different day than created
+                            activities.push({
+                                date: new Date(completedDate),
+                                dotClass: 'completed',
+                                icon: '✅',
+                                title: 'Work Order Completed',
+                                desc: woDesc,
+                                meta: woMeta
+                            });
                         }
                     }
                 }
 
                 // Activity: WO moved to in-progress on this date
-                if (wo.status === 'in-progress' && wo.jobStart && wo.jobStart.slice(0, 10) === selectedDate) {
-                    if (!wo.createdRaw || wo.createdRaw.slice(0, 10) !== selectedDate) {
+                if (wo.status === 'in-progress') {
+                    var startDate = wo.jobStart || wo.startTime || '';
+                    var startDay = startDate ? startDate.slice(0, 10) : '';
+                    var woCreatedDay = wo.createdRaw ? wo.createdRaw.slice(0, 10) : '';
+                    if (startDay === selectedDate && woCreatedDay !== selectedDate) {
                         activities.push({
-                            date: new Date(wo.jobStart),
+                            date: new Date(startDate),
                             dotClass: 'in-progress',
                             icon: '🔧',
                             title: 'Work Order In Progress',
@@ -7858,8 +7866,7 @@
             var woCreated = workOrdersData.filter(function(wo) { return wo.createdRaw && wo.createdRaw.slice(0, 10) === today; }).length;
             var woCompleted = workOrdersData.filter(function(wo) {
                 if (wo.status !== 'completed') return false;
-                // Check finish time first, fall back to creation date
-                var dateStr = wo.finishTime || wo.createdRaw || '';
+                var dateStr = wo.jobFinish || wo.finishTime || wo.createdRaw || '';
                 return dateStr.slice(0, 10) === today;
             }).length;
             var pmCompleted = pmData.filter(function(pm) {
@@ -7868,11 +7875,17 @@
                 var raw = pm.lastCompletedRaw || '';
                 return raw.slice(0, 10) === today;
             }).length;
+            var breakdownsResolved = breakdownsData.filter(function(br) {
+                if (br.status !== 'resolved') return false;
+                var resolvedDate = br.jobFinish || br.downtimeEnd || '';
+                return resolvedDate && resolvedDate.slice(0, 10) === today;
+            }).length;
             var downEquip = equipmentList.filter(function(eq) { return eq.status === 'down'; }).length;
             container.innerHTML =
                 '<div class="stat-card"><div class="stat-label">Work Orders Created</div><div class="stat-value">' + woCreated + '</div></div>' +
                 '<div class="stat-card"><div class="stat-label">Work Orders Completed</div><div class="stat-value">' + woCompleted + '</div></div>' +
                 '<div class="stat-card"><div class="stat-label">PM Tasks Completed</div><div class="stat-value">' + pmCompleted + '</div></div>' +
+                '<div class="stat-card"><div class="stat-label">Breakdowns Resolved</div><div class="stat-value">' + breakdownsResolved + '</div></div>' +
                 '<div class="stat-card"><div class="stat-label">Equipment Down</div><div class="stat-value">' + downEquip + '</div></div>';
         }
 
@@ -7931,10 +7944,12 @@
         function renderCostBreakdown() {
             var container = document.getElementById('costBreakdownList');
             if (!container) return;
+            var costCutoff = getAnalyticsCutoff();
             // Calculate from work order time tracking and labor rates
             var laborRates = loadData('laborRates', {});
             var laborTotal = 0;
             workOrdersData.forEach(function(wo) {
+                if (wo.createdRaw && new Date(wo.createdRaw) < costCutoff) return;
                 if (wo.timeSpent && wo.assignedTo) {
                     var firstEng = parseEngineers(wo.assignedTo)[0] || '';
                     var rate = laborRates[firstEng] || 25;
@@ -7942,7 +7957,7 @@
                 }
             });
             // Parts cost from PO data
-            var partsTotal = purchaseOrdersData.filter(function(po) { return po.status === 'received'; }).reduce(function(sum, po) { return sum + (parseFloat(po.total) || 0); }, 0);
+            var partsTotal = purchaseOrdersData.filter(function(po) { return po.status === 'received' && po.createdRaw && new Date(po.createdRaw) >= costCutoff; }).reduce(function(sum, po) { return sum + (parseFloat(po.total) || 0); }, 0);
             var grandTotal = laborTotal + partsTotal;
             container.innerHTML =
                 '<div class="metric-item"><span class="metric-label">Labor Costs</span><span class="metric-value">£' + Math.round(laborTotal).toLocaleString() + '</span></div>' +
@@ -12578,12 +12593,44 @@
         var _workOrderChartInstance = null;
         var _complianceChartInstance = null;
 
+        function getAnalyticsCutoff() {
+            var sel = document.getElementById('analyticsTimePeriod');
+            var days = sel ? parseInt(sel.value) || 30 : 30;
+            var cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - days);
+            return cutoff;
+        }
+
         function initializeCharts() {
+            var analyticsCutoff = getAnalyticsCutoff();
+            var sel = document.getElementById('analyticsTimePeriod');
+            var periodLabel = sel ? sel.options[sel.selectedIndex].text : 'Last 30 Days';
+
+            // Update chart subtitles
+            var dtSub = document.getElementById('downtimeChartSubtitle');
+            if (dtSub) dtSub.textContent = 'Total hours — ' + periodLabel;
+            var woSub = document.getElementById('woChartSubtitle');
+            if (woSub) woSub.textContent = periodLabel;
+            var t5Sub = document.getElementById('top5Subtitle');
+            if (t5Sub) t5Sub.textContent = 'By work order count — ' + periodLabel;
+            var cSub = document.getElementById('costSubtitle');
+            if (cSub) cSub.textContent = periodLabel;
+
+            // Recompute workOrders30d based on selected period
+            equipmentList.forEach(function(eq) {
+                eq.workOrders30d = workOrdersData.filter(function(wo) {
+                    return wo.equipment === eq.name && wo.createdRaw && new Date(wo.createdRaw) >= analyticsCutoff;
+                }).length;
+            });
+
             // --- Downtime by Equipment (bar) ---
             var downtimeCtx = document.getElementById('downtimeChart');
             if (downtimeCtx) {
                 var dtMap = {};
                 breakdownsData.forEach(function(bd) {
+                    // Filter by selected time period
+                    var bdDate = bd.downtimeStart || bd.created || bd.dateISO || '';
+                    if (bdDate && new Date(bdDate) < analyticsCutoff) return;
                     var name = bd.machine || 'Unknown';
                     var hours = 0;
                     if (bd.downtimeStart && bd.downtimeEnd) {
@@ -12618,6 +12665,8 @@
             if (workOrderCtx) {
                 var openCount = 0, inProgressCount = 0, completedCount = 0, onHoldCount = 0;
                 workOrdersData.forEach(function(wo) {
+                    // Filter by selected time period
+                    if (wo.createdRaw && new Date(wo.createdRaw) < analyticsCutoff) return;
                     var s = wo.status || 'open';
                     if (s === 'completed') completedCount++;
                     else if (s === 'in-progress') inProgressCount++;
