@@ -13077,6 +13077,7 @@
                 brPartsUsed = [];
 
                 breakdownsData.unshift(mapped);
+                logAudit('create', 'breakdown', brCreated.id, { title: fault, equipment: machine, user_name: engineer });
 
                 closeModal('logBreakdownModal');
                 document.getElementById('logBreakdownForm').reset();
@@ -13245,6 +13246,7 @@
                     }
                 }
                 br.status = newStatus;
+                logAudit(newStatus === 'resolved' ? 'complete' : 'update', 'breakdown', br.id, { status: newStatus, equipment: br.machine, title: br.faultDescription, user_name: br.resolvedBy });
 
                 closeModal('breakdownDetailModal');
                 renderBreakdowns();
