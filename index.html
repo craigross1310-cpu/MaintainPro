@@ -7713,20 +7713,59 @@
 
             // Build activities from work orders
             workOrdersData.forEach(function(wo) {
-                if (!wo.createdRaw) return;
-                var woDate = wo.createdRaw.slice(0, 10);
-                if (woDate !== selectedDate) return;
-                var dotClass = wo.status === 'completed' ? 'completed' : wo.status === 'in-progress' ? 'in-progress' : 'created';
-                var icon = wo.status === 'completed' ? '✅' : wo.status === 'in-progress' ? '🔧' : '📋';
-                var label = wo.status === 'completed' ? 'Work Order Completed' : wo.status === 'in-progress' ? 'Work Order In Progress' : 'Work Order Created';
-                activities.push({
-                    date: new Date(wo.createdRaw),
-                    dotClass: dotClass,
-                    icon: icon,
-                    title: label,
-                    desc: escHtml(wo.title) + ' — ' + escHtml(wo.equipment),
-                    meta: wo.assignedTo ? '👤 ' + escHtml(wo.assignedTo) : '👤 Unassigned'
-                });
+                var woDesc = escHtml(wo.title) + ' — ' + escHtml(wo.equipment);
+                var woMeta = wo.assignedTo ? '👤 ' + escHtml(wo.assignedTo) : '👤 Unassigned';
+
+                // Activity: WO created on this date
+                if (wo.createdRaw && wo.createdRaw.slice(0, 10) === selectedDate) {
+                    activities.push({
+                        date: new Date(wo.createdRaw),
+                        dotClass: 'created',
+                        icon: '📋',
+                        title: 'Work Order Created',
+                        desc: woDesc,
+                        meta: woMeta
+                    });
+                }
+
+                // Activity: WO completed on this date (separate from creation)
+                var completedDate = wo.jobFinish || wo.finishTime || '';
+                if (wo.status === 'completed' && completedDate && completedDate.slice(0, 10) === selectedDate) {
+                    // Avoid duplicate if created and completed same day
+                    if (!wo.createdRaw || wo.createdRaw.slice(0, 10) !== selectedDate || completedDate !== wo.createdRaw) {
+                        activities.push({
+                            date: new Date(completedDate),
+                            dotClass: 'completed',
+                            icon: '✅',
+                            title: 'Work Order Completed',
+                            desc: woDesc,
+                            meta: woMeta
+                        });
+                    } else {
+                        // Same day: upgrade the created entry to completed
+                        var lastEntry = activities[activities.length - 1];
+                        if (lastEntry && lastEntry.title === 'Work Order Created') {
+                            lastEntry.dotClass = 'completed';
+                            lastEntry.icon = '✅';
+                            lastEntry.title = 'Work Order Completed';
+                            lastEntry.date = new Date(completedDate);
+                        }
+                    }
+                }
+
+                // Activity: WO moved to in-progress on this date
+                if (wo.status === 'in-progress' && wo.jobStart && wo.jobStart.slice(0, 10) === selectedDate) {
+                    if (!wo.createdRaw || wo.createdRaw.slice(0, 10) !== selectedDate) {
+                        activities.push({
+                            date: new Date(wo.jobStart),
+                            dotClass: 'in-progress',
+                            icon: '🔧',
+                            title: 'Work Order In Progress',
+                            desc: woDesc,
+                            meta: woMeta
+                        });
+                    }
+                }
             });
 
             // Build activities from PM tasks
@@ -7750,18 +7789,38 @@
 
             // Build activities from breakdowns
             breakdownsData.forEach(function(br) {
-                if (!br.dateISO) return;
-                if (br.dateISO.slice(0, 10) !== selectedDate) return;
-                var dotClass = br.status === 'resolved' ? 'completed' : br.status === 'in-progress' ? 'in-progress' : 'created';
-                var icon = br.status === 'resolved' ? '✅' : '⚠️';
-                activities.push({
-                    date: new Date(br.dateISO),
-                    dotClass: dotClass,
-                    icon: icon,
-                    title: 'Breakdown — ' + escHtml(br.status || 'reported'),
-                    desc: escHtml(br.description || br.machine || ''),
-                    meta: br.machine ? '🏭 ' + escHtml(br.machine) : ''
-                });
+                var brDesc = escHtml(br.description || br.faultDescription || br.machine || '');
+                var brMeta = br.machine ? '🏭 ' + escHtml(br.machine) : '';
+
+                // Activity: Breakdown reported/occurred on this date
+                if (br.dateISO && br.dateISO.slice(0, 10) === selectedDate) {
+                    var dotClass = br.status === 'resolved' ? 'completed' : br.status === 'in-progress' ? 'in-progress' : 'created';
+                    var icon = br.status === 'resolved' ? '✅' : '⚠️';
+                    activities.push({
+                        date: new Date(br.dateISO + (br.time ? 'T' + br.time : '')),
+                        dotClass: dotClass,
+                        icon: icon,
+                        title: 'Breakdown Reported',
+                        desc: brDesc,
+                        meta: brMeta
+                    });
+                }
+
+                // Activity: Breakdown resolved on this date (using job finish or downtime end)
+                var resolvedDate = br.jobFinish || br.downtimeEnd || '';
+                if (br.status === 'resolved' && resolvedDate && resolvedDate.slice(0, 10) === selectedDate) {
+                    // Avoid duplicate if reported and resolved same day
+                    if (!br.dateISO || br.dateISO.slice(0, 10) !== selectedDate) {
+                        activities.push({
+                            date: new Date(resolvedDate),
+                            dotClass: 'completed',
+                            icon: '✅',
+                            title: 'Breakdown Resolved',
+                            desc: brDesc,
+                            meta: brMeta
+                        });
+                    }
+                }
             });
 
             // Sort by date descending
