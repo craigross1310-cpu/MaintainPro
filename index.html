@@ -2406,8 +2406,11 @@
 
                     <div class="chart-card">
                         <div class="chart-header">
-                            <div class="chart-title">Labor Costs</div>
-                            <div class="chart-subtitle">Based on tracked time</div>
+                            <div>
+                                <div class="chart-title">Labor Costs</div>
+                                <div class="chart-subtitle">Based on tracked time</div>
+                            </div>
+                            <button class="btn btn-secondary" style="font-size:0.8rem;padding:0.3rem 0.75rem;" onclick="openLaborRatesModal()" id="manageLaborRatesBtn">⚙ Manage Rates</button>
                         </div>
                         <div class="metric-list" id="laborCostList">
                         </div>
@@ -2698,6 +2701,35 @@
         </div>
     </div>
 
+
+    <!-- Labor Rates Modal -->
+    <div id="laborRatesModal" class="modal-overlay">
+        <div class="modal" style="max-width:550px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Manage Labor Rates</h2>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom:1.5rem;">
+                    <label class="form-label">Default Hourly Rate (£)</label>
+                    <input type="number" class="form-input" id="laborDefaultRateInput" min="0" step="0.50" placeholder="25.00" style="max-width:150px;">
+                    <div style="font-size:0.8rem;color:var(--gray-600);margin-top:0.25rem;">Applied to any engineer without a specific rate set</div>
+                </div>
+                <div style="border-top:1px solid var(--gray-200);padding-top:1rem;">
+                    <label class="form-label">Engineer Rates</label>
+                    <div id="laborRatesEngineerList"></div>
+                    <div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
+                        <input type="text" class="form-input" id="laborRateNewName" placeholder="Engineer name" style="flex:1;">
+                        <input type="number" class="form-input" id="laborRateNewRate" min="0" step="0.50" placeholder="Rate (£)" style="width:120px;">
+                        <button class="btn btn-secondary" onclick="addLaborRateRow()">+ Add</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('laborRatesModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveLaborRates()">Save Rates</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Submit Request Modal -->
     <div id="submitRequestModal" class="modal-overlay">
@@ -5521,6 +5553,11 @@
                 var umBtn = document.getElementById('userMgmtTab');
                 if (umBtn) umBtn.style.display = 'none';
             }
+            // Hide Manage Rates button for non-admin/manager
+            var laborRatesBtn = document.getElementById('manageLaborRatesBtn');
+            if (laborRatesBtn) {
+                laborRatesBtn.style.display = (role === 'admin' || role === 'manager') ? '' : 'none';
+            }
         }
 
         function applyProductionRestrictions() {
@@ -7202,12 +7239,11 @@
             document.getElementById('openWorkOrders').textContent = openWo;
             document.getElementById('totalEquipment').textContent = equipmentList.length;
 
-            // PM Compliance KPI — completed / (completed + overdue + due-soon) as percentage
+            // PM Compliance KPI — non-overdue / total as percentage
             var realPMs = pmData.filter(function(pm) { return !pm._projected; });
-            var pmCompleted = realPMs.filter(function(pm) { return pm.dueStatus === 'completed'; }).length;
             var pmOverdue = realPMs.filter(function(pm) { return pm.dueStatus === 'overdue'; }).length;
             var pmTotal = realPMs.length;
-            var pmCompliancePct = pmTotal > 0 ? Math.round((pmCompleted / pmTotal) * 100) : 0;
+            var pmCompliancePct = pmTotal > 0 ? Math.round(((pmTotal - pmOverdue) / pmTotal) * 100) : 0;
             var pmCompEl = document.getElementById('pmComplianceKPI');
             if (pmCompEl) pmCompEl.textContent = pmCompliancePct + '%';
             var pmCompChangeEl = document.getElementById('pmComplianceChange');
@@ -7456,7 +7492,8 @@
             // P6: Labor Costs
             var laborEl = document.getElementById('laborCostList');
             if (laborEl) {
-                var laborRates = loadData('laborRates', { 'John Smith': 25.00, 'Mike Johnson': 28.00, 'Sarah Williams': 30.00 });
+                var laborRates = loadData('laborRates', {});
+                var defaultLaborRate = loadData('laborDefaultRate', 25.00);
                 var laborByEngineer = {};
                 workOrdersData.forEach(function(wo) {
                     if (wo.assignedTo) {
@@ -7477,7 +7514,7 @@
                 var lHtml = '';
                 var totalLaborCost = 0;
                 Object.keys(laborByEngineer).forEach(function(name) {
-                    var rate = laborRates[name] || 25.00;
+                    var rate = laborRates[name] || defaultLaborRate;
                     var cost = laborByEngineer[name] * rate;
                     totalLaborCost += cost;
                     lHtml += '<div class="metric-item"><span class="metric-label">' + escHtml(name) + ' (' + laborByEngineer[name].toFixed(1) + 'h @ £' + rate.toFixed(2) + '/h)</span><span class="metric-value">£' + cost.toFixed(2) + '</span></div>';
@@ -7779,20 +7816,18 @@
             // Build activities from PM tasks
             pmData.forEach(function(pm) {
                 if (pm._projected) return;
-                if (pm.dueStatus === 'completed') {
-                    var pmDateRaw = pm.lastCompletedRaw || '';
-                    if (!pmDateRaw) return;
-                    var pmDate = pmDateRaw.slice(0, 10);
-                    if (pmDate !== selectedDate) return;
-                    activities.push({
-                        date: new Date(pmDateRaw),
-                        dotClass: 'completed',
-                        icon: '✅',
-                        title: 'PM Task Completed',
-                        desc: escHtml(pm.title) + ' — ' + escHtml(pm.equipment),
-                        meta: pm.assignedTo ? '👤 ' + escHtml(pm.assignedTo) : ''
-                    });
-                }
+                var pmDateRaw = pm.lastCompletedRaw || '';
+                if (!pmDateRaw) return;
+                var pmDate = pmDateRaw.slice(0, 10);
+                if (pmDate !== selectedDate) return;
+                activities.push({
+                    date: new Date(pmDateRaw),
+                    dotClass: 'completed',
+                    icon: '✅',
+                    title: 'PM Task Completed',
+                    desc: escHtml(pm.title) + ' — ' + escHtml(pm.equipment),
+                    meta: pm.assignedTo ? '👤 ' + escHtml(pm.assignedTo) : ''
+                });
             });
 
             // Build activities from breakdowns
@@ -7871,9 +7906,8 @@
             }).length;
             var pmCompleted = pmData.filter(function(pm) {
                 if (pm._projected) return false;
-                if (pm.dueStatus !== 'completed') return false;
                 var raw = pm.lastCompletedRaw || '';
-                return raw.slice(0, 10) === today;
+                return raw && raw.slice(0, 10) === today;
             }).length;
             var breakdownsResolved = breakdownsData.filter(function(br) {
                 if (br.status !== 'resolved') return false;
@@ -7929,11 +7963,12 @@
             var container = document.getElementById('pmCompletionList');
             if (!container) return;
             var realPMs = pmData.filter(function(pm) { return !pm._projected; });
-            var completed = realPMs.filter(function(pm) { return pm.dueStatus === 'completed'; }).length;
+            var completed = realPMs.filter(function(pm) { return pm.lastCompletedRaw && (pm.dueStatus === 'completed' || pm.dueStatus === 'upcoming'); }).length;
             var overdue = realPMs.filter(function(pm) { return pm.dueStatus === 'overdue'; }).length;
             var dueSoon = realPMs.filter(function(pm) { return pm.dueStatus === 'due-soon'; }).length;
+            var neverCompleted = realPMs.filter(function(pm) { return !pm.lastCompletedRaw && pm.dueStatus !== 'overdue' && pm.dueStatus !== 'due-soon'; }).length;
             var total = realPMs.length;
-            var rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+            var rate = total > 0 ? Math.round(((total - overdue) / total) * 100) : 0;
             container.innerHTML =
                 '<div class="metric-item"><span class="metric-label">Completed</span><span class="metric-value" style="color:var(--success);">' + completed + '</span></div>' +
                 '<div class="metric-item"><span class="metric-label">Due Soon</span><span class="metric-value" style="color:var(--warning);">' + dueSoon + '</span></div>' +
@@ -7947,12 +7982,13 @@
             var costCutoff = getAnalyticsCutoff();
             // Calculate from work order time tracking and labor rates
             var laborRates = loadData('laborRates', {});
+            var defaultLaborRate = loadData('laborDefaultRate', 25.00);
             var laborTotal = 0;
             workOrdersData.forEach(function(wo) {
                 if (wo.createdRaw && new Date(wo.createdRaw) < costCutoff) return;
                 if (wo.timeSpent && wo.assignedTo) {
                     var firstEng = parseEngineers(wo.assignedTo)[0] || '';
-                    var rate = laborRates[firstEng] || 25;
+                    var rate = laborRates[firstEng] || defaultLaborRate;
                     laborTotal += wo.timeSpent * rate;
                 }
             });
@@ -7963,6 +7999,88 @@
                 '<div class="metric-item"><span class="metric-label">Labor Costs</span><span class="metric-value">£' + Math.round(laborTotal).toLocaleString() + '</span></div>' +
                 '<div class="metric-item"><span class="metric-label">Parts/Materials</span><span class="metric-value">£' + Math.round(partsTotal).toLocaleString() + '</span></div>' +
                 '<div class="metric-item" style="background:var(--primary);color:white;"><span class="metric-label" style="color:white;">Total</span><span class="metric-value" style="color:white;">£' + Math.round(grandTotal).toLocaleString() + '</span></div>';
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // LABOR RATES MANAGEMENT
+        // ─────────────────────────────────────────────────────────────────────
+        function openLaborRatesModal() {
+            var rates = loadData('laborRates', {});
+            var defaultRate = loadData('laborDefaultRate', 25.00);
+            document.getElementById('laborDefaultRateInput').value = defaultRate;
+
+            // Collect all engineer names from work orders
+            var engineerNames = {};
+            workOrdersData.forEach(function(wo) {
+                if (wo.assignedTo) {
+                    parseEngineers(wo.assignedTo).forEach(function(name) {
+                        engineerNames[name] = true;
+                    });
+                }
+            });
+            // Also include any names already in saved rates
+            Object.keys(rates).forEach(function(name) { engineerNames[name] = true; });
+
+            var listEl = document.getElementById('laborRatesEngineerList');
+            var html = '';
+            var sortedNames = Object.keys(engineerNames).sort();
+            sortedNames.forEach(function(name) {
+                var rate = rates[name] !== undefined ? rates[name] : '';
+                html += '<div class="labor-rate-row" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">' +
+                    '<span style="flex:1;font-size:0.9rem;">' + escHtml(name) + '</span>' +
+                    '<input type="number" class="form-input labor-rate-input" data-engineer="' + escHtml(name) + '" value="' + rate + '" min="0" step="0.50" placeholder="Default (£' + defaultRate.toFixed(2) + ')" style="width:150px;">' +
+                    '<button class="btn btn-secondary" style="font-size:0.75rem;padding:0.2rem 0.5rem;color:var(--danger);" onclick="this.parentElement.remove()">✕</button>' +
+                    '</div>';
+            });
+            listEl.innerHTML = html || '<div style="color:var(--gray-600);font-size:0.85rem;">No engineers found — add one below or create work orders with assigned engineers.</div>';
+
+            document.getElementById('laborRateNewName').value = '';
+            document.getElementById('laborRateNewRate').value = '';
+            openModal('laborRatesModal');
+        }
+
+        function addLaborRateRow() {
+            var nameInput = document.getElementById('laborRateNewName');
+            var rateInput = document.getElementById('laborRateNewRate');
+            var name = nameInput.value.trim();
+            if (!name) return;
+
+            var rate = rateInput.value;
+            var listEl = document.getElementById('laborRatesEngineerList');
+            // Remove "no engineers" placeholder if present
+            var placeholder = listEl.querySelector('div[style*="gray"]');
+            if (placeholder && !placeholder.classList.contains('labor-rate-row')) listEl.innerHTML = '';
+
+            var defaultRate = parseFloat(document.getElementById('laborDefaultRateInput').value) || 25.00;
+            var row = document.createElement('div');
+            row.className = 'labor-rate-row';
+            row.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;';
+            row.innerHTML = '<span style="flex:1;font-size:0.9rem;">' + escHtml(name) + '</span>' +
+                '<input type="number" class="form-input labor-rate-input" data-engineer="' + escHtml(name) + '" value="' + rate + '" min="0" step="0.50" placeholder="Default (£' + defaultRate.toFixed(2) + ')" style="width:150px;">' +
+                '<button class="btn btn-secondary" style="font-size:0.75rem;padding:0.2rem 0.5rem;color:var(--danger);" onclick="this.parentElement.remove()">✕</button>';
+            listEl.appendChild(row);
+
+            nameInput.value = '';
+            rateInput.value = '';
+            nameInput.focus();
+        }
+
+        function saveLaborRates() {
+            var defaultRate = parseFloat(document.getElementById('laborDefaultRateInput').value) || 25.00;
+            saveData('laborDefaultRate', defaultRate);
+
+            var rates = {};
+            document.querySelectorAll('.labor-rate-input').forEach(function(input) {
+                var name = input.getAttribute('data-engineer');
+                var val = parseFloat(input.value);
+                if (name && !isNaN(val) && val > 0) {
+                    rates[name] = val;
+                }
+            });
+            saveData('laborRates', rates);
+
+            closeModal('laborRatesModal');
+            refreshDashboards();
         }
 
         // ─────────────────────────────────────────────────────────────────────
