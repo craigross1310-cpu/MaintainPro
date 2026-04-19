@@ -7333,15 +7333,11 @@
         }
 
         function refreshDashboards() {
-            updateKPIs();
-            renderNotifications();
-            loadDailyActivity();
-            renderTop5Equipment();
-            renderPOStats();
-            renderPMCompletionStats();
-            renderCostBreakdown();
-            initializeCharts();
-            if (typeof renderProAnalytics === 'function') renderProAnalytics();
+            var fns = [updateKPIs, renderNotifications, loadDailyActivity, renderTop5Equipment, renderPOStats, renderPMCompletionStats, renderCostBreakdown, initializeCharts];
+            if (typeof renderProAnalytics === 'function') fns.push(renderProAnalytics);
+            fns.forEach(function(fn) {
+                try { fn(); } catch(e) { console.error('[Cradero] refreshDashboards error in ' + fn.name + ':', e); }
+            });
         }
 
         function renderProAnalytics() {
