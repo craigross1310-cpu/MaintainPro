@@ -2404,7 +2404,7 @@
                         </div>
                     </div>
 
-                    <div class="chart-card">
+                    <div class="chart-card" id="laborCostsCard">
                         <div class="chart-header">
                             <div>
                                 <div class="chart-title">Labor Costs</div>
@@ -5553,10 +5553,10 @@
                 var umBtn = document.getElementById('userMgmtTab');
                 if (umBtn) umBtn.style.display = 'none';
             }
-            // Hide Manage Rates button for non-admin/manager
-            var laborRatesBtn = document.getElementById('manageLaborRatesBtn');
-            if (laborRatesBtn) {
-                laborRatesBtn.style.display = (role === 'admin' || role === 'manager') ? '' : 'none';
+            // Hide entire Labor Costs card for non-admin/manager (employee privacy)
+            var laborCostsCard = document.getElementById('laborCostsCard');
+            if (laborCostsCard) {
+                laborCostsCard.style.display = (role === 'admin' || role === 'manager') ? '' : 'none';
             }
         }
 
@@ -7995,10 +7995,11 @@
             // Parts cost from PO data
             var partsTotal = purchaseOrdersData.filter(function(po) { return po.status === 'received' && po.createdRaw && new Date(po.createdRaw) >= costCutoff; }).reduce(function(sum, po) { return sum + (parseFloat(po.total) || 0); }, 0);
             var grandTotal = laborTotal + partsTotal;
+            var isManagerOrAbove = (currentUserRole === 'admin' || currentUserRole === 'manager');
             container.innerHTML =
-                '<div class="metric-item"><span class="metric-label">Labor Costs</span><span class="metric-value">£' + Math.round(laborTotal).toLocaleString() + '</span></div>' +
+                (isManagerOrAbove ? '<div class="metric-item"><span class="metric-label">Labor Costs</span><span class="metric-value">£' + Math.round(laborTotal).toLocaleString() + '</span></div>' : '') +
                 '<div class="metric-item"><span class="metric-label">Parts/Materials</span><span class="metric-value">£' + Math.round(partsTotal).toLocaleString() + '</span></div>' +
-                '<div class="metric-item" style="background:var(--primary);color:white;"><span class="metric-label" style="color:white;">Total</span><span class="metric-value" style="color:white;">£' + Math.round(grandTotal).toLocaleString() + '</span></div>';
+                '<div class="metric-item" style="background:var(--primary);color:white;"><span class="metric-label" style="color:white;">Total</span><span class="metric-value" style="color:white;">£' + Math.round(isManagerOrAbove ? grandTotal : partsTotal).toLocaleString() + '</span></div>';
         }
 
         // ─────────────────────────────────────────────────────────────────────
