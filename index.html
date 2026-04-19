@@ -7806,13 +7806,11 @@
 
                 // Render summary cards
                 if (summaryContainer) {
-                    var downEquip = equipmentList.filter(function(eq) { return eq.status === 'down'; }).length;
                     summaryContainer.innerHTML =
                         '<div class="stat-card"><div class="stat-label">WOs Created</div><div class="stat-value">' + woCreated + '</div></div>' +
                         '<div class="stat-card"><div class="stat-label">WOs Completed</div><div class="stat-value">' + woCompleted + '</div></div>' +
                         '<div class="stat-card"><div class="stat-label">PMs Completed</div><div class="stat-value">' + pmCompleted + '</div></div>' +
-                        '<div class="stat-card"><div class="stat-label">Breakdowns</div><div class="stat-value">' + bdReported + '</div></div>' +
-                        '<div class="stat-card"><div class="stat-label">Equipment Down</div><div class="stat-value">' + downEquip + '</div></div>';
+                        '<div class="stat-card"><div class="stat-label">Reactive Maintenance Completed</div><div class="stat-value">' + bdResolved + '</div></div>';
                 }
 
                 // Render activity timeline from audit entries
