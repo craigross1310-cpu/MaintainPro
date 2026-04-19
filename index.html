@@ -2342,7 +2342,7 @@
                     <div class="chart-card">
                         <div class="chart-header">
                             <div class="chart-title">MTTR & MTBF</div>
-                            <div class="chart-subtitle">Mean Time to Repair / Between Failures</div>
+                            <div class="chart-subtitle" id="mttrSubtitle">Mean Time to Repair / Between Failures</div>
                         </div>
                         <div class="metric-list" id="mttrMtbfList">
                         </div>
@@ -2351,7 +2351,7 @@
                     <div class="chart-card">
                         <div class="chart-header">
                             <div class="chart-title">Fault Cause Analysis</div>
-                            <div class="chart-subtitle">Breakdown frequency by cause category</div>
+                            <div class="chart-subtitle" id="faultCauseSubtitle">Breakdown frequency by cause category</div>
                         </div>
                         <div class="metric-list" id="faultCauseAnalysisList">
                         </div>
@@ -2360,7 +2360,7 @@
                     <div class="chart-card">
                         <div class="chart-header">
                             <div class="chart-title">Recurring Faults by Equipment</div>
-                            <div class="chart-subtitle">Repeated cause patterns per machine</div>
+                            <div class="chart-subtitle" id="recurringSubtitle">Repeated cause patterns per machine</div>
                         </div>
                         <div class="metric-list" id="recurringFaultsList">
                         </div>
@@ -2388,7 +2388,7 @@
                         <div class="chart-header">
                             <div>
                                 <div class="chart-title">Labor Costs</div>
-                                <div class="chart-subtitle">Based on tracked time</div>
+                                <div class="chart-subtitle" id="laborCostSubtitle">Based on tracked time</div>
                             </div>
                             <button class="btn btn-secondary" style="font-size:0.8rem;padding:0.3rem 0.75rem;" onclick="openLaborRatesModal()" id="manageLaborRatesBtn">⚙ Manage Rates</button>
                         </div>
@@ -2399,7 +2399,7 @@
                     <div class="chart-card">
                         <div class="chart-header">
                             <div class="chart-title">Downtime by Equipment</div>
-                            <div class="chart-subtitle">Total machine downtime hours</div>
+                            <div class="chart-subtitle" id="downtimeEquipSubtitle">Total machine downtime hours</div>
                         </div>
                         <div class="metric-list" id="productionLossByEquipList">
                         </div>
@@ -2408,7 +2408,7 @@
                     <div class="chart-card">
                         <div class="chart-header">
                             <div class="chart-title">Engineer Hours</div>
-                            <div class="chart-subtitle">Total job time per engineer</div>
+                            <div class="chart-subtitle" id="engHoursSubtitle">Total job time per engineer</div>
                         </div>
                         <div class="metric-list" id="engineerHoursList">
                         </div>
@@ -7347,6 +7347,22 @@
         function renderProAnalytics() {
             if (!hasAccess('analytics')) return;
             var analyticsCutoff = getAnalyticsCutoff();
+            var sel = document.getElementById('analyticsTimePeriod');
+            var periodLabel = sel ? sel.options[sel.selectedIndex].text : 'Last 30 Days';
+
+            // Update all Pro analytics card subtitles with the selected period
+            var subtitleUpdates = {
+                'mttrSubtitle': 'Mean Time to Repair / Between Failures — ' + periodLabel,
+                'faultCauseSubtitle': 'Breakdown frequency by cause category — ' + periodLabel,
+                'recurringSubtitle': 'Repeated cause patterns per machine — ' + periodLabel,
+                'laborCostSubtitle': 'Based on tracked time — ' + periodLabel,
+                'downtimeEquipSubtitle': 'Total machine downtime hours — ' + periodLabel,
+                'engHoursSubtitle': 'Total job time per engineer — ' + periodLabel
+            };
+            Object.keys(subtitleUpdates).forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = subtitleUpdates[id];
+            });
 
             // P2: Parts at Risk
             var riskEl = document.getElementById('partsAtRiskList');
@@ -7404,7 +7420,8 @@
                 var causeCounts = {};
                 var filteredBreakdowns = breakdownsData.filter(function(b) {
                     var bDate = b.downtimeStart || b.created || b.dateISO || '';
-                    return !bDate || new Date(bDate) >= analyticsCutoff;
+                    if (!bDate) return false;
+                    return new Date(bDate) >= analyticsCutoff;
                 });
                 filteredBreakdowns.forEach(function(b) {
                     var cause = b.faultCause || 'Unclassified';
@@ -7430,6 +7447,8 @@
             if (recurringEl) {
                 var machCause = {};
                 breakdownsData.forEach(function(b) {
+                    var bDate = b.downtimeStart || b.created || b.dateISO || '';
+                    if (bDate && new Date(bDate) < analyticsCutoff) return;
                     var key = (b.machine || 'Unknown') + '||' + (b.faultCause || 'Unclassified');
                     if (!machCause[key]) machCause[key] = { machine: b.machine || 'Unknown', cause: b.faultCause || 'Unclassified', count: 0 };
                     machCause[key].count++;
@@ -7509,6 +7528,7 @@
                 var defaultLaborRate = loadData('laborDefaultRate', 25.00);
                 var laborByEngineer = {};
                 workOrdersData.forEach(function(wo) {
+                    if (wo.createdRaw && new Date(wo.createdRaw) < analyticsCutoff) return;
                     if (wo.assignedTo) {
                         var hours = wo.totalJobHours || 0;
                         if (!hours && wo.totalJobTime) {
@@ -7543,11 +7563,14 @@
             if (plEl) {
                 var dtMapByEquip = {};
                 breakdownsData.forEach(function(b) {
+                    var bDate = b.downtimeStart || b.created || b.dateISO || '';
+                    if (bDate && new Date(bDate) < analyticsCutoff) return;
                     var name = b.machine || 'Unknown';
                     if (!dtMapByEquip[name]) dtMapByEquip[name] = 0;
                     dtMapByEquip[name] += (b.totalDowntimeHours || 0);
                 });
                 workOrdersData.forEach(function(wo) {
+                    if (wo.createdRaw && new Date(wo.createdRaw) < analyticsCutoff) return;
                     var dt = wo.totalDowntimeHours || (parseFloat(wo.machineDowntime) || 0);
                     if (dt > 0 && wo.equipment) {
                         if (!dtMapByEquip[wo.equipment]) dtMapByEquip[wo.equipment] = 0;
@@ -7577,6 +7600,8 @@
             if (engHrsEl) {
                 var engMap = {};
                 breakdownsData.forEach(function(b) {
+                    var bDate = b.downtimeStart || b.created || b.dateISO || '';
+                    if (bDate && new Date(bDate) < analyticsCutoff) return;
                     if (b.totalJobHours > 0 && b.resolvedBy) {
                         parseEngineers(b.resolvedBy).forEach(function(name) {
                             if (!engMap[name]) engMap[name] = { breakdowns: 0, hours: 0 };
@@ -7586,6 +7611,7 @@
                     }
                 });
                 workOrdersData.forEach(function(wo) {
+                    if (wo.createdRaw && new Date(wo.createdRaw) < analyticsCutoff) return;
                     var hours = wo.totalJobHours || 0;
                     if (!hours && wo.totalJobTime) {
                         var match = wo.totalJobTime.match(/([\d]+)h\s*([\d]*)m?/);
@@ -7876,9 +7902,11 @@
         function renderTop5Equipment() {
             var container = document.getElementById('top5EquipmentList');
             if (!container) return;
+            var sel = document.getElementById('analyticsTimePeriod');
+            var periodLabel = sel ? sel.options[sel.selectedIndex].text : 'Last 30 Days';
             var sorted = equipmentList.slice().sort(function(a, b) { return (b.workOrders30d || 0) - (a.workOrders30d || 0); }).slice(0, 5);
             if (sorted.length === 0 || (sorted[0].workOrders30d || 0) === 0) {
-                container.innerHTML = '<div class="metric-item"><span class="metric-label" style="color:var(--gray-600);">No work orders in the last 30 days</span></div>';
+                container.innerHTML = '<div class="metric-item"><span class="metric-label" style="color:var(--gray-600);">No work orders — ' + periodLabel + '</span></div>';
                 return;
             }
             container.innerHTML = sorted.filter(function(eq) { return eq.workOrders30d > 0; }).map(function(eq) {
